@@ -1,0 +1,65 @@
+# Node modules
+node_modules/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# Cache and output
+.cache/
+dist/
+build/
+tmp/
+out/
+coverage/
+
+# Logs and runtime data
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# IDE and Editor settings
+.idea/
+.vscode/
+*.swp
+*.swo
+*.bak
+*.tmp
+
+# Docker files
+docker-compose.override.yml
+docker-compose.override.*.yml
+docker-compose.override.local.yml
+
+# ESLint and Prettier
+.eslintcache
+.eslintignore
+.prettierignore
+*.eslintcache
+
+# Husky hooks
+.husky/_
+
+# Sequelize files to include
+!config/
+!migrations/
+!seeders/
+
+# Exclude database dumps or temporary exports
+# *.sql
+*.sqlite
+*.db
+
+# Miscellaneous
+*.bak
+*.orig
+*.rej
