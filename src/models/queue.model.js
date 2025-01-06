@@ -6,8 +6,16 @@ class Queue extends Model {
    * @param {Object} models - All Sequelize models
    */
   static associate(models) {
-    // A Queue can have many Appointments
-    Queue.hasMany(models.Appointment, { foreignKey: 'queueId', as: 'appointments' });
+   
+    // Queue belongs to a Patient
+    Queue.belongsTo(models.Patient, { foreignKey: 'patientId', as: 'patient' });
+
+    // Queue belongs to a Specialty
+    Queue.belongsTo(models.Specialty, { foreignKey: 'specialtyId', as: 'specialty' });
+
+    // One Queue belongs to one Clinic
+    Queue.belongsTo(models.Clinic, { foreignKey: 'clinicId', as: 'clinic' });
+
   }
 }
 
@@ -19,13 +27,42 @@ const initModel = (sequelize) => {
         defaultValue: DataTypes.UUIDV4,
         primaryKey: true,
       },
-      queue_date: {
+      queueDate: {
         type: DataTypes.DATEONLY,
         allowNull: false,
       },
-      queue_type: {
+      queueType: {
         type: DataTypes.ENUM('GP', 'Dentistry', 'Mammography'),
+      },
+      tokenNumber: {
+        type: DataTypes.INTEGER,
         allowNull: false,
+      },
+      specialtyId: {
+        type: DataTypes.UUID,
+        allowNull: false,
+        references: {
+          model: 'specialties',
+          key: 'id',
+        },
+      },
+      patientId: {
+        type: DataTypes.UUID,
+        allowNull: false,
+        references: {
+          model: 'patients',
+          key: 'id',
+        },
+      },
+      clinicId: {
+        type: DataTypes.UUID,
+        allowNull: false,
+        references: {
+          model: 'clinics', // References Clinic table
+          key: 'id',
+        },
+        onDelete: 'CASCADE', // Delete queue if clinic is deleted
+        onUpdate: 'CASCADE',
       },
     },
     {

@@ -8,6 +8,10 @@ const register = {
     name: Joi.string().required(),
     // role: Joi.string().required().custom(role),
     role: Joi.string().required(),
+    phoneNumber: Joi.string()
+      .pattern(/^[0-9]{10,15}$/)
+      .allow('', null)
+      .optional(),
   }),
 };
 

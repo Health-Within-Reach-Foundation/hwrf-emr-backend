@@ -241,7 +241,7 @@ describe('Auth routes', () => {
 
     test('should return 204 and send reset password email to the user', async () => {
       await insertUsers([userOne]);
-      const sendResetPasswordEmailSpy = jest.spyOn(emailService, 'sendResetPasswordEmail');
+      const sendResetPasswordEmailSpy = jest.spyOn(emailService, 'sendPasswordEmail');
 
       await request(app).post('/v1/auth/forgot-password').send({ email: userOne.email }).expect(httpStatus.NO_CONTENT);
 

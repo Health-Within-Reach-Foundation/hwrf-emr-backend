@@ -5,7 +5,7 @@ const ApiError = require('../utils/ApiError');
 const isClinicActive = async (req, res, next) => {
   try {
     // Fetch user with associated clinic and role details
-    const { user, isSuperAdmin } = await userService.getUserWithAssociatedClinic(req.body.email);
+    const { user, isSuperAdmin } = await userService.getUserAssociatedToClinic(req.body.email);
 
     // Allow superadmin to proceed without clinic checks
     if (isSuperAdmin) {

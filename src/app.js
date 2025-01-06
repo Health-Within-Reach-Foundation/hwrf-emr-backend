@@ -36,7 +36,7 @@ app.use(xss());
 app.use(compression());
 
 // enable cors
-app.use(cors({ origin: 'http://localhost:5173', credentials: true }));
+app.use(cors({ origin: config.client_domain, credentials: true }));
 app.options('*', cors());
 
 // jwt authentication

@@ -1,5 +1,9 @@
 const { Op } = require('sequelize');
 const { Patient } = require('../models/patient.model');
+const { Appointment } = require('../models/appointment.model');
+const { PatientRecord } = require('../models/patient-record.model');
+const { DentistPatientRecord } = require('../models/dentist-patient-record');
+const { Queue } = require('../models/queue.model');
 
 /**
  *
@@ -10,7 +14,6 @@ const createPatient = async (patientBody) => {
   //   const isPatientExist = await Patient.findOne({ where: {} })
   return Patient.create(patientBody);
 };
-
 
 /**
  * Search for patients based on dynamic filters.
@@ -51,59 +54,35 @@ const getPatientById = async (patientId) => {
 };
 
 /**
- * Fetch all patients under a specific clinic with pagination and optional filters.
- * @param {String} clinicId - The ID of the clinic.
- * @param {Object} query - Query parameters for filtering and pagination.
- * @param {String} [query.name] - Filter by patient name (optional).
- * @param {String} [query.mobile] - Filter by patient mobile number (optional).
- * @param {Number} [query.page=1] - Page number for pagination.
- * @param {Number} [query.limit=10] - Number of records per page.
- * @returns {Promise<Object>} - Paginated list of patients.
+ * Get all patients by clinic ID.
+ * @param {string} clinicId - The clinic ID.
+ * @param {object} queryOptions - Pagination and sorting options.
+ * @returns {Promise<object>}
  */
-const getPatientsByClinic = async (clinicId, query) => {
-  const { name, mobile, page = 1, limit = 10 } = query;
+const getPatientsByClinic = async (clinicId) => {
+  // const { page = 1, limit = 10 } = queryOptions;
 
-  // Build the dynamic filter object
-  const where = { clinic_id: clinicId }; // Scope patients to the given clinic
-  if (name) {
-    where.name = { [Op.iLike]: `%${name}%` }; // Case-insensitive partial match
-  }
-  if (mobile) {
-    where.mobile = mobile; // Exact match
-  }
+  // const offset = (page - 1) * limit;
 
-  // Pagination settings
-  const offset = (page - 1) * limit;
-
-  // Query the database with filters and pagination
   const { rows: patients, count: total } = await Patient.findAndCountAll({
-    where,
-    offset,
-    limit: parseInt(limit, 10),
-    order: [['createdAt', 'DESC']], // Sort by most recent patients
+    where: { clinicId },
+    // limit: parseInt(limit, 10),
+    // offset: parseInt(offset, 10),
+    order: [['createdAt', 'DESC']],
   });
 
-  // Prepare paginated response
-  // return {
-  //   success: true,
-  //   message: 'Patients retrieved successfully',
-  //   data: {
-  //     patients,
-  //     pagination: {
-  //       total,
-  //       currentPage: parseInt(page, 10),
-  //       totalPages: Math.ceil(total / limit),
-  //       pageSize: parseInt(limit, 10),
-  //     },
-  //   },
-  // };
+  if (!patients.length) {
+    throw new ApiError(httpStatus.NOT_FOUND, 'No patients found for this clinic.');
+  }
+
   return {
-    patients,
-    pagination: {
+    success: true,
+    data: patients,
+    meta: {
       total,
-      currentPage,
-      totalPages: Math.ceil(total / limit),
-      pageSize: parseInt(limit, 10),
+      // page,
+      // limit,
+      // totalPages: Math.ceil(tota l / limit),
     },
   };
 };
@@ -117,7 +96,7 @@ const getPatientsByClinic = async (clinicId, query) => {
 const updatePatientById = async (patientId, updateBody) => {
   // Fetch the patient record
   const patient = await getPatientById(patientId);
-  
+
   if (!patient) {
     throw new ApiError(httpStatus.NOT_FOUND, 'Patient not found');
   }
@@ -140,7 +119,6 @@ const updatePatientById = async (patientId, updateBody) => {
 const deletePatientById = async (patientId, permanent = false) => {
   // Find the patient by ID
   const patient = await getPatientById(patientId);
-  
   if (!patient) {
     throw new ApiError(httpStatus.NOT_FOUND, 'Patient not found');
   }
@@ -153,6 +131,71 @@ const deletePatientById = async (patientId, permanent = false) => {
   }
 };
 
+const getLastPatientRegistered = async (clinicId, clinicInitials) => {
+  // Find the last patient registered for the given clinic based on createdAt and regNo
+  const lastPatient = await Patient.findOne({
+    where: {
+      regNo: { [Op.like]: `${clinicInitials}%` }, // regNo starts with the clinic ID (e.g., AP)
+    },
+    order: [
+      ['createdAt', 'DESC'], // Order by createdAt in descending order to get the most recent patient
+      ['regNo', 'DESC'], // If two patients were created at the same time, sort by regNo
+    ],
+    limit: 1, // Only fetch the first result after ordering
+  });
+
+  return lastPatient;
+};
+
+/**
+ * Get patient by ID, including all related models.
+ * @param {string} patientId - ID of the patient
+ * @returns {Promise<Patient>}
+ */
+const getPatientDetailsById = async (patientId, specialtyId) => {
+  const patient = await Patient.findByPk(patientId, {
+    include: [
+      // Include related Clinic data
+      // Include Appointments associated with the patient
+      {
+        model: Appointment,
+        where: {
+          specialtyId,
+        },
+        as: 'appointments',
+        attributes: { exclude: ['createdAt', 'updatedAt'] },
+      },
+      // Include Patient Records
+      {
+        model: PatientRecord,
+        as: 'records',
+        include: [
+          {
+            model: DentistPatientRecord, // Include Dentist-specific data
+            as: 'dentalData',
+            attributes: { exclude: ['createdAt', 'updatedAt'] },
+          },
+        ],
+      },
+      // Include Queue records for the patient
+      {
+        model: Queue,
+        where: {
+          specialtyId,
+        },
+        as: 'queues',
+        attributes: { exclude: ['createdAt', 'updatedAt'] },
+      },
+    ],
+  });
+
+  // Throw an error if no patient is found
+  if (!patient) {
+    throw new ApiError(httpStatus.NOT_FOUND, 'Patient not found');
+  }
+
+  return patient;
+};
 
 module.exports = {
   createPatient,
@@ -160,5 +203,7 @@ module.exports = {
   getPatientById,
   getPatientsByClinic,
   updatePatientById,
-  deletePatientById
+  deletePatientById,
+  getLastPatientRegistered,
+  getPatientDetailsById,
 };

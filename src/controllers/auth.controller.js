@@ -1,6 +1,7 @@
 const httpStatus = require('http-status');
 const catchAsync = require('../utils/catchAsync');
 const { authService, tokenService, emailService, clinicService, userService } = require('../services');
+const { tokenTypes } = require('../config/tokens');
 
 const register = catchAsync(async (req, res) => {
   // invoke register service
@@ -52,8 +53,8 @@ const refreshTokens = catchAsync(async (req, res) => {
 });
 
 const forgotPassword = catchAsync(async (req, res) => {
-  const resetPasswordToken = await tokenService.generateResetPasswordToken(req.body.email);
-  await emailService.sendResetPasswordEmail(req.body.email, resetPasswordToken);
+  const resetPasswordToken = await tokenService.generatePasswordToken(req.body.email, tokenTypes.SET_PASSWORD);
+  await emailService.sendPasswordEmail(req.body.email, resetPasswordToken, tokenTypes.RESET_PASSWORD);
   res.status(httpStatus.NO_CONTENT).send();
 });
 
@@ -74,12 +75,30 @@ const verifyEmail = catchAsync(async (req, res) => {
 });
 
 const getMe = catchAsync(async (req, res) => {
-  console.log('Req from getMe function --> ', req.user);
+  console.log('Req from getMe function --> ', req.user.specialties);
   const user = await userService.getUserById(req.user.id); // Use service to fetch user data
 
   res.status(httpStatus.OK).json({
     success: true,
     user,
+  });
+});
+
+// Verify Token API
+const verifyToken = catchAsync(async (req, res) => {
+  // const { token } = req.params;
+  console.log(req.query);
+  const payload = await tokenService.verifyToken(req.query.token, tokenTypes.SET_PASSWORD);
+  // Return user details on successful token verification
+  const user = await userService.getUserById(payload.userId);
+  res.status(httpStatus.OK).json({
+    success: true,
+    message: 'Token verified successfully.',
+    data: {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+    },
   });
 });
 
@@ -94,4 +113,5 @@ module.exports = {
   verifyEmail,
   onboardClinic,
   getMe,
+  verifyToken,
 };

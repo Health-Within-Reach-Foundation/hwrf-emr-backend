@@ -9,14 +9,16 @@ class Appointment extends Model {
     // Each Appointment belongs to a Patient
     Appointment.belongsTo(models.Patient, { foreignKey: 'patientId', as: 'patient' });
 
-    // Each Appointment belongs to a Queue
-    Appointment.belongsTo(models.Queue, { foreignKey: 'queueId', as: 'queue' });
-
+  
     // Each Appointment belongs to a Clinic
     Appointment.belongsTo(models.Clinic, { foreignKey: 'clinicId', as: 'clinic' });
 
-    // One Appointment can have many TreatmentRecords
-    // Appointment.hasMany(models.TreatmentRecord, { foreignKey: 'appointment_id', as: 'treatment_records' });
+     // Appointment can have one Patient Record
+     Appointment.hasOne(models.PatientRecord, { foreignKey: 'appointmentId', as: 'record' });
+
+     // An appointment belongs to one specialty
+    Appointment.belongsTo(models.Specialty, { foreignKey: 'specialtyId', as: 'specialty' });
+
   }
 }
 
@@ -28,13 +30,16 @@ const initModel = (sequelize) => {
         defaultValue: DataTypes.UUIDV4,
         primaryKey: true,
       },
-      token_number: {
-        type: DataTypes.INTEGER,
+      // token_number: {
+      //   type: DataTypes.INTEGER,
+      //   allowNull: false,
+      // },
+      appointmentDate: {
+        type: DataTypes.DATEONLY,
         allowNull: false,
       },
       status: {
-        type: DataTypes.ENUM('registered', 'in', 'out'),
-        allowNull: false,
+        type: DataTypes.ENUM('registered', 'in-progress', 'completed', 'cancelled'),
         defaultValue: 'registered',
       },
       clinicId: {
@@ -55,11 +60,11 @@ const initModel = (sequelize) => {
           key: 'id',
         },
       },
-      queueId: {
+      specialtyId: {
         type: DataTypes.UUID,
         allowNull: false,
         references: {
-          model: 'queues',
+          model: 'specialties',
           key: 'id',
         },
         onDelete: 'CASCADE',
@@ -78,9 +83,6 @@ const initModel = (sequelize) => {
         },
         {
           fields: ['patient_id'], // Index for patient filtering
-        },
-        {
-          fields: ['queue_id'], // Index for queue filtering
         },
       ],
     }

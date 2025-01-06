@@ -1,5 +1,5 @@
 {
-  "name": "create-nodejs-express-app",
+  "name": "hwrf-emr-server",
   "version": "1.7.0",
   "description": "Create a Node.js app for building production-ready RESTful APIs using Express, by running one command",
   "bin": "bin/createNodejsApp.js",
@@ -34,8 +34,7 @@
     "express",
     "rest",
     "api",
-    "mongodb",
-    "mongoose",
+    "pg",
     "es6",
     "es7",
     "es8",

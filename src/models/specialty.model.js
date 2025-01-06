@@ -8,6 +8,15 @@ class Specialty extends Model {
       foreignKey: 'specialtyId',
       as: 'clinics',
     });
+
+    // A specialty can have many appointments
+    Specialty.hasMany(models.Appointment, { foreignKey: 'specialtyId', as: 'appointments' });
+
+    Specialty.belongsToMany(models.User, {
+      through: 'user_specialties', // Junction table
+      foreignKey: 'specialtyId',
+      as: 'users',
+    });
   }
 }
 
@@ -27,6 +36,10 @@ const initModel = (sequelize) => {
           notEmpty: { msg: 'Specialty name is required' },
         },
       },
+      departmentName: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      }
     },
     {
       sequelize,

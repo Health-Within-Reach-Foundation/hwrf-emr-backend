@@ -3,6 +3,7 @@ const ApiError = require('../utils/ApiError');
 const { User } = require('../models/user.model');
 const { Role } = require('../models/role.model');
 const { Clinic } = require('../models/clinic.model');
+const { Specialty } = require('../models/specialty.model');
 
 /**
  * Create a user
@@ -37,12 +38,25 @@ const queryUsers = async (filter, options) => {
  */
 const getUserById = async (id) => {
   return User.findByPk(id, {
-    include: {
-      model: Role,
-      as: 'roles',
-      through: { attributes: [] }, // Exclude intermediate table fields
-      attributes: { exclude: ['createdAt', 'updatedAt', 'userId', 'clinicId'] },
-    },
+    include: [
+      {
+        model: Role,
+        as: 'roles',
+        through: { attributes: [] }, // Exclude junction table
+        attributes: { exclude: ['createdAt', 'updatedAt', 'userId', 'clinicId'] }, // Clean unnecessary fields
+      },
+      {
+        model: Clinic,
+        as: 'clinic', // Assuming Clinic has alias 'clinic' in User model
+        attributes: ['id', 'clinicName', 'status'], // Only required fields
+      },
+      {
+        model: Specialty,
+        as: 'specialties', // Assuming User has a many-to-many relationship with Specialty
+        through: { attributes: [] }, // Exclude intermediate fields
+        attributes: ['id', 'name', 'departmentName'], // Minimal required fields
+      },
+    ],
   });
 };
 
@@ -55,12 +69,25 @@ const getUserByEmail = async (email) => {
   return User.findOne({
     where: { email },
     attributes: { include: ['password'] },
-    include: {
-      model: Role,
-      as: 'roles',
-      through: { attributes: [] }, // Exclude intermediate table fields
-      attributes: { exclude: ['createdAt', 'updatedAt', 'userId', 'clinicId'] }, // Exclude role-specific fields
-    },
+    include: [
+      {
+        model: Role,
+        as: 'roles',
+        through: { attributes: [] }, // Exclude junction table
+        attributes: { exclude: ['createdAt', 'updatedAt', 'userId', 'clinicId'] }, // Clean unnecessary fields
+      },
+      {
+        model: Clinic,
+        as: 'clinic', // Assuming Clinic has alias 'clinic' in User model
+        attributes: ['id', 'clinicName', 'status'], // Only required fields
+      },
+      {
+        model: Specialty,
+        as: 'specialties', // Assuming User has a many-to-many relationship with Specialty
+        through: { attributes: [] }, // Exclude intermediate fields
+        attributes: ['id', 'name', 'departmentName'], // Minimal required fields
+      },
+    ],
   });
 };
 
@@ -96,11 +123,11 @@ const deleteUserById = async (userId) => {
   return user;
 };
 
-const getUserWithAssociatedClinic = async (userEmail) => {
-  console.log("userid -->", userEmail);
+const getUserAssociatedToClinic = async (userEmail) => {
+  console.log('userid -->', userEmail);
   const user = await User.findOne({
     where: {
-      email: userEmail
+      email: userEmail,
     },
     include: [
       {
@@ -124,7 +151,7 @@ const getUserWithAssociatedClinic = async (userEmail) => {
 
   // Check if the user is a superadmin
   const isSuperAdmin = user.roles.some((role) => role.roleName === 'superadmin');
-  console.log("asdfghjkl",isSuperAdmin);
+  console.log('asdfghjkl', isSuperAdmin);
   if (isSuperAdmin) {
     return { user, isSuperAdmin: true };
   }
@@ -133,9 +160,35 @@ const getUserWithAssociatedClinic = async (userEmail) => {
   if (!user.clinic) {
     throw new ApiError(httpStatus.UNAUTHORIZED, 'User has no associated clinic');
   }
-  console.log("returnning user from getUserWithAssociatedClinic -->", user.clinic.status);
+  console.log('returnning user from getUserAssociatedToClinic -->', user.clinic.status);
   return { user, isSuperAdmin: false };
 };
+
+/**
+ * Get all users associated with a specific clinic
+ * @param {String} clinicId - ID of the clinic
+ * @returns {Promise<Array>} - List of users with their roles
+ */
+const getUsersByClinic = async (clinicId) => {
+  // Query users associated with the given clinicId
+  const users = await User.findAll({
+    where: { clinicId }, // Filter by clinicId
+    attributes: ['id', 'name', 'email', 'phoneNumber', 'specialist', 'createdAt', 'updatedAt'], // Select required fields
+    include: [
+      {
+        model: Role, // Include roles associated with the user
+        as: 'roles',
+        attributes: ['id', 'roleName'], // Include role details
+        through: { attributes: [] }, // Exclude junction table attributes
+      },
+    ],
+    order: [['createdAt', 'DESC']], // Sort by creation date (latest first)
+  });
+
+  // Return the list of users
+  return users;
+};
+
 module.exports = {
   createUser,
   queryUsers,
@@ -143,5 +196,6 @@ module.exports = {
   getUserByEmail,
   updateUserById,
   deleteUserById,
-  getUserWithAssociatedClinic,
+  getUserAssociatedToClinic,
+  getUsersByClinic,
 };

@@ -1,6 +1,6 @@
 const httpStatus = require('http-status');
 const catchAsync = require('../utils/catchAsync');
-const { clinicService } = require('../services');
+const { clinicService, userService } = require('../services');
 
 /**
  * Get a list of clinics with pagination, filtering, and sorting
@@ -40,9 +40,42 @@ const approveClinic = catchAsync(async (req, res) => {
   });
 });
 
+/**
+ * Get all users associated with a clinic
+ * @route GET /users/clinic
+ * @access Admin (Clinic Level)
+ */
+const getUsersByClinic = catchAsync(async (req, res) => {
+  // Extract clinicId from the logged-in admin's session or token
+  const clinicId = req.user.clinicId;
+  console.log('Checking the getUSersByClinic controller');
+  // Fetch users from the service
+  const users = await userService.getUsersByClinic(clinicId);
+
+  // Send response
+  res.status(httpStatus.OK).json({
+    success: true,
+    message: 'Users retrieved successfully.',
+    data: users,
+  });
+});
+
+const getSpecialtyDepartmentsByClinic = catchAsync(async (req, res) => {
+  const clinicId = req.user.clinicId;
+
+  const departments = await clinicService.getSpecialtyDepartmentsByClinic(clinicId);
+
+  res.status(httpStatus.OK).json({
+    success: true,
+    data: departments,
+    message: 'Specialty departments retrieved successfully.',
+  });
+});
 
 module.exports = {
   getClinics,
   getClinic,
   approveClinic,
+  getUsersByClinic,
+  getSpecialtyDepartmentsByClinic,
 };

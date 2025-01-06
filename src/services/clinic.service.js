@@ -148,7 +148,6 @@ const updateClinicById = async (clinicId, clinicBody) => {
   await clinic.save();
 
   return clinic;
-  
 };
 
 /**
@@ -328,6 +327,28 @@ const getClinic = async (clinicId) => {
   };
 };
 
+const getSpecialtyDepartmentsByClinic = async (clinicId) => {
+  // Fetch clinic along with associated specialties
+  const clinic = await Clinic.findByPk(clinicId, {
+    include: [
+      {
+        model: Specialty,
+        as: 'specialties', // Alias defined in the association
+        attributes: ['id', 'name', 'departmentName'], // Fetch only required columns
+        through: { attributes: [] }, // Exclude junction table fields
+      },
+    ],
+    attributes: ['id', 'clinicName'], // Clinic attributes to include in response
+  });
+
+  // Throw error if no clinic found
+  if (!clinic) {
+    throw new ApiError(httpStatus.NOT_FOUND, 'Clinic not found');
+  }
+
+  return clinic.specialties; // Return the associated specialties
+};
+
 module.exports = {
   createClinic,
   getClinicById,
@@ -337,4 +358,5 @@ module.exports = {
   removeClinicById,
   onboardClinic,
   getClinic,
+  getSpecialtyDepartmentsByClinic,
 };

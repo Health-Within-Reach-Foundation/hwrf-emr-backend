@@ -5,7 +5,7 @@ const allRoles = {
 const ermAllRoles = {
   superadmin: [],
   admin: [],
-  docter: [],
+  doctor: [],
   receptionist: [],
   assistant: [],
 };

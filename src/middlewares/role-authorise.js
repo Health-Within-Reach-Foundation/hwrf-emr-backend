@@ -12,11 +12,11 @@ const roleAuthorization = (...allowedRoles) => (req, res, next) => {
     if (!req.user) {
       throw new ApiError(httpStatus.UNAUTHORIZED, 'Please authenticate');
     }
-
+    console.log('allowedRoles -->', allowedRoles);
     // Extract user's roles from the authenticated user object
     const userRoles = req.user.roles.map((role) => role.roleName); // Assuming roles are populated in req.user
     const hasAccess = allowedRoles.some((role) => userRoles.includes(role));
-
+    console.log('userRoles -->', userRoles);
     if (!hasAccess) {
       throw new ApiError(httpStatus.FORBIDDEN, 'You do not have permission to access this resource');
     }

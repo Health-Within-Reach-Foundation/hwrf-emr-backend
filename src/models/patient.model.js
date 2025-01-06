@@ -7,10 +7,16 @@ class Patient extends Model {
    */
   static associate(models) {
     // One Patient can have many Appointments
-    Patient.hasMany(models.Appointment, { foreignKey: 'patient_id', as: 'appointments' });
+    Patient.hasMany(models.Appointment, { foreignKey: 'patientId', as: 'appointments' });
    
     // Each Patient belongs to a Clinic
     Patient.belongsTo(models.Clinic, { foreignKey: 'clinicId', as: 'clinic' });
+
+    // A Patient can have many PatientRecords
+    Patient.hasMany(models.PatientRecord, { foreignKey: 'patientId', as: 'records' });
+
+    // A Patient can have many Queues
+    Patient.hasMany(models.Queue, { foreignKey: 'patientId', as: 'queues' });
   }
 }
 
@@ -38,6 +44,14 @@ const initModel = (sequelize) => {
         validate: {
           notEmpty: { msg: 'Name is required' },
         },
+      },
+      age: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+      },
+      sex: {
+        type: DataTypes.ENUM('male', 'female', 'other'),
+        allowNull: false,
       },
       mobile: {
         type: DataTypes.STRING,

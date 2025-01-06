@@ -73,7 +73,7 @@ const resetPassword = async (resetPasswordToken, newPassword) => {
   console.log('resetpasswordToken -->', resetPasswordToken);
   try {
     console.log('hello -->');
-    const resetPasswordTokenDoc = await tokenService.verifyToken(resetPasswordToken, tokenTypes.RESET_PASSWORD);
+    const resetPasswordTokenDoc = await tokenService.verifyToken(resetPasswordToken, tokenTypes.SET_PASSWORD);
     console.log('verifed reset token --> ', resetPasswordTokenDoc);
     const user = await userService.getUserById(resetPasswordTokenDoc.userId);
     if (!user) {
@@ -81,7 +81,7 @@ const resetPassword = async (resetPasswordToken, newPassword) => {
     }
     console.log('FILE: authService --> reset password destroyed');
     await userService.updateUserById(user.id, { password: newPassword });
-    await Token.destroy({ where: { userId: user.id, type: tokenTypes.RESET_PASSWORD }, force: true });
+    await Token.destroy({ where: { userId: user.id, type: tokenTypes.SET_PASSWORD }, force: true });
   } catch (error) {
     logger.error(error);
     throw new ApiError(httpStatus.UNAUTHORIZED, 'Password reset failed');
@@ -108,7 +108,7 @@ const verifyEmail = async (verifyEmailToken) => {
 };
 
 const register = async (userBody) => {
-  const { name, email, password, role } = userBody;
+  const { name, email, password, role, phoeneNumber } = userBody;
   if (await User.isEmailTaken(userBody.email)) {
     throw new ApiError(httpStatus.BAD_REQUEST, 'Email already taken');
   }
@@ -116,6 +116,7 @@ const register = async (userBody) => {
     name,
     email,
     password,
+    phoeneNumber
   });
   const superadminRole = await Role.create({ roleName: role, userId: superadmin.id });
 

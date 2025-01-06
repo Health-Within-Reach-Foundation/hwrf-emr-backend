@@ -27,7 +27,7 @@ const initModel = (sequelize) => {
         },
       },
       type: {
-        type: DataTypes.ENUM(tokenTypes.ACCESS, tokenTypes.REFRESH, tokenTypes.RESET_PASSWORD,tokenTypes.VERIFY_EMAIL),
+        type: DataTypes.ENUM(tokenTypes.ACCESS, tokenTypes.REFRESH, tokenTypes.RESET_PASSWORD,tokenTypes.VERIFY_EMAIL, tokenTypes.SET_PASSWORD),
         allowNull: false,
       },
       expires: {

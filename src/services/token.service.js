@@ -93,16 +93,16 @@ const generateAuthTokens = async (user) => {
  * @param {string} email
  * @returns {Promise<string>}
  */
-const generateResetPasswordToken = async (email) => {
+const generatePasswordToken = async (email, type) => {
   const user = await userService.getUserByEmail(email);
   if (!user) {
     throw new ApiError(httpStatus.NOT_FOUND, 'No users found with this email');
   }
-  const expires = moment().add(config.jwt.accessExpirationMinutes, 'minutes');
+  const expires = moment().add(config.jwt.accessExpirationMinutes, 'days');
   console.log('Expired in -->', expires);
-  const resetPasswordToken = generateToken(user.id, expires, tokenTypes.RESET_PASSWORD);
-  await saveToken(resetPasswordToken, user.id, expires, tokenTypes.RESET_PASSWORD);
-  return resetPasswordToken;
+  const passwordToken = generateToken(user.id, expires, type);
+  await saveToken(passwordToken, user.id, expires, type);
+  return passwordToken;
 };
 
 /**
@@ -117,11 +117,17 @@ const generateVerifyEmailToken = async (user) => {
   return verifyEmailToken;
 };
 
+/**
+ * Generate reset password token
+ * @param {string} email
+ * @returns {Promise<string>}
+ */
+
 module.exports = {
   generateToken,
   saveToken,
   verifyToken,
   generateAuthTokens,
-  generateResetPasswordToken,
+  generatePasswordToken,
   generateVerifyEmailToken,
 };

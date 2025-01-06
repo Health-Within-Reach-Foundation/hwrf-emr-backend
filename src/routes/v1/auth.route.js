@@ -1,9 +1,10 @@
 const express = require('express');
 const validate = require('../../middlewares/validate');
 const authController = require('../../controllers/auth.controller');
-const auth  = require('../../middlewares/auth');
+const auth = require('../../middlewares/auth');
 const { clinicValidation, authValidation } = require('../../validations');
 const isClinicActive = require('../../middlewares/clinic-active');
+const { userController } = require('../../controllers');
 
 const router = express.Router();
 
@@ -28,6 +29,10 @@ router.post('/reset-password', validate(authValidation.resetPassword), authContr
 router.post('/send-verification-email', auth(), authController.sendVerificationEmail);
 
 router.post('/verify-email', validate(authValidation.verifyEmail), authController.verifyEmail);
+
+// router.route('/set-password').post(validate(authValidation.resetPassword), authController.resetPassword);
+
+router.get('/verify-token', validate(authValidation.verifyEmail), authController.verifyToken);
 
 module.exports = router;
 

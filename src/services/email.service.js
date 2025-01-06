@@ -1,6 +1,7 @@
 const nodemailer = require('nodemailer');
 const config = require('../config/config');
 const logger = require('../config/logger');
+const emailSubjectBodyForPassword = require('../utils/email-template-password');
 
 const transport = nodemailer.createTransport(config.email.smtp);
 /* istanbul ignore next */
@@ -19,7 +20,9 @@ if (config.env !== 'test') {
  * @returns {Promise}
  */
 const sendEmail = async (to, subject, text) => {
+  console.log("!@#$%^&*()",to, subject, text);
   const msg = { from: config.email.from, to, subject, text };
+
   await transport.sendMail(msg);
 };
 
@@ -29,14 +32,16 @@ const sendEmail = async (to, subject, text) => {
  * @param {string} token
  * @returns {Promise}
  */
-const sendResetPasswordEmail = async (to, token) => {
-  const subject = 'Reset password';
-  // replace this url with the link to the reset password page of your front-end app
-  const resetPasswordUrl = `http://link-to-app/reset-password?token=${token}`;
-  const text = `Dear user,
-To reset your password, click on this link: ${resetPasswordUrl}
-If you did not request any password resets, then ignore this email.`;
-  await sendEmail(to, subject, text);
+const sendPasswordEmail = async (to, token, type) => {
+  // const resetPasswordUrl = `http://link-to-app/reset-password?token=${token}`;
+
+  const { subject, body } = emailSubjectBodyForPassword(type, token);
+  //   const subject = 'Reset password';
+  //   // replace this url with the link to the reset password page of your front-end app
+  //   const text = `Dear user,
+  // To reset your password, click on this link: ${resetPasswordUrl}
+  // If you did not request any password resets, then ignore this email.`;
+  await sendEmail(to, subject, body);
 };
 
 /**
@@ -55,10 +60,10 @@ If you did not create an account, then ignore this email.`;
   await sendEmail(to, subject, text);
 };
 
-
+console.log();
 const sendClinicOnboardingNotification = async (clinicDetails) => {
   const subject = 'New Clinic Onboarding Request';
-  
+
   // Create the link to the superadmin's approval page (this can be the admin dashboard or a special page)
   const onboardingApprovalUrl = `${config.client_domain}/clinics/${clinicDetails.id}`;
 
@@ -85,11 +90,10 @@ const sendClinicOnboardingNotification = async (clinicDetails) => {
   await sendEmail(config.superadmin_email, subject, text);
 };
 
-
 module.exports = {
   transport,
   sendEmail,
-  sendResetPasswordEmail,
+  sendPasswordEmail,
   sendVerificationEmail,
   sendClinicOnboardingNotification,
 };

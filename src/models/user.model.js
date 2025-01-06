@@ -44,6 +44,12 @@ class User extends Model {
     User.belongsTo(models.Clinic, { foreignKey: 'clinicId', as: 'clinic' });
 
     User.hasMany(models.Token, { foreignKey: 'userId', as: 'tokens' });
+
+    User.belongsToMany(models.Specialty, {
+      through: 'user_specialties', // Junction table
+      foreignKey: 'userId',
+      as: 'specialties',
+    });
   }
 }
 
@@ -77,17 +83,17 @@ const initModel = (sequelize) => {
       },
       phoneNumber: {
         type: DataTypes.STRING,
-        allowNull: false,  // You can make it false if it should be mandatory
+        allowNull: false, // You can make it false if it should be mandatory
         validate: {
           is: {
-            args: [/^\+?[1-9]\d{1,14}$/],  // A simple validation for an international phone number format
+            args: [/^\+?[1-9]\d{1,14}$/], // A simple validation for an international phone number format
             msg: 'Phone number is invalid',
           },
         },
       },
       password: {
         type: DataTypes.STRING,
-        allowNull: false,
+        allowNull: true,
         validate: {
           len: {
             args: [8],
@@ -111,6 +117,10 @@ const initModel = (sequelize) => {
           model: 'clinics',
           key: 'id',
         },
+      },
+      specialist: {
+        type: DataTypes.STRING,
+        allowNull: true,
       },
     },
     {
