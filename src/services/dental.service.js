@@ -22,13 +22,13 @@ const addDentalPatientRecord = async (recordData) => {
 
   console.log("req.body -->", recordData)
   // Step 1: Check if appointment exists
-  const appointment = await PatientRecord.findOne({
-    where: { appointmentId, patientId },
-  });
+  // const appointment = await PatientRecord.findOne({
+  //   where: { appointmentId, patientId },
+  // });
 
-  if (appointment) {
-    throw new ApiError(httpStatus.CONFLICT, 'Record with this appointment already exists');
-  }
+  // if (appointment) {
+  //   throw new ApiError(httpStatus.CONFLICT, 'Record with this appointment already exists');
+  // }
 
   // Step 2: Create a Patient Record (General Record)
   const patientRecord = await PatientRecord.create({

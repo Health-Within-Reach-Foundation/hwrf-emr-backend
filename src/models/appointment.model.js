@@ -14,7 +14,7 @@ class Appointment extends Model {
     Appointment.belongsTo(models.Clinic, { foreignKey: 'clinicId', as: 'clinic' });
 
      // Appointment can have one Patient Record
-     Appointment.hasOne(models.PatientRecord, { foreignKey: 'appointmentId', as: 'record' });
+     Appointment.hasMany(models.PatientRecord, { foreignKey: 'appointmentId', as: 'records' });
 
      // An appointment belongs to one specialty
     Appointment.belongsTo(models.Specialty, { foreignKey: 'specialtyId', as: 'specialty' });

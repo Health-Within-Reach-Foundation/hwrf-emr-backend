@@ -254,7 +254,7 @@ const getAppointments = async (queryOptions, clinicId) => {
           {
             model: Queue, // Include Queue via Patient
             as: 'queues',
-            attributes: ['tokenNumber', 'queueDate', 'queueType'], // Queue details
+            attributes: ['tokenNumber', 'queueDate', 'queueType', 'specialtyId'], // Queue details
             where: {
               clinicId, // Filter queues by clinic
               queueDate: appointmentDate, // Filter queues by date
@@ -270,7 +270,7 @@ const getAppointments = async (queryOptions, clinicId) => {
       },
       {
         model: PatientRecord,
-        as: 'record',
+        as: 'records',
         attributes: ['id', 'description', 'billingDetails'], // Patient record details
         include: [
           {
@@ -286,9 +286,10 @@ const getAppointments = async (queryOptions, clinicId) => {
   console.log('Raw Appointments -->', appointments);
 
   // **Flatten Response** to remove nesting
-  const flattenedAppointments = appointments.map((appointment) => {
-    const { patient, specialty, record } = appointment;
+  const flattenedAppointments = appointments.map((appointment, index) => {
+    const { patient, specialty, records } = appointment;
 
+    console.log('Patient -->', patient.queues);
     return {
       id: appointment.id,
       appointmentDate: appointment.appointmentDate,
@@ -301,13 +302,14 @@ const getAppointments = async (queryOptions, clinicId) => {
       patientSex: patient?.sex,
       patientMobile: patient?.mobile,
       patientRegNo: patient?.regNo,
-      tokenNumber: patient?.queues?.[0]?.tokenNumber || null, // Extract token number
-      queueType: patient?.queues?.[0]?.queueType || null, // Extract queue type
-      queueDate: patient?.queues?.[0]?.queueDate || null, // Extract queue date
-      recordId: record?.id || null,
-      description: record?.description || null,
-      billingDetails: record?.billingDetails || null,
-      dentalData: record?.dentalData || null,
+      tokenNumber: patient?.queues?.find((queue) => queue.specialtyId === appointment.specialtyId).tokenNumber || null, // Extract token number
+      queueType: patient?.queues?.find((queue) => queue.specialtyId === appointment.specialtyId).queueType || null, // Extract queue type
+      queueDate: patient?.queues?.find((queue) => queue.specialtyId === appointment.specialtyId).queueDate || null, // Extract queue date
+      // recordId: record?.id || null,
+      // description: record?.description || null,
+      // billingDetails: record?.billingDetails || null,
+      // dentalData: record?.dentalData || null,
+      medicalRecords: records,
     };
   });
 

@@ -108,7 +108,7 @@ const verifyEmail = async (verifyEmailToken) => {
 };
 
 const register = async (userBody) => {
-  const { name, email, password, role, phoeneNumber } = userBody;
+  const { name, email, password, role, phoneNumber } = userBody;
   if (await User.isEmailTaken(userBody.email)) {
     throw new ApiError(httpStatus.BAD_REQUEST, 'Email already taken');
   }
@@ -116,7 +116,7 @@ const register = async (userBody) => {
     name,
     email,
     password,
-    phoeneNumber
+    phoneNumber
   });
   const superadminRole = await Role.create({ roleName: role, userId: superadmin.id });
 
