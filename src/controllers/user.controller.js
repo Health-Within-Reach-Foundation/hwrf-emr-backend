@@ -5,6 +5,7 @@ const catchAsync = require('../utils/catchAsync');
 const { userService, tokenService, emailService } = require('../services');
 const { tokenTypes } = require('../config/tokens');
 const { createRole } = require('../services/role.service');
+const { Specialty } = require('../models/specialty.model');
 
 const createUser = catchAsync(async (req, res) => {
   const user = await userService.createUser(req.body);
@@ -13,7 +14,7 @@ const createUser = catchAsync(async (req, res) => {
 
 const createClinicUser = catchAsync(async (req, res) => {
   // Destructure 'role' and exclude it from userPayload, but keep it in req.body
-  const { role, ...userPayload } = {
+  const { roles, specialities, ...userPayload } = {
     ...req.body, // Spread existing req.body
     clinicId: req.user.clinicId, // Attach clinicId
     password: 'TzR6!wS@7bH9',
@@ -21,8 +22,16 @@ const createClinicUser = catchAsync(async (req, res) => {
 
   // Create the user
   const user = await userService.createUser(userPayload);
+  // user.addSpecialties({specialtyId: re});
+  if (specialities && specialities.length > 0) {
+    // 'addSpecialties' automatically inserts entries in 'user_specialties'
+    await user.addSpecialties(specialities); // Pass array of specialty IDs
+  }
 
-  await createRole({ roleName: role, userId: user.id, clinicId: req.user.clinicId }, user);
+  user.addRoles(roles); 
+
+  // await createRole({ roleName: role, userId: user.id, clinicId: req.user.clinicId }, user);
+
   // Generate the set-password token
   const setPasswordToken = await tokenService.generatePasswordToken(user.email, tokenTypes.SET_PASSWORD);
 

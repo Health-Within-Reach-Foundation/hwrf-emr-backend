@@ -19,6 +19,11 @@ class Appointment extends Model {
      // An appointment belongs to one specialty
     Appointment.belongsTo(models.Specialty, { foreignKey: 'specialtyId', as: 'specialty' });
 
+    Appointment.belongsTo(models.Camp, {
+      foreignKey: 'campId',
+      as: 'camp',
+    });
+
   }
 }
 
@@ -68,6 +73,16 @@ const initModel = (sequelize) => {
           key: 'id',
         },
         onDelete: 'CASCADE',
+        onUpdate: 'CASCADE',
+      },
+      campId: {
+        type: DataTypes.UUID,
+        allowNull: true, // Allow null as some appointments may not belong to a camp
+        references: {
+          model: 'camps', // Reference Camp table
+          key: 'id',
+        },
+        onDelete: 'SET NULL', // Remove camp association if camp is deleted
         onUpdate: 'CASCADE',
       },
     },

@@ -34,14 +34,14 @@ const initModel = (sequelize) => {
         type: DataTypes.STRING,
         allowNull: true,
       },
-      userId: {
-        type: DataTypes.UUID,
-        allowNull: false,
-        references: {
-          model: 'users',
-          key: 'id',
-        },
-      },
+      // userId: {
+      //   type: DataTypes.UUID,
+      //   allowNull: false,
+      //   references: {
+      //     model: 'users',
+      //     key: 'id',
+      //   },
+      // },
       clinicId: {
         type: DataTypes.UUID,
         allowNull: true,

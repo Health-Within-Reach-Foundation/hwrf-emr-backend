@@ -68,9 +68,37 @@ const getSpecialtyDepartmentsByClinic = catchAsync(async (req, res) => {
   res.status(httpStatus.OK).json({
     success: true,
     data: departments,
-    message: 'Specialty departments retrieved successfully.',
+    message: 'Specialties retrieved successfully.',
   });
 });
+
+const createRole = catchAsync(async (req, res) => {
+  const roleBody = {
+    ...req.body,
+    clinicId: req.user.clinicId,
+  };
+  const role = await clinicService.createRoleUnderClinc(roleBody);
+
+  res.status(httpStatus.CREATED).json({
+    success: true,
+    data: role,
+    message: 'Role created successfully.',
+  });
+});
+
+const getRolesByClinic = catchAsync(async (req, res) => {
+  const clinicId = req.user.clinicId;
+
+  const roles = await clinicService.getRolesByClinic(clinicId);
+
+  res.status(httpStatus.OK).json({
+    success: true,
+    data: roles,
+    message: 'Roles retrieved successfully.',
+  });
+});
+
+
 
 module.exports = {
   getClinics,
@@ -78,4 +106,6 @@ module.exports = {
   approveClinic,
   getUsersByClinic,
   getSpecialtyDepartmentsByClinic,
+  createRole,
+  getRolesByClinic
 };

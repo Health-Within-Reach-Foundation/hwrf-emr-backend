@@ -64,6 +64,16 @@ const initModel = (sequelize) => {
         onDelete: 'CASCADE', // Delete queue if clinic is deleted
         onUpdate: 'CASCADE',
       },
+      campId: {
+        type: DataTypes.UUID,
+        allowNull: true, // Optional as queues may not always belong to a camp
+        references: {
+          model: 'camps', // Reference Camp table
+          key: 'id',
+        },
+        onDelete: 'SET NULL',
+        onUpdate: 'CASCADE',
+      },      
     },
     {
       sequelize,

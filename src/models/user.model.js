@@ -50,6 +50,13 @@ class User extends Model {
       foreignKey: 'userId',
       as: 'specialties',
     });
+
+    User.belongsToMany(models.Camp, {
+      through: 'user_camps', // Junction table
+      foreignKey: 'userId',
+      otherKey: 'campId',
+      as: 'camps',
+    });
   }
 }
 

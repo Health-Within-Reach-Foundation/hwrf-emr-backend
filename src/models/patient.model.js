@@ -17,6 +17,13 @@ class Patient extends Model {
 
     // A Patient can have many Queues
     Patient.hasMany(models.Queue, { foreignKey: 'patientId', as: 'queues' });
+
+    Patient.belongsToMany(models.Camp, {
+      through: 'camp_patients', // Junction table
+      foreignKey: 'patientId',
+      otherKey: 'campId',
+      as: 'camps',
+    });
   }
 }
 

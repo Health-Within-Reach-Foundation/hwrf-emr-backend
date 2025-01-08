@@ -65,9 +65,17 @@ const approveClinic = {
   }),
 };
 
+const createRole = {
+  body: Joi.object().keys({
+    roleName: Joi.string().required(),
+    roleDescription: Joi.string().optional(),
+  }),
+};
+
 module.exports = {
   onboardClinic,
   queryOptionsValidation,
   getClinic,
   approveClinic,
+  createRole
 };

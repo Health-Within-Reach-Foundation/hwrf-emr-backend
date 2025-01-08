@@ -17,6 +17,13 @@ class Specialty extends Model {
       foreignKey: 'specialtyId',
       as: 'users',
     });
+
+    Specialty.belongsToMany(models.Camp, {
+      through: 'camp_specialties',
+      foreignKey: 'specialtyId',
+      otherKey: 'campId',
+      as: 'camps',
+    });
   }
 }
 

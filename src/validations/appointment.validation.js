@@ -19,7 +19,7 @@ const getAppointments = {
 const createAppointment = {
   body: Joi.object().keys({
     patientId: Joi.string().uuid().required(), // Patient ID (UUID)
-    specialtyId: Joi.string().uuid().required(), // Specialty ID (UUID)
+    specialties: Joi.array().items(Joi.string().uuid()).optional(),
     appointmentDate: Joi.date().required(), // Appointment Date
     status: Joi.string().valid('registered', 'in', 'out').default('registered'), // Status with default
   }),

@@ -16,6 +16,11 @@ class Clinic extends Model {
       foreignKey: 'clinicId',
       as: 'specialties',
     });
+
+    Clinic.hasMany(models.Camp, {
+      foreignKey: 'clinicId',
+      as: 'camps',
+    });
   }
 }
 

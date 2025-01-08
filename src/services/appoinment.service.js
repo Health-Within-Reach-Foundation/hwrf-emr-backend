@@ -13,53 +13,59 @@ const { Op, Sequelize } = require('sequelize');
  * @param {Object} appointmentBody
  * @returns {Promise<Appointment>}
  */
+/**
+ * Book multiple appointments for the patient
+ * @param {Object} appointmentBody
+ * @returns {Promise<Array<Appointment>>}
+ */
 const bookAppointment = async (appointmentBody) => {
-  const { patientId, specialtyId, appointmentDate, status, clinicId } = appointmentBody;
+  const { patientId, specialties, appointmentDate, status, clinicId } = appointmentBody;
 
-  // Check if patient already has an appointment for the same specialty on the same date
-  const existingAppointment = await Appointment.findOne({
-    where: { patientId, specialtyId, appointmentDate },
-  });
+  // Ensure specialtyId is treated as an array
+  // const specialties = Array.isArray(specialtyId) ? specialtyId : [specialtyId]; // Handle single ID or array
 
-  if (existingAppointment) {
-    throw new ApiError(httpStatus.BAD_REQUEST, 'Appointment already exists for this date and specialty.');
+  // Initialize an array to store created appointments
+  const createdAppointments = [];
+
+  for (const specialty of specialties) {
+    // Check if an appointment already exists for this specialty and date
+    const existingAppointment = await Appointment.findOne({
+      where: { patientId, specialtyId: specialty, appointmentDate },
+    });
+
+    if (existingAppointment) {
+      throw new ApiError(
+        httpStatus.BAD_REQUEST,
+        `Appointment already exists for this date and specialty (${specialty}).`
+      );
+    }
+
+    // Create a new appointment for the current specialty
+    const appointment = await Appointment.create({
+      patientId,
+      specialtyId: specialty,
+      clinicId,
+      appointmentDate,
+      status,
+    });
+
+    // Push created appointment to the array
+    createdAppointments.push(appointment);
+
+    // Add patient to the queue if appointment is today
+    const localAppointmentDate = new Date(appointmentDate).toLocaleDateString('en-CA'); // 'YYYY-MM-DD'
+    const today = new Date().toLocaleDateString('en-CA'); // 'YYYY-MM-DD'
+
+    if (localAppointmentDate === today) {
+      console.log(`Adding to queue for specialty ***********(${specialty})`);
+      await addToQueue(patientId, specialty, appointmentDate, clinicId);
+    }
   }
 
-  // Create a new appointment
-  const appointment = await Appointment.create({
-    patientId,
-    specialtyId,
-    clinicId,
-    appointmentDate,
-    status,
-  });
-
-  // Add patient to the queue if appointment is today
-  const localAppointmentDate = new Date(appointmentDate).toLocaleDateString('en-CA'); // Converts to 'YYYY-MM-DD'
-
-  const today = new Date().toLocaleDateString('en-CA');
-
-  console.log('Type of Local appointmentDate and its value -->', typeof localAppointmentDate, localAppointmentDate);
-  console.log('Type of Today and its value -->', typeof today, today);
-
-  if (localAppointmentDate === today) {
-    console.log('Adding to queue for today');
-    await addToQueue(patientId, specialtyId, appointmentDate, clinicId);
-  }
-
-  // const today = new Date().toISOString().split('T')[0];
-  // console.log('Type of appointmentDate -->', typeof appointmentDate, appointmentDate); // string
-  // console.log('Type of today -->', typeof today); // string
-  // console.log('Type of appointmentDate  -->', typeof appointmentDate.toISOString());
-  // console.log('today -->', today);
-  // console.log('appointmentDate -->', appointmentDate.toISOString().split('T')[0]);
-  // if (appointmentDate.toISOString().split('T')[0] === today) {
-  //   console.log('adding into quque -->', today);
-  //   await addToQueue(patientId, specialtyId, appointmentDate, clinicId);
-  // }
-
-  return appointment;
+  return createdAppointments; // Return all created appointments
 };
+
+
 
 /**
  * Add patient to the queue

@@ -22,7 +22,7 @@ const router = express.Router();
 //     patientController.getPatientsByClinic // Controller
 //   );
 router
-  .route('/specialty-department')
+  .route('/specialities')
   .get(auth(), roleAuthorization('admin', 'receptionist', 'doctor'), clinicController.getSpecialtyDepartmentsByClinic);
 
 // router.route('/add-patient').post(auth(), roleAuthorization('admin'), validate());
@@ -32,7 +32,14 @@ router
   .post(auth(), roleAuthorization('admin'), validate(userValidation.createUser), userController.createClinicUser)
   .get(auth(), roleAuthorization('admin'), clinicController.getUsersByClinic);
 
+
 router
+  .route('/roles')
+  .post(auth(),roleAuthorization('admin'), validate(clinicValidation.createRole), clinicController.createRole)
+  .get(auth(), roleAuthorization('admin'), clinicController.getRolesByClinic);
+
+
+  router
   .route('/:clinicId')
   .get(auth(), roleAuthorization('superadmin', 'admin'), validate(clinicValidation.getClinic), clinicController.getClinic);
 module.exports = router;

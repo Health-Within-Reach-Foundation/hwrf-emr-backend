@@ -6,6 +6,7 @@ const superadminRoute = require('./superadmin.route');
 const clinicRoute = require('./clinic.route');
 const appointmentRoute = require('./appointment.route');
 const patientRoute = require('./patient.route');
+const campRoute = require('./camp.route');
 const config = require('../../config/config');
 const { path } = require('../../app');
 
@@ -44,6 +45,8 @@ const clinicRoutes = [
   },
 ];
 
+
+
 const patientRoutes = [
   {
     path: '/patients',
@@ -58,6 +61,13 @@ const appointmentRoutes = [
   },
 ];
 
+const campRoutes = [
+  {
+    path: '/clinics/camps',
+    route: campRoute,
+  },
+];
+
 defaultRoutes.forEach((route) => {
   router.use(route.path, route.route);
 });
@@ -66,10 +76,14 @@ superadminRoutes.forEach((route) => {
   router.use(route.path, route.route);
 });
 
-/** 
- * It is sub routes of @clinicRoutes 
+/**
+ * It is sub routes of @clinicRoutes
  */
 appointmentRoutes.forEach((route) => {
+  router.use(route.path, route.route);
+});
+
+campRoutes.forEach((route) => {
   router.use(route.path, route.route);
 });
 

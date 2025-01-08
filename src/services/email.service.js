@@ -65,7 +65,7 @@ const sendClinicOnboardingNotification = async (clinicDetails) => {
   const subject = 'New Clinic Onboarding Request';
 
   // Create the link to the superadmin's approval page (this can be the admin dashboard or a special page)
-  const onboardingApprovalUrl = `${config.client_domain}/clinics/${clinicDetails.id}`;
+  const onboardingApprovalUrl = `${config.client_domain}/clinics/${clinicDetails.clinicId}`;
 
   const text = `
     Dear Superadmin,
