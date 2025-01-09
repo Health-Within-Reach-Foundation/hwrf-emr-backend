@@ -14,10 +14,29 @@ const createCamp = catchAsync(async (req, res) => {
     clinicId: req.user.clinicId,
   };
   const camp = await campService.createCamp(campData);
-  res.status(httpStatus.CREATED).json(camp);
+
+  res.status(201).json({
+    message: 'Camp created successfully',
+    data: camp,
+    success: true,
+  });
+});
+
+const setCurrentCamp = catchAsync(async (req, res) => {
+  const campId = req.body.campId;
+  const userId = req.user.id;
+
+  const response = await campService.setCurrentCamp(campId, userId);
+
+  res.status(200).json({
+    message: 'Currently selected camp',
+    data: response,
+    success: true,
+  });
 });
 
 module.exports = {
   getCamps,
   createCamp,
+  setCurrentCamp,
 };

@@ -56,7 +56,13 @@ const getCamps = async () => {
   return camps;
 };
 
+const setCurrentCamp = async (campId, userId) => {
+  const user = await User.update({ currentCampId: campId }, { where: { id: userId } });
+  return user;
+};
+
 module.exports = {
   createCamp,
   getCamps,
+  setCurrentCamp
 };
