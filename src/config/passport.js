@@ -5,6 +5,7 @@ const { User } = require('../models/user.model');
 const { Role } = require('../models/role.model');
 const { Clinic } = require('../models/clinic.model');
 const { Specialty } = require('../models/specialty.model');
+const { Camp } = require('../models/camp.model');
 
 const jwtOptions = {
   secretOrKey: config.jwt.secret,
@@ -39,7 +40,13 @@ const jwtVerify = async (payload, done) => {
           model: Specialty,
           as: 'specialties', // Assuming User has a many-to-many relationship with Specialty
           through: { attributes: [] }, // Exclude intermediate fields
-          attributes: ['id', 'name','departmentName'], // Minimal required fields
+          attributes: ['id', 'name', 'departmentName'], // Minimal required fields
+        },
+        {
+          model: Camp,
+          as: 'camps',
+          through: { attributes: [] },
+          attributes: { exclude: ['clinicId', 'updatedAt'] },
         },
       ],
     });
@@ -48,6 +55,7 @@ const jwtVerify = async (payload, done) => {
     }
     done(null, user);
   } catch (error) {
+    console.log('error in passport verifcation ****** -->', error);
     done(error, false);
   }
 };
