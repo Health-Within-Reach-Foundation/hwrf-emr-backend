@@ -11,4 +11,7 @@ router
   .get('/', auth(), campController.getCamps)
   .post('/', auth(), validate(campValidation.createCamp), campController.createCamp);
 
+router.post('/set-camp', auth(), campController.setCurrentCamp);
+
+
 module.exports = router;

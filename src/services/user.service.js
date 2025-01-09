@@ -4,6 +4,7 @@ const { User } = require('../models/user.model');
 const { Role } = require('../models/role.model');
 const { Clinic } = require('../models/clinic.model');
 const { Specialty } = require('../models/specialty.model');
+const { Camp } = require('../models/camp.model');
 
 /**
  * Create a user
@@ -37,6 +38,7 @@ const queryUsers = async (filter, options) => {
  * @returns {Promise<User>}
  */
 const getUserById = async (id) => {
+  console.log("hello getting user from auth/me");
   return User.findByPk(id, {
     include: [
       {
@@ -55,6 +57,12 @@ const getUserById = async (id) => {
         as: 'specialties', // Assuming User has a many-to-many relationship with Specialty
         through: { attributes: [] }, // Exclude intermediate fields
         attributes: ['id', 'name', 'departmentName'], // Minimal required fields
+      },
+      {
+        model: Camp,
+        as: 'camps',
+        through: { attributes: [] },
+        attributes: { exclude: ['clinicId', 'updatedAt'] },
       },
     ],
   });
@@ -86,6 +94,12 @@ const getUserByEmail = async (email) => {
         as: 'specialties', // Assuming User has a many-to-many relationship with Specialty
         through: { attributes: [] }, // Exclude intermediate fields
         attributes: ['id', 'name', 'departmentName'], // Minimal required fields
+      },
+      {
+        model: Camp,
+        as: 'camps',
+        through: { attributes: [] },
+        attributes: { exclude: ['clinicId', 'updatedAt'] },
       },
     ],
   });

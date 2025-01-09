@@ -129,6 +129,10 @@ const initModel = (sequelize) => {
         type: DataTypes.STRING,
         allowNull: true,
       },
+      currentCampId: {
+        type: DataTypes.UUID,
+        allowNull: true,
+      },
     },
     {
       sequelize,
