@@ -9,20 +9,12 @@ const { DentistPatientRecord } = require('../models/dentist-patient-record');
 const { Op, Sequelize } = require('sequelize');
 
 /**
- * Book an appointment for the patient
- * @param {Object} appointmentBody
- * @returns {Promise<Appointment>}
- */
-/**
- * Book multiple appointments for the patient
+ * Book multiple appointments for the patient, segregated by camp.
  * @param {Object} appointmentBody
  * @returns {Promise<Array<Appointment>>}
  */
 const bookAppointment = async (appointmentBody) => {
-  const { patientId, specialties, appointmentDate, status, clinicId } = appointmentBody;
-
-  // Ensure specialtyId is treated as an array
-  // const specialties = Array.isArray(specialtyId) ? specialtyId : [specialtyId]; // Handle single ID or array
+  const { patientId, specialties, appointmentDate, status, clinicId, campId } = appointmentBody;
 
   // Initialize an array to store created appointments
   const createdAppointments = [];
@@ -30,23 +22,24 @@ const bookAppointment = async (appointmentBody) => {
   for (const specialty of specialties) {
     // Check if an appointment already exists for this specialty and date
     const existingAppointment = await Appointment.findOne({
-      where: { patientId, specialtyId: specialty, appointmentDate },
+      where: { patientId, specialtyId: specialty, appointmentDate, campId },
     });
 
     if (existingAppointment) {
       throw new ApiError(
         httpStatus.BAD_REQUEST,
-        `Appointment already exists for this date and specialty (${specialty}).`
+        `Appointment already exists for this date, specialty (${specialty}), and camp (${campId || 'No Camp'}).`
       );
     }
 
-    // Create a new appointment for the current specialty
+    // Create a new appointment for the current specialty and camp
     const appointment = await Appointment.create({
       patientId,
       specialtyId: specialty,
       clinicId,
       appointmentDate,
       status,
+      campId: campId || null, // Handle null campId explicitly
     });
 
     // Push created appointment to the array
@@ -57,15 +50,13 @@ const bookAppointment = async (appointmentBody) => {
     const today = new Date().toLocaleDateString('en-CA'); // 'YYYY-MM-DD'
 
     if (localAppointmentDate === today) {
-      console.log(`Adding to queue for specialty ***********(${specialty})`);
-      await addToQueue(patientId, specialty, appointmentDate, clinicId);
+      console.log(`Adding to queue for specialty (${specialty}) and camp (${campId || 'No Camp'})`);
+      await addToQueue(patientId, specialty, appointmentDate, clinicId, campId);
     }
   }
 
   return createdAppointments; // Return all created appointments
 };
-
-
 
 /**
  * Add patient to the queue
@@ -73,10 +64,10 @@ const bookAppointment = async (appointmentBody) => {
  * @param {String} specialtyId
  * @param {Date} queueDate
  */
-const addToQueue = async (patientId, specialtyId, queueDate, clinicId) => {
+const addToQueue = async (patientId, specialtyId, queueDate, clinicId, campId) => {
   // Increment token number for the day and specialty
   const lastToken = await Queue.findOne({
-    where: { queueDate, specialtyId },
+    where: { queueDate, specialtyId, campId },
     order: [['tokenNumber', 'DESC']],
   });
 
@@ -90,6 +81,7 @@ const addToQueue = async (patientId, specialtyId, queueDate, clinicId) => {
     queueDate,
     tokenNumber,
     clinicId,
+    campId,
     queueType: queueType.departmentName,
   });
 };
@@ -212,7 +204,7 @@ const updateAppointmentStatus = async (appointmentId, updateBody) => {
 //   };
 // };
 
-const getAppointments = async (queryOptions, clinicId) => {
+const getAppointments = async (queryOptions, clinicId, campId) => {
   console.log('ClinicId -->', clinicId);
 
   const {
@@ -228,7 +220,7 @@ const getAppointments = async (queryOptions, clinicId) => {
   console.log('appointmentDate -->', appointmentDate);
 
   // Build dynamic filters
-  const where = { clinicId }; // Filter by clinic ID
+  const where = { clinicId, campId }; // Filter by clinic ID
 
   if (appointmentDate) {
     where.appointmentDate = appointmentDate; // Match DATE directly
@@ -334,8 +326,21 @@ const getAppointments = async (queryOptions, clinicId) => {
   };
 };
 
+const markAppointment = async (appointmentId, updatedBody) => {
+  const appointment = await Appointment.findByPk(appointmentId);
+
+  if (!appointment) {
+    throw new ApiError(httpStatus.NOT_FOUND, 'Appointment not found');
+  }
+
+  Object.assign(appointment, updatedBody);
+  await appointment.save();
+  return appointment;
+};
+
 module.exports = {
   bookAppointment,
   updateAppointmentStatus,
   getAppointments,
+  markAppointment,
 };

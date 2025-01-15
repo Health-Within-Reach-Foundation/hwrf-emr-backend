@@ -22,6 +22,16 @@ const createCamp = catchAsync(async (req, res) => {
   });
 });
 
+const getCampById = catchAsync(async (req, res) => {
+  const { campId } = req.params;
+  const campDetails = await campService.getCampById(campId);
+  res.status(200).json({
+    success: true,
+    message: 'Camp details fetched successfully',
+    data: campDetails,
+  });
+});
+
 const setCurrentCamp = catchAsync(async (req, res) => {
   const campId = req.body.campId;
   const userId = req.user.id;
@@ -39,4 +49,5 @@ module.exports = {
   getCamps,
   createCamp,
   setCurrentCamp,
+  getCampById,
 };

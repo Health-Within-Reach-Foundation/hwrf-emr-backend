@@ -16,7 +16,7 @@ router.route('/onboard-clinic').post(validate(clinicValidation.onboardClinic), a
 // login api for sign up (docter / assistant / receptionits)
 router.post('/login', validate(authValidation.login), isClinicActive, authController.login);
 
-router.post('/logout', validate(authValidation.logout), authController.logout);
+router.post('/logout', auth(), validate(authValidation.logout), authController.logout);
 
 router.post('/refresh-tokens', validate(authValidation.refreshTokens), authController.refreshTokens);
 
@@ -32,7 +32,7 @@ router.post('/verify-email', validate(authValidation.verifyEmail), authControlle
 
 // router.route('/set-password').post(validate(authValidation.resetPassword), authController.resetPassword);
 
-router.get('/verify-token',auth(), validate(authValidation.verifyEmail), authController.verifyToken);
+router.get('/verify-token', auth(), validate(authValidation.verifyEmail), authController.verifyToken);
 
 module.exports = router;
 

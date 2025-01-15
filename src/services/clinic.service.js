@@ -353,14 +353,6 @@ const createRoleUnderClinc = async (roleBody) => {
   return Role.create(roleBody);
 };
 
-const getRolesByClinic = async (clinicId) => {
-  const clinicRoles = await Role.findAll({
-    where: { clinicId },
-    attributes: { exclude: ['deletedAt', 'createdAt', 'updatedAt'] },
-  });
-
-  return clinicRoles;
-};
 
 
 module.exports = {
@@ -374,5 +366,5 @@ module.exports = {
   getClinic,
   getSpecialtyDepartmentsByClinic,
   createRoleUnderClinc,
-  getRolesByClinic,
+  // getRolesByClinic,
 };

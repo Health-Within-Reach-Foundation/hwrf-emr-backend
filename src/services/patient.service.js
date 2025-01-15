@@ -4,6 +4,11 @@ const { Appointment } = require('../models/appointment.model');
 const { PatientRecord } = require('../models/patient-record.model');
 const { DentistPatientRecord } = require('../models/dentist-patient-record');
 const { Queue } = require('../models/queue.model');
+const { Camp } = require('../models/camp.model');
+const ApiError = require('../utils/ApiError');
+const httpStatus = require('http-status');
+const { Diagnosis } = require('../models/diagnosis.model');
+const { Treatment } = require('../models/treatment.model');
 
 /**
  *
@@ -54,25 +59,30 @@ const getPatientById = async (patientId) => {
 };
 
 /**
- * Get all patients by clinic ID.
+ * Get patients by clinic ID and optionally by camp ID.
  * @param {string} clinicId - The clinic ID.
- * @param {object} queryOptions - Pagination and sorting options.
+ * @param {string|null} currentCampId - The camp ID (if filtering by camp).
  * @returns {Promise<object>}
  */
 const getPatientsByClinic = async (clinicId) => {
-  // const { page = 1, limit = 10 } = queryOptions;
+  const whereClause = { clinicId };
 
-  // const offset = (page - 1) * limit;
+  // Include conditionally based on currentCampId
+  const includeCamps = {
+    model: Camp,
+    as: 'camps',
+    attributes: [], // Exclude Camp fields if not needed
+    through: { attributes: [] }, // Exclude junction table fields
+  };
 
   const { rows: patients, count: total } = await Patient.findAndCountAll({
-    where: { clinicId },
-    // limit: parseInt(limit, 10),
-    // offset: parseInt(offset, 10),
+    where: whereClause,
+    include: [includeCamps],
     order: [['createdAt', 'DESC']],
   });
 
   if (!patients.length) {
-    throw new ApiError(httpStatus.NOT_FOUND, 'No patients found for this clinic.');
+    throw new ApiError(httpStatus.NOT_FOUND, 'No patients found for this clinic or camp.');
   }
 
   return {
@@ -80,9 +90,6 @@ const getPatientsByClinic = async (clinicId) => {
     data: patients,
     meta: {
       total,
-      // page,
-      // limit,
-      // totalPages: Math.ceil(tota l / limit),
     },
   };
 };
@@ -153,38 +160,58 @@ const getLastPatientRegistered = async (clinicId, clinicInitials) => {
  * @returns {Promise<Patient>}
  */
 const getPatientDetailsById = async (patientId, specialtyId) => {
+  console.log(typeof specialtyId, specialtyId);
+
+  // Build the where clause dynamically for specialty filtering
+  const where = {};
+  if (specialtyId && specialtyId !== 'undefined') {
+    where.specialtyId = specialtyId;
+  }
+
+  console.log('where -->', where);
+
   const patient = await Patient.findByPk(patientId, {
     include: [
-      // Include related Clinic data
-      // Include Appointments associated with the patient
+      // Include Appointments with optional specialty filtering
       {
         model: Appointment,
-        where: {
-          specialtyId,
-        },
+        where, // Filter by specialty if provided
         as: 'appointments',
         attributes: { exclude: ['createdAt', 'updatedAt'] },
+        required: false, // Use LEFT JOIN to ensure patient is returned even if no appointments exist
       },
       // Include Patient Records
       {
-        model: PatientRecord,
-        as: 'records',
+        model: Diagnosis,
+        as: 'diagnoses',
         include: [
           {
-            model: DentistPatientRecord, // Include Dentist-specific data
-            as: 'dentalData',
+            model: Treatment, // Include Dentist-specific data
+            as: 'treatments',
             attributes: { exclude: ['createdAt', 'updatedAt'] },
           },
         ],
+        required: false, // Ensure patient is returned even if no records exist
       },
+      // {
+      //   model: PatientRecord,
+      //   as: 'records',
+      //   include: [
+      //     {
+      //       model: DentistPatientRecord, // Include Dentist-specific data
+      //       as: 'dentalData',
+      //       attributes: { exclude: ['createdAt', 'updatedAt'] },
+      //     },
+      //   ],
+      //   required: false, // Ensure patient is returned even if no records exist
+      // },
       // Include Queue records for the patient
       {
         model: Queue,
-        where: {
-          specialtyId,
-        },
+        where, // Filter by specialty if provided
         as: 'queues',
         attributes: { exclude: ['createdAt', 'updatedAt'] },
+        required: false, // Use LEFT JOIN to ensure patient is returned even if no queues exist
       },
     ],
   });
@@ -197,6 +224,132 @@ const getPatientDetailsById = async (patientId, specialtyId) => {
   return patient;
 };
 
+const createDiagnosis = async (diagnosisBody) => {
+  const { selectedTeeth, complaints, treatment, dentalQuadrantType, xrayStatus, notes, patientId } = diagnosisBody;
+
+  // Ensure the patient exists
+  const patient = await Patient.findByPk(patientId);
+  if (!patient) {
+    throw new ApiError(httpStatus.NOT_FOUND, 'Patient not found');
+  }
+
+  // Ensure the appointment exists if appointmentId is provided
+  // if (appointmentId) {
+  //   const appointment = await Appointment.findByPk(appointmentId);
+  //   if (!appointment) {
+  //     throw new ApiError(httpStatus.NOT_FOUND, 'Appointment not found');
+  //   }
+  // }
+
+  // Create the diagnosis
+  let diagnosis;
+  if (selectedTeeth.length > 0) {
+    selectedTeeth.forEach(async (element) => {
+      diagnosis = await Diagnosis.create({
+        complaints,
+        treatment,
+        selectedTeeth: element,
+        dentalQuadrantType,
+        xrayStatus,
+        notes,
+        patientId,
+      });
+    });
+  } else {
+    diagnosis = await Diagnosis.create({
+      complaints,
+      treatment,
+      dentalQuadrantType,
+      xrayStatus,
+      notes,
+      patientId,
+    });
+  }
+
+  return diagnosis;
+};
+
+const getDiagnoses = async (queryOptions) => {
+  const { patientId, page = 1, limit = 10 } = queryOptions;
+  const offset = (page - 1) * limit;
+
+  const where = {};
+  if (patientId) {
+    where.patientId = patientId;
+  }
+
+  const { rows: diagnoses, count: total } = await Diagnosis.findAndCountAll({
+    where,
+    limit: parseInt(limit, 10),
+    offset: parseInt(offset, 10),
+    order: [['createdAt', 'DESC']],
+  });
+
+  return {
+    data: diagnoses,
+    meta: {
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    },
+  };
+};
+
+const getDiagnosisById = async (diagnosisId) => {
+  const diagnosis = await Diagnosis.findByPk(diagnosisId);
+  if (!diagnosis) {
+    throw new ApiError(httpStatus.NOT_FOUND, 'Diagnosis not found');
+  }
+  return diagnosis;
+};
+
+const updateDiagnosis = async (diagnosisId, updateBody) => {
+  const diagnosis = await getDiagnosisById(diagnosisId);
+  Object.assign(diagnosis, updateBody);
+  await diagnosis.save();
+  return diagnosis;
+};
+
+const deleteDiagnosis = async (diagnosisId) => {
+  const diagnosis = await getDiagnosisById(diagnosisId);
+  await diagnosis.destroy({ force: true });
+};
+
+const createTreatment = async (treatmentBody) => {
+  return Treatment.create(treatmentBody);
+};
+
+const getTreatments = async ({ diagnosisId, page = 1, limit = 10 }) => {
+  const offset = (page - 1) * limit;
+  const { rows, count } = await Treatment.findAndCountAll({
+    where: { diagnosisId },
+    limit,
+    offset,
+    order: [['treatmentDate', 'DESC']],
+  });
+
+  return { treatments: rows, total: count, page, totalPages: Math.ceil(count / limit) };
+};
+
+const getTreatmentById = async (treatmentId) => {
+  const treatment = await Treatment.findByPk(treatmentId);
+  if (!treatment) throw new Error('Treatment not found');
+  return treatment;
+};
+
+const updateTreatment = async (treatmentId, updateBody) => {
+  const treatment = await getTreatmentById(treatmentId);
+  Object.assign(treatment, updateBody);
+  await treatment.save();
+  return treatment;
+};
+
+const deleteTreatment = async (treatmentId) => {
+  const treatment = await getTreatmentById(treatmentId);
+  await treatment.destroy();
+};
+
 module.exports = {
   createPatient,
   searchPatients,
@@ -206,4 +359,14 @@ module.exports = {
   deletePatientById,
   getLastPatientRegistered,
   getPatientDetailsById,
+  createDiagnosis,
+  getDiagnoses,
+  getDiagnosisById,
+  updateDiagnosis,
+  deleteDiagnosis,
+  createTreatment,
+  getTreatments,
+  getTreatmentById,
+  updateTreatment,
+  deleteTreatment,
 };

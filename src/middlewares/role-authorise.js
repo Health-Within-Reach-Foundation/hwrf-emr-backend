@@ -2,21 +2,22 @@ const httpStatus = require('http-status');
 const ApiError = require('../utils/ApiError');
 
 /**
- * Middleware to check user's role for accessing specific APIs
- * @param {string[]} allowedRoles - Array of roles allowed to access the route
- * @returns {Function} Middleware function for role-based access control
+ * Middleware to check user's permissions for accessing specific APIs
+ * @param {...string} requiredPermissions - Array of required permissions for the route
+ * @returns {Function} Middleware function for permission-based access control
  */
-const roleAuthorization = (...allowedRoles) => (req, res, next) => {
+const roleAuthorization = (...requiredPermissions) => (req, res, next) => {
   try {
-    // Ensure user is authenticated (already handled by passport-jwt)
+    // Ensure user is authenticated
     if (!req.user) {
       throw new ApiError(httpStatus.UNAUTHORIZED, 'Please authenticate');
     }
-    console.log('allowedRoles -->', allowedRoles);
-    // Extract user's roles from the authenticated user object
-    const userRoles = req.user.roles.map((role) => role.roleName); // Assuming roles are populated in req.user
-    const hasAccess = allowedRoles.some((role) => userRoles.includes(role));
-    console.log('userRoles -->', userRoles);
+
+    console.log('Required permissions:', requiredPermissions);
+    console.log('User permissions:', req.user.permissions);
+
+    // Check if the user has all required permissions
+    const hasAccess = requiredPermissions.every((perm) => req.user.permissions.includes(perm));
     if (!hasAccess) {
       throw new ApiError(httpStatus.FORBIDDEN, 'You do not have permission to access this resource');
     }

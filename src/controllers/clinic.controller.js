@@ -86,17 +86,7 @@ const createRole = catchAsync(async (req, res) => {
   });
 });
 
-const getRolesByClinic = catchAsync(async (req, res) => {
-  const clinicId = req.user.clinicId;
 
-  const roles = await clinicService.getRolesByClinic(clinicId);
-
-  res.status(httpStatus.OK).json({
-    success: true,
-    data: roles,
-    message: 'Roles retrieved successfully.',
-  });
-});
 
 
 
@@ -107,5 +97,5 @@ module.exports = {
   getUsersByClinic,
   getSpecialtyDepartmentsByClinic,
   createRole,
-  getRolesByClinic
+  // getRolesByClinic
 };

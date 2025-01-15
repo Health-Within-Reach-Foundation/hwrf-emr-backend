@@ -8,6 +8,7 @@ const bookAppointment = catchAsync(async (req, res) => {
   const appoinmentData = {
     ...req.body,
     clinicId: req.user.clinicId,
+    campId: req.user?.currentCampId,
   };
   const appointment = await appointmentService.bookAppointment(appoinmentData);
 
@@ -36,8 +37,10 @@ const updateAppointmentStatus = catchAsync(async (req, res) => {
  */
 const getAppointments = catchAsync(async (req, res) => {
   const queryOptions = req.query; // Query parameters from request
-  const appointments = await appointmentService.getAppointments(queryOptions, req.user.clinicId);
-    
+  const campId = req.user.currentCampId;
+  const clinicId = req.user.clinicId;
+  const appointments = await appointmentService.getAppointments(queryOptions, clinicId, campId);
+
   res.status(httpStatus.OK).json({
     success: true,
     message: 'Appointments fetched successfully',
@@ -46,8 +49,21 @@ const getAppointments = catchAsync(async (req, res) => {
   });
 });
 
+const markAppointment = catchAsync(async (req, res) => {
+  const appointmentId = req.params.appointmentId;
+
+  const markedAppointment = await appointmentService.markAppointment(appointmentId,req.body);
+
+  res.status(httpStatus.OK).json({
+    success: true,
+    message: `Marked the appointment as ${req.body.status}`,
+    data: markedAppointment,
+  });
+});
+
 module.exports = {
   bookAppointment,
   getAppointments,
   updateAppointmentStatus,
+  markAppointment,
 };

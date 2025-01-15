@@ -32,11 +32,13 @@ const loginUserWithEmailAndPassword = async (email, password) => {
  * @param {string} refreshToken
  * @returns {Promise}
  */
-const logout = async (refreshToken) => {
-  console.log('refresh token -->', refreshToken);
+const logout = async (refreshToken, userId) => {
+  console.log('refresh token -->', refreshToken, userId);
   const refreshTokenDoc = await Token.findOne({
     where: { token: refreshToken, type: tokenTypes.REFRESH, blacklisted: false },
   });
+  await User.update({currentCampId: null}, {where:{id: userId}})
+
   if (!refreshTokenDoc) {
     throw new ApiError(httpStatus.NOT_FOUND, 'Not found');
   }
