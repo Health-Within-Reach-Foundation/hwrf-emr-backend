@@ -4,3 +4,5 @@ module.exports.clinicValidation = require('./clinic.validation');
 module.exports.patientValidation = require('./patient.validation');
 module.exports.appointmentValidation = require('./appointment.validation');
 module.exports.campValidation = require('./camp.validation');
+module.exports.rolePermissionValidation = require('./role-permission.validation');
+module.exports.formTemplateValidation = require('./form-template.validation');

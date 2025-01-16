@@ -21,7 +21,7 @@ const createAppointment = {
     patientId: Joi.string().uuid().required(), // Patient ID (UUID)
     specialties: Joi.array().items(Joi.string().uuid()).optional(),
     appointmentDate: Joi.date().required(), // Appointment Date
-    status: Joi.string().valid('registered', 'in', 'out').default('registered'), // Status with default
+    status: Joi.string().valid('in queue', 'in', 'out').default('in queue'), // Status with default
   }),
 };
 
@@ -34,8 +34,18 @@ const updateAppointment = {
   }),
 };
 
+const markAppointment = {
+  params: Joi.object().keys({
+    appointmentId: Joi.string().uuid().required(), // Filter by specialty
+  }),
+  body: Joi.object().keys({
+    status: Joi.string().valid('in-queue', 'in', 'out').required(),
+  }),
+};
+
 module.exports = {
   createAppointment,
   updateAppointment,
   getAppointments,
+  markAppointment,
 };

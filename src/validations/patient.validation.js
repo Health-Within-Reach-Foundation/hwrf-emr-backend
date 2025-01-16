@@ -19,15 +19,24 @@ const createPatient = {
  * Validation for updating patient details
  */
 const updatePatient = {
+  params: Joi.object().keys({
+    patientId: Joi.string().uuid().required(), // patientId must be a valid UUID and is required
+  }),
   body: Joi.object().keys({
     name: Joi.string().optional().trim(),
     age: Joi.number().integer().min(0).optional(),
-    gender: Joi.string().valid('Male', 'Female', 'Other').optional(),
+    sex: Joi.string().valid('male', 'female', 'other').optional(),
     mobile: Joi.string()
       .pattern(/^[0-9]{10}$/)
       .optional(),
-    email: Joi.string().email().optional(),
     address: Joi.string().optional().allow(''),
+    primaryDoctor: Joi.object()
+      .keys({
+        label: Joi.string().optional(),
+        value: Joi.string().uuid().optional(),
+        phoneNumber: Joi.string().optional(),
+      })
+      .optional(),
   }),
 };
 
@@ -82,7 +91,172 @@ const getPatientById = {
     patientId: Joi.string().uuid().required(), // patientId must be a valid UUID and is required
   }),
   query: Joi.object().keys({
-    specialtyId: Joi.string().uuid().optional(), // specialtyId must be a valid UUID and is optional
+    specialtyId: Joi.alternatives()
+      .try(Joi.string().uuid(), Joi.allow(null)) // Allow either a UUID or null
+      .optional(),
+  }),
+};
+
+// const createDiagnosis = {
+//   body: Joi.object().keys({
+//     complaints: Joi.array().items(Joi.string()).optional(),
+//     treatment: Joi.array().items(Joi.string()).optional(),
+//     currentStatus: Joi.array().items(Joi.string()).optional(),
+//     // dentalQuadrant: Joi.object().pattern(Joi.string(), Joi.array().items(Joi.number())).optional(),
+//     dentalQuadrant: Joi.array().items(Joi.string()).optional(),
+//     xrayStatus: Joi.boolean().optional(),
+//     // xray: Joi.array().items(Joi.string().uri()).optional(),
+//     notes: Joi.string().optional(),
+//     additionalDetails: Joi.object().optional(),
+//     // appointmentId: Joi.string().uuid().optional(),
+//     patientId: Joi.string().uuid().required(),
+//   }),
+// };
+
+//
+
+const createDiagnosis = {
+  body: Joi.object().keys({
+    complaints: Joi.array().items(Joi.string()).optional(),
+    treatmentsSuggested: Joi.array().items(Joi.string()).optional(),
+    currentStatus: Joi.array().items(Joi.string()).optional(),
+    // dentalQuadrant: Joi.array().items(Joi.string()).optional(),
+    selectedTeeth: Joi.array().items(Joi.number()).optional(),
+    dentalQuadrantType: Joi.string().valid('adult', 'child').optional(),
+    xrayStatus: Joi.boolean().optional(),
+    notes: Joi.string().optional(),
+    additionalDetails: Joi.object().optional(),
+    patientId: Joi.string().uuid().required(),
+  }),
+  files: (files) => {
+    if (!files.length) return null; // No files, validation passes
+
+    for (const file of files) {
+      if (!['image/jpeg', 'image/png', 'application/pdf'].includes(file.mimetype)) {
+        return `Invalid file type for file: ${file.originalname}. Only JPEG, PNG, or PDF files are allowed.`;
+      }
+      if (file.size > 5 * 1024 * 1024) {
+        // 5 MB limit
+        return `File ${file.originalname} exceeds the maximum size of 5MB.`;
+      }
+    }
+
+    return null; // No errors
+  },
+};
+
+const getDiagnoses = {
+  query: Joi.object().keys({
+    patientId: Joi.string().uuid().optional(),
+    // page: Joi.number().integer().default(1),
+    // limit: Joi.number().integer().default(10),
+  }),
+};
+
+const getDiagnosis = {
+  params: Joi.object().keys({
+    diagnosisId: Joi.string().uuid().required(),
+  }),
+};
+
+const updateDiagnosis = {
+  params: Joi.object().keys({
+    diagnosisId: Joi.string().uuid().required(),
+  }),
+  body: Joi.object().keys({
+    complaints: Joi.array().items(Joi.string()).optional(),
+    treatmentsSuggested: Joi.array().items(Joi.string()).optional(),
+    // currentStatus: Joi.array().items(Joi.string()).optional(),
+    selectedTeeth: Joi.array().items(Joi.number()).optional(),
+    dentalQuadrantType: Joi.string().valid('adult', 'child').optional(),
+
+    // dentalQuadrant: Joi.array().items(Joi.string()).optional(),
+    xrayStatus: Joi.boolean().optional(),
+    notes: Joi.string().optional(),
+    additionalDetails: Joi.object().optional(),
+  }),
+  files: (files) => {
+    if (!files.length) return null; // No files, validation passes
+
+    for (const file of files) {
+      if (!['image/jpeg', 'image/png', 'application/pdf', 'image/avif'].includes(file.mimetype)) {
+        return `Invalid file type for file: ${file.originalname}. Only JPEG, PNG, or PDF files are allowed.`;
+      }
+      if (file.size > 5 * 1024 * 1024) {
+        // 5 MB limit
+        return `File ${file.originalname} exceeds the maximum size of 5MB.`;
+      }
+    }
+
+    return null; // No errors
+  },
+};
+
+const deleteDiagnosis = {
+  params: Joi.object().keys({
+    diagnosisId: Joi.string().uuid().required(),
+  }),
+};
+
+const createTreatment = {
+  body: Joi.object().keys({
+    diagnosisId: Joi.string().uuid().required().description('Diagnosis ID'),
+    treatmentDate: Joi.date().required().description('Date of treatment'),
+    // complaints: Joi.array().items(Joi.string()).optional(),
+    // treatment: Joi.array().items(Joi.string()).required(),
+    // dentalQuadrant: Joi.object().pattern(Joi.string(), Joi.array().items(Joi.number())).optional(),
+    // xrayStatus: Joi.boolean().optional(),
+    // xray: Joi.array().items(Joi.string().uri()).optional(),
+    treatmentStatus: Joi.array().items(Joi.string()).optional(),
+    notes: Joi.string().optional(),
+    additionalDetails: Joi.object().optional(),
+    totalAmount: Joi.number().required(),
+    paidAmount: Joi.number().default(0),
+    remainingAmount: Joi.number().required(),
+    paymentStatus: Joi.string().valid('paid', 'pending').default('pending'),
+  }),
+};
+
+const getTreatments = {
+  query: Joi.object().keys({
+    diagnosisId: Joi.string().uuid().required().description('Diagnosis ID'),
+    page: Joi.number().integer().default(1),
+    limit: Joi.number().integer().default(10),
+  }),
+};
+
+const getTreatmentById = {
+  params: Joi.object().keys({
+    treatmentId: Joi.string().uuid().required().description('Treatment ID'),
+  }),
+};
+
+const updateTreatment = {
+  params: Joi.object().keys({
+    treatmentId: Joi.string().uuid().required().description('Treatment ID'),
+  }),
+  body: Joi.object()
+    .keys({
+      treatmentDate: Joi.date().optional(),
+      // complaints: Joi.array().items(Joi.string()).optional(),
+      // treatments: Joi.array().items(Joi.string()).optional(),
+      // dentalQuadrant: Joi.object().pattern(Joi.string(), Joi.array().items(Joi.number())).optional(),
+      // xrayStatus: Joi.boolean().optional(),
+      // xray: Joi.array().items(Joi.string().uri()).optional(),
+      treatmentStatus: Joi.array().items(Joi.string()).optional(),
+      notes: Joi.string().optional(),
+      additionalDetails: Joi.object().optional(),
+      totalAmount: Joi.number().optional(),
+      paidAmount: Joi.number().optional(),
+      remainingAmount: Joi.number().optional(),
+      paymentStatus: Joi.string().valid('paid', 'pending').optional(),
+    })
+    .min(1),
+};
+
+const deleteTreatment = {
+  params: Joi.object().keys({
+    treatmentId: Joi.string().uuid().required().description('Treatment ID'),
   }),
 };
 
@@ -93,4 +267,14 @@ module.exports = {
   addDentalPatientRecord,
   getPatientsByClinic,
   getPatientById,
+  createDiagnosis,
+  getDiagnoses,
+  getDiagnosis,
+  updateDiagnosis,
+  deleteDiagnosis,
+  createTreatment,
+  getTreatments,
+  getTreatmentById,
+  updateTreatment,
+  deleteTreatment,
 };

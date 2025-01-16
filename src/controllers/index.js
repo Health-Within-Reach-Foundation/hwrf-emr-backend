@@ -4,3 +4,6 @@ module.exports.clinicController = require('./clinic.controller');
 module.exports.patientController = require('./patient.controller');
 module.exports.appointmentController = require('./appointment.controller');
 module.exports.campController = require('./camp.controller');
+module.exports.rolePermissionController = require('./role-permission.controller');
+module.exports.formTemplateController = require('./form-template.controller');
+module.exports.superadminController = require('./superadmin.controller');

@@ -1,5 +1,5 @@
 const httpStatus = require('http-status');
-const { userService, emailService, roleService } = require('.');
+const { userService, emailService, rolePermissionService, formTemplateService } = require('.');
 const { Clinic } = require('../models/clinic.model');
 const ApiError = require('../utils/ApiError');
 const { createRole } = require('./role.service');
@@ -7,6 +7,8 @@ const { Specialty } = require('../models/specialty.model');
 const { Op } = require('sequelize');
 const { User } = require('../models/user.model');
 const { Role } = require('../models/role.model');
+const { bulkCreateRole } = require('./role-permission.service');
+const { getAllFormTemplates, createFormTemplate } = require('./form-template.service');
 
 /**
  *
@@ -39,7 +41,7 @@ const getClinicByContactEmailPhoneNumber = async (contactEmail, phoneNumber) => 
   // Query to find clinic based on contactEmail or phoneNumber
   const clinic = await Clinic.findOne({
     where: {
-      [Op.or]: [{ contactEmail }, { phoneNumber }],
+      [Op.and]: [{ contactEmail }, { phoneNumber }],
     },
   });
 
@@ -243,17 +245,54 @@ const onboardClinic = async (clinicData) => {
     phoneNumber: adminPhoneNumber,
   });
 
-  // Step 5: Assign the role to the admin user (assuming there's an 'admin' role in your system)
-  //   const adminRole = await Role.create({ roleName: 'admin', userId: admin.id });
-  // await rolespermissionService.createRole({ roleName: 'admin', userId: admin.id, clinicId: clinic.id });
+  // Step 5 create the predefined role for the Clinic
+  const predefinedRole = [
+    { roleName: 'admin', roleDescription: 'Has full access to all resources', clinicId: clinic.id },
+    { roleName: 'doctor', roleDescription: 'default role doctor', clinicId: clinic.id },
+    { roleName: 'assistant', roleDescription: 'default role assistant', clinicId: clinic.id },
+  ];
+
+  console.log('role permission service -->', formTemplateService);
+  const defaultClinicRoles = await bulkCreateRole(predefinedRole);
 
   // await roleService.createRole({ roleName: 'admin', userId: admin.id, clinicId: clinic.id });
-  await createRole({ roleName: 'admin', userId: admin.id, clinicId: clinic.id }, admin);
+  // await createRole({ roleName: 'admin', clinicId: clinic.id }, admin);
   // await admin.addRoles(adminRole);
+
+  const adminRole = defaultClinicRoles.find((role) => role.roleName === 'admin');
+  await admin.addRoles(adminRole);
 
   // Step 6: Update the clinic's ownerId to the admin's UUID after user creation
   clinic.ownerId = admin.id;
   await clinic.save();
+
+  // Step 7: replicate the form template for clinic
+  // const predefinedTemplates = await getAllFormTemplates(null);
+
+  // if (predefinedTemplates) {
+  //   predefinedTemplates.forEach(async (formTemplate) => {
+  //     const { clinicId, ...otherBody } = formTemplate;
+  //     console.log("otherbody ---------------------------", otherBody);
+  //     await createFormTemplate({ ...otherBody, clinicId: clinic.id });
+  //   });
+  // }
+  const predefinedTemplates = await getAllFormTemplates(null);
+
+  if (predefinedTemplates && Array.isArray(predefinedTemplates)) {
+    for (const formTemplate of predefinedTemplates) {
+      const { dataValues } = formTemplate; // Extract the actual data
+      const { clinicId, ...templateData } = dataValues; // Remove clinicId from dataValues
+
+      try {
+        console.log('Replicating template with new clinicId...');
+        await createFormTemplate({ ...templateData, clinicId: clinic.id });
+      } catch (error) {
+        console.error('Error creating form template:', error);
+      }
+    }
+  } else {
+    console.warn('No predefined templates found or invalid response:', predefinedTemplates);
+  }
 
   // Send notification to superadmin
   await emailService.sendClinicOnboardingNotification({
@@ -353,16 +392,6 @@ const createRoleUnderClinc = async (roleBody) => {
   return Role.create(roleBody);
 };
 
-const getRolesByClinic = async (clinicId) => {
-  const clinicRoles = await Role.findAll({
-    where: { clinicId },
-    attributes: { exclude: ['deletedAt', 'createdAt', 'updatedAt'] },
-  });
-
-  return clinicRoles;
-};
-
-
 module.exports = {
   createClinic,
   getClinicById,
@@ -374,5 +403,5 @@ module.exports = {
   getClinic,
   getSpecialtyDepartmentsByClinic,
   createRoleUnderClinc,
-  getRolesByClinic,
+  // getRolesByClinic,
 };

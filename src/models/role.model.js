@@ -8,6 +8,14 @@ class Role extends Model {
   static associate(models) {
     // Many-to-Many: Roles and Users
     Role.belongsToMany(models.User, { through: 'user_roles', foreignKey: 'roleId', otherKey: 'userId', as: 'users' });
+
+    Role.belongsToMany(models.Permission, {
+      through: 'role_permissions', // Junction table
+      foreignKey: 'roleId',
+      otherKey: 'permissionId',
+      as: 'permissions',
+    });
+
   }
 }
 

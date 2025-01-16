@@ -26,6 +26,7 @@ pids/
 *.pid
 *.seed
 *.pid.lock
+Storage/
 
 # IDE and Editor settings
 .idea/

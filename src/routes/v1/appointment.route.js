@@ -14,16 +14,26 @@ const router = express.Router();
  */
 router.route('/').get(
   auth(), // Authenticate the user
-  roleAuthorization('admin', 'receptionist', 'doctor'),
+  // roleAuthorization('queues:read'),
   validate(appointmentValidation.getAppointments), // Validate query parameters
   appointmentController.getAppointments // Fetch appointments
 );
 
 router.route('/book').post(
+  (req,res,next)=>{
+    console.log("inside booking route --------------------------------")
+    next();
+  },
   auth(), // Authenticate the user
-  roleAuthorization('admin', 'receptionist', 'doctor'),
+  // roleAuthorization('queues:write'),
   validate(appointmentValidation.createAppointment), // Validate request
   appointmentController.bookAppointment // Controller
 );
+
+router.route('/mark/:appointmentId').patch(
+  auth(),
+  validate(appointmentValidation.markAppointment),
+  appointmentController.markAppointment
+)
 
 module.exports = router;

@@ -15,6 +15,8 @@ class Patient extends Model {
     // A Patient can have many PatientRecords
     Patient.hasMany(models.PatientRecord, { foreignKey: 'patientId', as: 'records' });
 
+    Patient.hasMany(models.Diagnosis, { foreignKey: 'patientId', as: 'diagnoses' });
+
     // A Patient can have many Queues
     Patient.hasMany(models.Queue, { foreignKey: 'patientId', as: 'queues' });
 
@@ -86,6 +88,10 @@ const initModel = (sequelize) => {
         onDelete: 'CASCADE', // Automatically delete patients if the clinic is deleted
         onUpdate: 'CASCADE',
       },
+      primaryDoctor: {
+        type: DataTypes.JSON,
+        allowNull: true, // Each patient must belong to a clinic
+      },
     },
     {
       sequelize,

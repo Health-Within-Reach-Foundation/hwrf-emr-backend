@@ -2,6 +2,7 @@
 const app = require('./app');
 const config = require('./config/config');
 const logger = require('./config/logger');
+const { scheduleCampStatusUpdate } = require('./utils/cron-jobs/deactivate-camp.job');
 const initializeDatabase = require('./utils/db-sync');
 
 let server;
@@ -16,11 +17,11 @@ initializeDatabase() // Ensures schema alignment
     logger.error('Failed to initialize database:', err);
     process.exit(1);
   });
+scheduleCampStatusUpdate();
 
 const exitHandler = () => {
   if (server) {
     server.close(() => {
-      
       logger.warn('Server closed');
       process.exit(1);
     });

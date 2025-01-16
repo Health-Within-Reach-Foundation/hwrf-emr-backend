@@ -28,7 +28,7 @@ const createClinicUser = catchAsync(async (req, res) => {
     await user.addSpecialties(specialities); // Pass array of specialty IDs
   }
 
-  user.addRoles(roles); 
+  user.addRoles(roles);
 
   // await createRole({ roleName: role, userId: user.id, clinicId: req.user.clinicId }, user);
 
@@ -42,24 +42,29 @@ const createClinicUser = catchAsync(async (req, res) => {
   return res.status(httpStatus.NO_CONTENT).send();
 });
 
-const getUsers = catchAsync(async (req, res) => {
-  const filter = pick(req.query, ['name', 'role']);
-  const options = pick(req.query, ['sortBy', 'limit', 'page']);
-  const result = await userService.queryUsers(filter, options);
-  res.send(result);
-});
+const getUserById = catchAsync(async (req, res) => {
+  const { userId } = req.params;
 
-const getUser = catchAsync(async (req, res) => {
-  const user = await userService.getUserById(req.params.userId);
-  if (!user) {
-    throw new ApiError(httpStatus.NOT_FOUND, 'User not found');
-  }
-  res.send(user);
+  const userDetails = await userService.getUserById(userId);
+
+  res.status(httpStatus.OK).json({
+    success: true,
+    message: 'User details fetched successfully',
+    data: userDetails,
+  });
 });
 
 const updateUser = catchAsync(async (req, res) => {
-  const user = await userService.updateUserById(req.params.userId, req.body);
-  res.send(user);
+  const { userId } = req.params;
+  const updateBody = req.body;
+
+  const updatedUser = await userService.updateUser(userId, updateBody);
+
+  res.status(httpStatus.OK).json({
+    success: true,
+    message: 'User updated successfully',
+    data: updatedUser,
+  });
 });
 
 const deleteUser = catchAsync(async (req, res) => {
@@ -69,8 +74,7 @@ const deleteUser = catchAsync(async (req, res) => {
 
 module.exports = {
   createUser,
-  getUsers,
-  getUser,
+  getUserById,
   updateUser,
   deleteUser,
   createClinicUser,

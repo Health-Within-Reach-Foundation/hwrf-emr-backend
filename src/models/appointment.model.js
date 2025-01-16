@@ -15,7 +15,9 @@ class Appointment extends Model {
 
      // Appointment can have one Patient Record
      Appointment.hasMany(models.PatientRecord, { foreignKey: 'appointmentId', as: 'records' });
-
+     
+    //  Appointment.hasMany(models.Diagnosis, { foreignKey: 'appointmentId', as: 'diagnoses' });
+     
      // An appointment belongs to one specialty
     Appointment.belongsTo(models.Specialty, { foreignKey: 'specialtyId', as: 'specialty' });
 
@@ -44,8 +46,8 @@ const initModel = (sequelize) => {
         allowNull: false,
       },
       status: {
-        type: DataTypes.ENUM('registered', 'in-progress', 'completed', 'cancelled'),
-        defaultValue: 'registered',
+        type: DataTypes.ENUM('in queue', 'in', 'out', 'cancelled'),
+        defaultValue: 'in queue',
       },
       clinicId: {
         type: DataTypes.UUID,
