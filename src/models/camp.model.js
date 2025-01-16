@@ -101,6 +101,10 @@ const initModel = (sequelize) => {
       endDate: {
         type: DataTypes.DATEONLY,
         allowNull: true
+      },
+      vans: {
+        type: DataTypes.ARRAY(DataTypes.STRING),
+        allowNull: true,
       }
     },
     {

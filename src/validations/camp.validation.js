@@ -9,6 +9,7 @@ const createCamp = {
     startDate: Joi.date().optional(),
     endDate: Joi.date().optional(),
     specialties: Joi.array().items(Joi.string()).optional(),
+    vans: Joi.array().items(Joi.string()).optional(),
     users: Joi.array().items(Joi.string()).optional(),
   }),
 };

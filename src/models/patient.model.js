@@ -88,6 +88,10 @@ const initModel = (sequelize) => {
         onDelete: 'CASCADE', // Automatically delete patients if the clinic is deleted
         onUpdate: 'CASCADE',
       },
+      primaryDoctor: {
+        type: DataTypes.JSON,
+        allowNull: true, // Each patient must belong to a clinic
+      },
     },
     {
       sequelize,

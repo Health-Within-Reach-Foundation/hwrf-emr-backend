@@ -5,6 +5,7 @@ const { Role } = require('../models/role.model');
 const { Clinic } = require('../models/clinic.model');
 const { Specialty } = require('../models/specialty.model');
 const { Camp } = require('../models/camp.model');
+const { Permission } = require('../models/permission.model');
 
 /**
  * Create a user
@@ -31,6 +32,14 @@ const getUserById = async (id) => {
         model: Role,
         as: 'roles',
         through: { attributes: [] }, // Exclude junction table
+        include: [
+          {
+            model: Permission, // Include permissions for roles
+            as: 'permissions',
+            attributes: ['id', 'action'], // Fetch permission details
+            through: { attributes: [] }, // Exclude intermediate fields
+          },
+        ],
         attributes: { exclude: ['createdAt', 'updatedAt', 'userId', 'clinicId'] }, // Clean unnecessary fields
       },
       {
@@ -68,24 +77,36 @@ const getUserByEmail = async (email) => {
         model: Role,
         as: 'roles',
         through: { attributes: [] }, // Exclude junction table
+        include: [
+          {
+            model: Permission, // Include permissions for roles
+            as: 'permissions',
+            attributes: ['id', 'action'], // Fetch permission details
+            through: { attributes: [] }, // Exclude intermediate fields
+            required: false,
+          },
+        ],
         attributes: { exclude: ['createdAt', 'updatedAt', 'userId', 'clinicId'] }, // Clean unnecessary fields
       },
       {
         model: Clinic,
         as: 'clinic', // Assuming Clinic has alias 'clinic' in User model
         attributes: ['id', 'clinicName', 'status'], // Only required fields
+        required: false,
       },
       {
         model: Specialty,
         as: 'specialties', // Assuming User has a many-to-many relationship with Specialty
         through: { attributes: [] }, // Exclude intermediate fields
         attributes: ['id', 'name', 'departmentName'], // Minimal required fields
+        required: false,
       },
       {
         model: Camp,
         as: 'camps',
         through: { attributes: [] },
         attributes: { exclude: ['clinicId', 'updatedAt'] },
+        required: false,
       },
     ],
   });

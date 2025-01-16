@@ -4,7 +4,6 @@ class Treatment extends Model {
   static associate(models) {
     // Each Treatment belongs to a Diagnosis
     Treatment.belongsTo(models.Diagnosis, { foreignKey: 'diagnosisId', as: 'diagnosis' });
-
   }
 }
 
@@ -24,13 +23,22 @@ const initModel = (sequelize) => {
         type: DataTypes.ARRAY(DataTypes.TEXT),
         allowNull: true,
       },
-      treatment: {
+      
+      treatments: {
         type: DataTypes.ARRAY(DataTypes.STRING),
         allowNull: true,
       },
       dentalQuadrant: {
         type: DataTypes.JSONB,
         allowNull: true,
+      },
+      dentalQuadrantType: {
+        type: DataTypes.ENUM('adult', 'child'),
+        defaultValue: 'adult',
+      },
+      selectedTeeth: {
+        type: DataTypes.INTEGER,
+        allowNull: true
       },
       xrayStatus: {
         type: DataTypes.BOOLEAN,
@@ -77,7 +85,7 @@ const initModel = (sequelize) => {
         },
         onDelete: 'CASCADE',
         onUpdate: 'CASCADE',
-      }
+      },
     },
     {
       sequelize,

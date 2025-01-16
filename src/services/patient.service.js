@@ -225,7 +225,7 @@ const getPatientDetailsById = async (patientId, specialtyId) => {
 };
 
 const createDiagnosis = async (diagnosisBody) => {
-  const { selectedTeeth, complaints, treatment, dentalQuadrantType, xrayStatus, notes, patientId } = diagnosisBody;
+  const { selectedTeeth, complaints, treatments, dentalQuadrantType, xrayStatus, notes, patientId } = diagnosisBody;
 
   // Ensure the patient exists
   const patient = await Patient.findByPk(patientId);
@@ -247,7 +247,7 @@ const createDiagnosis = async (diagnosisBody) => {
     selectedTeeth.forEach(async (element) => {
       diagnosis = await Diagnosis.create({
         complaints,
-        treatment,
+        treatments,
         selectedTeeth: element,
         dentalQuadrantType,
         xrayStatus,
@@ -258,7 +258,7 @@ const createDiagnosis = async (diagnosisBody) => {
   } else {
     diagnosis = await Diagnosis.create({
       complaints,
-      treatment,
+      treatments,
       dentalQuadrantType,
       xrayStatus,
       notes,
@@ -306,6 +306,25 @@ const getDiagnosisById = async (diagnosisId) => {
 
 const updateDiagnosis = async (diagnosisId, updateBody) => {
   const diagnosis = await getDiagnosisById(diagnosisId);
+  const treatments = await Treatment.findAll({ where: { diagnosisId } });
+  const { complaints, treatmentsSuggested, dentalQuadrantType, selectedTeeth, xrayStatus, xray, notes } = updateBody;
+  const updatedTreatmentBody = {
+    complaints,
+    treatments: treatmentsSuggested,
+    dentalQuadrantType,
+    selectedTeeth,
+    xrayStatus,
+    xray,
+    notes,
+  };
+
+  if (treatments.length > 0) {
+    treatments.forEach(async (treatment) => {
+      Object.assign(treatment, updatedTreatmentBody);
+      await treatment.save();
+    });
+  }
+
   Object.assign(diagnosis, updateBody);
   await diagnosis.save();
   return diagnosis;
@@ -317,7 +336,36 @@ const deleteDiagnosis = async (diagnosisId) => {
 };
 
 const createTreatment = async (treatmentBody) => {
-  return Treatment.create(treatmentBody);
+  const { diagnosisId, treatmentDate, treatmentStatus, notes, totalAmount, paidAmount, remainingAmount, paymentStatus } =
+    treatmentBody;
+
+  try {
+    const diagnosis = await Diagnosis.findByPk(diagnosisId);
+
+    if (!diagnosis) {
+      throw ApiError(httpStatus.NOT_FOUND, 'Diagnosis not found');
+    }
+
+    const treatmentCreated = await Treatment.create({
+      treatmentDate,
+      complaints: diagnosis.complaints,
+      treatments: diagnosis.treatmentsSuggested,
+      dentalQuadrantType: diagnosis.dentalQuadrantType,
+      selectedTeeth: diagnosis.selectedTeeth,
+      xrayStatus: diagnosis.xrayStatus,
+      xray: diagnosis.xray,
+      treatmentStatus,
+      notes,
+      totalAmount,
+      paidAmount,
+      remainingAmount,
+      paymentStatus,
+      diagnosisId,
+    });
+    return treatmentCreated;
+  } catch (error) {
+    throw ApiError(httpStatus.INTERNAL_SERVER_ERROR, 'Internal Server error');
+  }
 };
 
 const getTreatments = async ({ diagnosisId, page = 1, limit = 10 }) => {

@@ -1,6 +1,8 @@
 const { Op } = require('sequelize');
 const { Permission } = require('../models/permission.model');
 const { Role } = require('../models/role.model');
+const httpStatus = require('http-status');
+const ApiError = require('../utils/ApiError');
 
 /**
  * Create a role with associated permissions.
@@ -24,6 +26,10 @@ const createRoleWithPermissions = async (name, permissions) => {
   await role.addPermissions(permissionInstances);
 
   return role;
+};
+
+const bulkCreateRole = async (roles) => {
+  return Role.bulkCreate(roles);
 };
 
 /**
@@ -133,6 +139,7 @@ const updateRoleWithPermissions = async (roleId, roleBody) => {
 
 module.exports = {
   createRoleWithPermissions,
+  bulkCreateRole,
   getRolesByClinic,
   getAllPermissions,
   updateRoleWithPermissions,

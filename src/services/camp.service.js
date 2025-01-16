@@ -13,7 +13,7 @@ const { Patient } = require('../models/patient.model');
 
 // function to create camp
 const createCamp = async (campData) => {
-  const { name, location, city, startDate, endDate, specialties, organizerId, clinicId, users } = campData;
+  const { name, location, city, vans, startDate, endDate, specialties, organizerId, clinicId, users } = campData;
 
   const camp = await Camp.create({
     name,
@@ -23,6 +23,7 @@ const createCamp = async (campData) => {
     endDate,
     organizerId,
     clinicId,
+    vans,
   });
 
   const specialtiesDoc = await Specialty.findAll({

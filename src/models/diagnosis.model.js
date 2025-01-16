@@ -24,7 +24,7 @@ const initModel = (sequelize) => {
         type: DataTypes.ARRAY(DataTypes.TEXT),
         allowNull: true,
       },
-      treatment: {
+      treatmentsSuggested: {
         type: DataTypes.ARRAY(DataTypes.STRING),
         allowNull: true,
       },
@@ -56,10 +56,10 @@ const initModel = (sequelize) => {
         type: DataTypes.TEXT,
         allowNull: true,
       },
-      currentStatus: {
-        type: DataTypes.ARRAY(DataTypes.TEXT),
-        allowNull: true,
-      },
+      // currentStatus: {
+      //   type: DataTypes.ARRAY(DataTypes.TEXT),
+      //   allowNull: true,
+      // },
       additionalDetails: {
         type: DataTypes.JSON,
         defaultValue: {},

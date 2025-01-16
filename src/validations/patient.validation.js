@@ -30,6 +30,13 @@ const updatePatient = {
       .pattern(/^[0-9]{10}$/)
       .optional(),
     address: Joi.string().optional().allow(''),
+    primaryDoctor: Joi.object()
+      .keys({
+        label: Joi.string().optional(),
+        value: Joi.string().uuid().optional(),
+        phoneNumber: Joi.string().optional(),
+      })
+      .optional(),
   }),
 };
 
@@ -111,7 +118,7 @@ const getPatientById = {
 const createDiagnosis = {
   body: Joi.object().keys({
     complaints: Joi.array().items(Joi.string()).optional(),
-    treatment: Joi.array().items(Joi.string()).optional(),
+    treatmentsSuggested: Joi.array().items(Joi.string()).optional(),
     currentStatus: Joi.array().items(Joi.string()).optional(),
     // dentalQuadrant: Joi.array().items(Joi.string()).optional(),
     selectedTeeth: Joi.array().items(Joi.number()).optional(),
@@ -158,9 +165,12 @@ const updateDiagnosis = {
   }),
   body: Joi.object().keys({
     complaints: Joi.array().items(Joi.string()).optional(),
-    treatment: Joi.array().items(Joi.string()).optional(),
-    currentStatus: Joi.array().items(Joi.string()).optional(),
-    dentalQuadrant: Joi.array().items(Joi.string()).optional(),
+    treatmentsSuggested: Joi.array().items(Joi.string()).optional(),
+    // currentStatus: Joi.array().items(Joi.string()).optional(),
+    selectedTeeth: Joi.array().items(Joi.number()).optional(),
+    dentalQuadrantType: Joi.string().valid('adult', 'child').optional(),
+
+    // dentalQuadrant: Joi.array().items(Joi.string()).optional(),
     xrayStatus: Joi.boolean().optional(),
     notes: Joi.string().optional(),
     additionalDetails: Joi.object().optional(),
@@ -192,11 +202,11 @@ const createTreatment = {
   body: Joi.object().keys({
     diagnosisId: Joi.string().uuid().required().description('Diagnosis ID'),
     treatmentDate: Joi.date().required().description('Date of treatment'),
-    complaints: Joi.array().items(Joi.string()).optional(),
-    treatment: Joi.array().items(Joi.string()).required(),
-    dentalQuadrant: Joi.object().pattern(Joi.string(), Joi.array().items(Joi.number())).optional(),
-    xrayStatus: Joi.boolean().optional(),
-    xray: Joi.array().items(Joi.string().uri()).optional(),
+    // complaints: Joi.array().items(Joi.string()).optional(),
+    // treatment: Joi.array().items(Joi.string()).required(),
+    // dentalQuadrant: Joi.object().pattern(Joi.string(), Joi.array().items(Joi.number())).optional(),
+    // xrayStatus: Joi.boolean().optional(),
+    // xray: Joi.array().items(Joi.string().uri()).optional(),
     treatmentStatus: Joi.array().items(Joi.string()).optional(),
     notes: Joi.string().optional(),
     additionalDetails: Joi.object().optional(),
@@ -228,11 +238,11 @@ const updateTreatment = {
   body: Joi.object()
     .keys({
       treatmentDate: Joi.date().optional(),
-      complaints: Joi.array().items(Joi.string()).optional(),
-      treatment: Joi.array().items(Joi.string()).optional(),
-      dentalQuadrant: Joi.object().pattern(Joi.string(), Joi.array().items(Joi.number())).optional(),
-      xrayStatus: Joi.boolean().optional(),
-      xray: Joi.array().items(Joi.string().uri()).optional(),
+      // complaints: Joi.array().items(Joi.string()).optional(),
+      // treatments: Joi.array().items(Joi.string()).optional(),
+      // dentalQuadrant: Joi.object().pattern(Joi.string(), Joi.array().items(Joi.number())).optional(),
+      // xrayStatus: Joi.boolean().optional(),
+      // xray: Joi.array().items(Joi.string().uri()).optional(),
       treatmentStatus: Joi.array().items(Joi.string()).optional(),
       notes: Joi.string().optional(),
       additionalDetails: Joi.object().optional(),

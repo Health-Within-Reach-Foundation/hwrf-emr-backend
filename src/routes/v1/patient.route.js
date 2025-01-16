@@ -45,7 +45,7 @@ router
   .post(
     auth(),
     upload.array('xrayFiles'),
-    parseArrayFields(['complaints', 'treatment', 'currentStatus', 'selectedTeeth']),
+    parseArrayFields(['complaints', 'treatmentsSuggested', 'currentStatus', 'selectedTeeth']),
     (req, res, next) => {
       console.log('req body --------', req.body, req.files);
       next();
@@ -72,7 +72,7 @@ router
       next();
     },
 
-    parseArrayFields(['complaints', 'treatment', 'currentStatus', 'dentalQuadrant']),
+    parseArrayFields(['complaints', 'treatmentsSuggested', 'currentStatus', 'dentalQuadrant','selectedTeeth']),
     // roleAuthorization('diagnosis:write'),
     validate(patientValidation.updateDiagnosis),
     patientController.updateDiagnosis
