@@ -72,10 +72,30 @@ const createRole = {
   }),
 };
 
+const updateClinicById = {
+  params: Joi.object().keys({
+    clinicId: Joi.string().uuid().required(), // Clinic ID must be a valid UUID
+  }),
+  body: Joi.object().keys({
+    clinicName: Joi.string().optional(),
+    address: Joi.string().allow('', null).optional(),
+    city: Joi.string().allow('', null).optional(),
+    state: Joi.string().allow('', null).optional(),
+    phoneNumber: Joi.string()
+      .pattern(/^[0-9]{10,15}$/)
+      .allow('', null)
+      .optional(),
+    contactEmail: Joi.string().email().allow('', null).optional(),
+    status: Joi.string().valid('pending', 'active', 'inactive').optional(),
+    specialties: Joi.array().items(Joi.string().uuid()).optional(),
+  }),
+};
+
 module.exports = {
   onboardClinic,
   queryOptionsValidation,
   getClinic,
   approveClinic,
-  createRole
+  createRole,
+  updateClinicById,
 };

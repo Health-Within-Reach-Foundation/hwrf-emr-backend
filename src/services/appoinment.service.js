@@ -211,8 +211,8 @@ const getAppointments = async (queryOptions, clinicId, campId) => {
     appointmentDate,
     status,
     specialtyId,
-    sortBy = 'appointmentDate',
-    order = 'asc',
+    sortBy = 'createdAt',
+    order = 'desc',
     page = 1,
     limit = 10,
   } = queryOptions;

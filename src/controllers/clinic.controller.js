@@ -28,7 +28,11 @@ const getClinics = catchAsync(async (req, res) => {
 const getClinic = catchAsync(async (req, res) => {
   const clinicResponse = await clinicService.getClinic(req.params.clinicId);
 
-  return res.status(httpStatus.OK).json(clinicResponse);
+  return res.status(httpStatus.OK).json({
+    message: 'Clinic found !',
+    success: true,
+    data: clinicResponse,
+  });
 });
 
 const approveClinic = catchAsync(async (req, res) => {
@@ -72,22 +76,31 @@ const getSpecialtyDepartmentsByClinic = catchAsync(async (req, res) => {
   });
 });
 
-const createRole = catchAsync(async (req, res) => {
-  const roleBody = {
-    ...req.body,
-    clinicId: req.user.clinicId,
-  };
-  const role = await clinicService.createRoleUnderClinc(roleBody);
+// const createRole = catchAsync(async (req, res) => {
+//   const roleBody = {
+//     ...req.body,
+//     clinicId: req.user.clinicId,
+//   };
+//   const role = await clinicService.createRoleUnderClinc(roleBody);
 
-  res.status(httpStatus.CREATED).json({
+//   res.status(httpStatus.CREATED).json({
+//     success: true,
+//     data: role,
+//     message: 'Role created successfully.',
+//   });
+// });
+
+
+const updateClinicById = catchAsync(async (req, res) => {
+  const { clinicId } = req.params;
+  const updatedClinic = await clinicService.updateClinic(clinicId, req.body);
+
+  res.status(httpStatus.OK).json({
     success: true,
-    data: role,
-    message: 'Role created successfully.',
+    message: 'Clinic updated successfully',
+    data: updatedClinic,
   });
 });
-
-
-
 
 
 module.exports = {
@@ -96,6 +109,7 @@ module.exports = {
   approveClinic,
   getUsersByClinic,
   getSpecialtyDepartmentsByClinic,
-  createRole,
+  updateClinicById
+  // createRole,
   // getRolesByClinic
 };

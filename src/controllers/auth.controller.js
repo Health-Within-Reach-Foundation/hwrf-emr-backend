@@ -24,6 +24,7 @@ const onboardClinic = catchAsync(async (req, res) => {
   // Invoke service to handle clinic and admin creation
   const { clinic, admin } = await clinicService.onboardClinic(req.body);
 
+  // console.log(clin)
   // Send response
   res.status(httpStatus.CREATED).json({
     success: true,

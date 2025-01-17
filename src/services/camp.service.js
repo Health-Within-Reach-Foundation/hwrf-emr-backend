@@ -109,9 +109,70 @@ const setCurrentCamp = async (campId, userId) => {
   return user;
 };
 
+/**
+ * Update a camp by ID
+ * @param {string} campId - ID of the camp to update
+ * @param {Object} campData - Data to update the camp
+ * @returns {Promise<Camp>}
+ */
+const updateCampById = async (campId, campData) => {
+  const { name, location, city, startDate, endDate, specialties, vans, users } = campData;
+
+  // Find existing camp
+  const camp = await Camp.findByPk(campId);
+  if (!camp) {
+    throw new ApiError(httpStatus.NOT_FOUND, 'Camp not found');
+  }
+
+  const updatedCampBody = { name, location, city, startDate, endDate, vans };
+
+  // Update basic camp details
+  Object.assign(camp, updatedCampBody);
+
+  await camp.save();
+
+  // await camp.update({
+  //   name,
+  //   location,
+  //   city,
+  //   startDate,
+  //   endDate,
+  //   vans,
+  // });
+
+  // Handle Specialties (Many-to-Many)
+  if (specialties) {
+    const specialtyRecords = await Specialty.findAll({
+      where: { id: { [Op.in]: specialties } },
+    });
+
+    if (specialtyRecords.length !== specialties.length) {
+      throw new ApiError(httpStatus.BAD_REQUEST, 'One or more specialties not found');
+    }
+
+    await camp.setSpecialties(specialtyRecords); // Updates specialties
+  }
+
+  // Handle Users (Many-to-Many)
+  if (users) {
+    const userRecords = await User.findAll({
+      where: { id: { [Op.in]: users } },
+    });
+
+    if (userRecords.length !== users.length) {
+      throw new ApiError(httpStatus.BAD_REQUEST, 'One or more users not found');
+    }
+
+    await camp.setUsers(userRecords); // Updates users
+  }
+
+  return camp.reload(); // Return updated camp with relations
+  
+};
 module.exports = {
   createCamp,
   getCamps,
   getCampById,
   setCurrentCamp,
+  updateCampById,
 };

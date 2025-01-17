@@ -15,7 +15,7 @@ const bookAppointment = catchAsync(async (req, res) => {
   // Return response
   res.status(httpStatus.CREATED).json({
     success: true,
-    message: 'Appointment booked successfully',
+    message: 'Patient added in queue',
     data: appointment,
   });
 });

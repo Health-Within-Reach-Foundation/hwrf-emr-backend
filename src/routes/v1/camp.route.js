@@ -13,12 +13,14 @@ router
 
 router.post('/set-camp', auth(), campController.setCurrentCamp);
 
-router.get(
-  '/:campId',
-  auth(),
-  // roleAuthorization('admin', 'organizer'),
-  validate(campValidation.getCampById),
-  campController.getCampById
-);
+router
+  .route('/:campId')
+  .get(
+    auth(),
+    // roleAuthorization('admin', 'organizer'),
+    validate(campValidation.getCampById),
+    campController.getCampById
+  )
+  .patch(auth(), validate(campValidation.updateCampById), campController.updateCampById);
 
 module.exports = router;

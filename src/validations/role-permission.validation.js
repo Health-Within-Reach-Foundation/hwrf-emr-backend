@@ -2,7 +2,7 @@ const Joi = require('joi');
 
 const createRole = {
   body: Joi.object().keys({
-    name: Joi.string().required().description('Name of the role'),
+    roleName: Joi.string().required().description('Name of the role'),
     roleDescription: Joi.string().optional().allow(null, '').default(null),
     permissions: Joi.array()
       .items(Joi.string().uuid().required().description('Permission ID'))

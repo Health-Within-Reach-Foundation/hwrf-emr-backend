@@ -45,9 +45,21 @@ const setCurrentCamp = catchAsync(async (req, res) => {
   });
 });
 
+const updateCampById = catchAsync(async (req, res) => {
+  const { campId } = req.params;
+  const updatedCamp = await campService.updateCampById(campId, req.body);
+
+  res.status(httpStatus.OK).json({
+    success: true,
+    message: 'Camp updated successfully',
+    data: updatedCamp,
+  });
+});
+
 module.exports = {
   getCamps,
   createCamp,
   setCurrentCamp,
   getCampById,
+  updateCampById
 };
