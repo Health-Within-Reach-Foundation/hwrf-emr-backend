@@ -151,7 +151,7 @@ const updateClinicById = async (clinicId, clinicBody) => {
 
   await clinic.save();
 
-  return clinic;
+  return clinic.reload();
 };
 
 /**
@@ -451,6 +451,66 @@ const updateClinic = async (clinicId, clinicData) => {
   return clinic.reload(); // Return updated clinic with relations
 };
 
+const onboardClinicNew = async (clinicData) => {
+  const {
+    clinicName,
+    address = '',
+    city = '',
+    state = '',
+    phoneNumber = '',
+    contactEmail = '',
+    website,
+    specialties,
+    adminName,
+    adminEmail,
+    adminPhoneNumber,
+    password = 'TzR6!wS@7bH9',
+  } = clinicData;
+
+  const existingClinic = await getClinicByContactEmailPhoneNumber(contactEmail, phoneNumber);
+  if (existingClinic) {
+    throw new ApiError(httpStatus.BAD_REQUEST, 'Clinic has already been registered!');
+  }
+
+  // Step 2: Check if the admin email already exists
+  const existingAdmin = await userService.getUserByEmail(adminEmail);
+  if (existingAdmin) {
+    throw new ApiError(httpStatus.BAD_REQUEST, 'Admin email is already in use.');
+  }
+
+  const clinic = await createClinic({
+    clinicName,
+    address,
+    city,
+    state,
+    phoneNumber,
+    contactEmail,
+  });
+
+  const specialtiesDoc = await Specialty.findAll({
+    where: {
+      id: {
+        [Op.in]: specialties, // Check if the ID is in the array of specialties
+      },
+    },
+  });
+
+  await clinic.addSpecialties(specialtiesDoc);
+
+  const admin = await userService.createUser({
+    name: adminName,
+    email: adminEmail,
+    password: password,
+    clinicId: clinic.id, // Assign clinicId to user after clinic is created
+    phoneNumber: adminPhoneNumber,
+  });
+
+  clinic.ownerId = admin.id;
+  await clinic.save();
+
+  return { clinic, admin };
+};
+
 module.exports = {
   createClinic,
   getClinicById,
@@ -464,4 +524,5 @@ module.exports = {
   createRoleUnderClinc,
   // getRolesByClinic,
   updateClinic,
+  onboardClinicNew
 };

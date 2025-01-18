@@ -32,7 +32,7 @@ router.post('/verify-email', validate(authValidation.verifyEmail), authControlle
 
 // router.route('/set-password').post(validate(authValidation.resetPassword), authController.resetPassword);
 
-router.get('/verify-token', auth(), validate(authValidation.verifyEmail), authController.verifyToken);
+router.get('/verify-token',validate(authValidation.verifyEmail), authController.verifyToken);
 
 module.exports = router;
 

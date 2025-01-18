@@ -1,6 +1,12 @@
 const httpStatus = require('http-status');
 const catchAsync = require('../utils/catchAsync');
-const { clinicService, userService } = require('../services');
+const { clinicService, userService, tokenService, emailService } = require('../services');
+const { getAllFormTemplates, createFormTemplate } = require('../services/form-template.service');
+const { bulkCreateRole } = require('../services/role-permission.service');
+const { Op } = require('sequelize');
+const { Permission } = require('../models/permission.model');
+const { tokenTypes } = require('../config/tokens');
+const config = require('../config/config');
 
 /**
  * Get a list of clinics with pagination, filtering, and sorting
@@ -38,10 +44,87 @@ const getClinic = catchAsync(async (req, res) => {
 const approveClinic = catchAsync(async (req, res) => {
   const clinicResponse = await clinicService.updateClinicById(req.params.clinicId, req.body);
 
+  const admin = await userService.getUserById(clinicResponse.ownerId);
+  
+  // update the status of admin
+  admin.status = 'active'
+  await admin.save();
+
+  
+  // Replicating Templates
+  const predefinedTemplates = await getAllFormTemplates(null);
+
+  if (predefinedTemplates && Array.isArray(predefinedTemplates)) {
+    for (const formTemplate of predefinedTemplates) {
+      const { dataValues } = formTemplate; // Extract the actual data
+      const { id, clinicId, createdAt, updatedAt, ...templateData } = dataValues; // Remove clinicId from dataValues
+
+      try {
+        console.log('Replicating template with new clinicId...');
+        await createFormTemplate({ ...templateData, clinicId: clinicResponse.id });
+      } catch (error) {
+        console.error('Error creating form template:', error);
+      }
+    }
+  } else {
+    console.warn('No predefined templates found or invalid response:', predefinedTemplates);
+  }
+
+  // Adding predefined roles for clinic and associated permissions
+  const predefinedRole = [
+    { roleName: 'admin', roleDescription: 'Has full access to all resources', clinicId: clinicResponse.id },
+    { roleName: 'doctor', roleDescription: 'default role doctor', clinicId: clinicResponse.id },
+    // { roleName: 'assistant', roleDescription: 'default role assistant', clinicId: clinic.id },
+  ];
+
+  const defaultClinicRoles = await bulkCreateRole(predefinedRole);
+
+  const adminRole = defaultClinicRoles.find((role) => role.roleName === 'admin');
+  await admin.addRoles(adminRole);
+
+  const docotorPermission = ['queues:read', 'queues:write', 'camps:read', 'camps:write', 'patients:read', 'patients:write'];
+  const predefinedDoctorPermissions = await Permission.findAll({
+    where: {
+      action: {
+        [Op.in]: docotorPermission, // Match any of the given actions
+      },
+    },
+    attributes: ['id', 'action'], // Fetch only necessary fields
+  });
+
+  const doctorRole = defaultClinicRoles.find((role) => role.roleName === 'doctor');
+  await doctorRole.addPermissions(predefinedDoctorPermissions); // Sequelize method
+
+  // Sending the link for setting account of admin
+  const setPasswordToken = await tokenService.generatePasswordToken(admin.email, tokenTypes.SET_PASSWORD);
+
+  const subject = 'Your Clinic Onboarding Request Has Been Approved - Set Your Password';
+
+  const text = `Dear ${clinicResponse.clinicName},
+
+Good news! Your clinic onboarding request has been approved.
+
+To get started, please click the link below to set your admin password:
+
+${config.client_domain}/auth/set-password/${setPasswordToken}
+
+Once you’ve set your password, you’ll have full access to manage your clinic account.
+
+If you have any questions or need help, feel free to reach out to us at [contact email].
+
+Thank You!
+
+Best regards,
+The HWRF Team`;
+
+  await emailService.sendEmail(admin.email, subject, text);
+
   return res.status(httpStatus.OK).json({
     success: true,
+    message: 'Request approved! An email has been sent to the admin',
     data: clinicResponse,
   });
+
 });
 
 /**
@@ -90,7 +173,6 @@ const getSpecialtyDepartmentsByClinic = catchAsync(async (req, res) => {
 //   });
 // });
 
-
 const updateClinicById = catchAsync(async (req, res) => {
   const { clinicId } = req.params;
   const updatedClinic = await clinicService.updateClinic(clinicId, req.body);
@@ -102,14 +184,13 @@ const updateClinicById = catchAsync(async (req, res) => {
   });
 });
 
-
 module.exports = {
   getClinics,
   getClinic,
   approveClinic,
   getUsersByClinic,
   getSpecialtyDepartmentsByClinic,
-  updateClinicById
+  updateClinicById,
   // createRole,
   // getRolesByClinic
 };

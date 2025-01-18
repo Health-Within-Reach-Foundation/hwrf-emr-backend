@@ -19,7 +19,7 @@ const onboardClinic = {
     adminPhoneNumber: Joi.string()
       .required()
       .pattern(/^[0-9]{10,15}$/),
-    password: Joi.string().required().custom(password),
+    // password: Joi.string().required().custom(password),
   }),
 };
 

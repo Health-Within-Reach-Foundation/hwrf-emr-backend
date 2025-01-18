@@ -37,7 +37,7 @@ const logout = async (refreshToken, userId) => {
   const refreshTokenDoc = await Token.findOne({
     where: { token: refreshToken, type: tokenTypes.REFRESH, blacklisted: false },
   });
-  await User.update({currentCampId: null}, {where:{id: userId}})
+  await User.update({ currentCampId: null }, { where: { id: userId } });
 
   if (!refreshTokenDoc) {
     throw new ApiError(httpStatus.NOT_FOUND, 'Not found');
@@ -82,7 +82,7 @@ const resetPassword = async (resetPasswordToken, newPassword) => {
       throw new Error();
     }
     console.log('FILE: authService --> reset password destroyed');
-    await userService.updateUserById(user.id, { password: newPassword });
+    await userService.updateUserById(user.id, { password: newPassword, status: 'active' });
     await Token.destroy({ where: { userId: user.id, type: tokenTypes.SET_PASSWORD }, force: true });
   } catch (error) {
     logger.error(error);
@@ -118,17 +118,12 @@ const register = async (userBody) => {
     name,
     email,
     password,
-    phoneNumber
+    phoneNumber,
   });
   const superadminRole = await Role.create({ roleName: role, userId: superadmin.id });
 
   // Associate the superadmin with the role using the automatically created junction table
   await superadmin.addRole(superadminRole);
-
-  // await UserRole.create({
-  //   userId: superadmin.id,
-  //   roleId: superadminRole.id,
-  // });
 
   return superadmin;
 };
