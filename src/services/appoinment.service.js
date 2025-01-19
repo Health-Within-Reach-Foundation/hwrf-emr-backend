@@ -207,15 +207,7 @@ const updateAppointmentStatus = async (appointmentId, updateBody) => {
 const getAppointments = async (queryOptions, clinicId, campId) => {
   console.log('ClinicId -->', clinicId);
 
-  const {
-    appointmentDate,
-    status,
-    specialtyId,
-    sortBy = 'createdAt',
-    order = 'desc',
-    page = 1,
-    limit = 10,
-  } = queryOptions;
+  const { appointmentDate, status, specialtyId, sortBy = 'createdAt', order = 'desc', page = 1, limit = 10 } = queryOptions;
 
   console.log('appointmentDate -->', appointmentDate);
 
@@ -281,13 +273,10 @@ const getAppointments = async (queryOptions, clinicId, campId) => {
     ],
   });
 
-  console.log('Raw Appointments -->', appointments);
-
   // **Flatten Response** to remove nesting
   const flattenedAppointments = appointments.map((appointment, index) => {
     const { patient, specialty, records } = appointment;
 
-    console.log('Patient -->', patient.queues);
     return {
       id: appointment.id,
       appointmentDate: appointment.appointmentDate,
@@ -310,8 +299,6 @@ const getAppointments = async (queryOptions, clinicId, campId) => {
       medicalRecords: records,
     };
   });
-
-  console.log('Flattened Appointments -->', flattenedAppointments);
 
   // Return paginated response
   return {

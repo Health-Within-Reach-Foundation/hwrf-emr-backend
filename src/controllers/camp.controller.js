@@ -3,7 +3,8 @@ const catchAsync = require('../utils/catchAsync');
 const { campService } = require('../services');
 
 const getCamps = catchAsync(async (req, res) => {
-  const camps = await campService.getCamps();
+  const clinicId = req?.user?.clinicId;
+  const camps = await campService.getCamps(clinicId);
   res.status(httpStatus.OK).json({ camps });
 });
 
@@ -61,5 +62,5 @@ module.exports = {
   createCamp,
   setCurrentCamp,
   getCampById,
-  updateCampById
+  updateCampById,
 };

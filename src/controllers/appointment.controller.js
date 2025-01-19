@@ -51,8 +51,8 @@ const getAppointments = catchAsync(async (req, res) => {
 
 const markAppointment = catchAsync(async (req, res) => {
   const appointmentId = req.params.appointmentId;
-
-  const markedAppointment = await appointmentService.markAppointment(appointmentId,req.body);
+  console.log('MArking appointmet');
+  const markedAppointment = await appointmentService.markAppointment(appointmentId, req.body);
 
   res.status(httpStatus.OK).json({
     success: true,

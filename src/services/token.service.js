@@ -52,16 +52,46 @@ const saveToken = async (token, userId, expires, type, blacklisted = false) => {
  * @returns {Promise<Token>}
  */
 const verifyToken = async (token, type) => {
-  console.log('Inside token service function --> verifyToken ==> payload', token, type);
   const payload = jwt.verify(token, config.jwt.secret);
-  console.log('Inside token service function --> verifyToken ==> payload', payload);
-
   const tokenDoc = await Token.findOne({ where: { token, type, userId: payload.sub, blacklisted: false } });
   if (!tokenDoc) {
     throw new Error('Token not found');
   }
   return tokenDoc;
 };
+/**
+ * Verify token, check user validity, and handle token expiration
+ * @param {string} token - The access token to verify
+ * @returns {Promise<boolean>} - Returns true if the user is valid and the token is expired, false otherwise
+ * @throws {Error} - Throws an error if the token is invalid
+ */
+const verifyAccessToken = async (token) => {
+  try {
+    // Decode the token
+    const payload = jwt.decode(token, config.jwt.secret);
+
+    if (!payload) {
+      throw new Error('Access Token Invalid');
+    }
+
+    // Check if the user exists
+    const user = await userService.getUserById(payload.sub);
+    if (!user) {
+      return false;
+    }
+
+    // Check if the token is expired
+    const currentTime = Math.floor(Date.now() / 1000); // Current time in seconds
+    if (payload.exp && payload.exp < currentTime) {
+      return true; // Token is expired but user is valid
+    }
+
+    return false; // Token is still valid, or some other condition fails
+  } catch (error) {
+    throw new Error('Access Token Invalid');
+  }
+};
+
 
 /**
  * Generate auth tokens
@@ -84,6 +114,23 @@ const generateAuthTokens = async (user) => {
     refresh: {
       token: refreshToken,
       expires: refreshTokenExpires.toDate(),
+    },
+  };
+};
+/**
+ * Generate auth tokens
+ * @param {User} user
+ * @param {Token} user
+ * @returns {Promise<Object>}
+ */
+const generateAccessTokenOnly = async (user) => {
+  const accessTokenExpires = moment().add(config.jwt.accessExpirationMinutes, 'minutes');
+  const accessToken = generateToken(user.id, accessTokenExpires, tokenTypes.ACCESS);
+
+  return {
+    access: {
+      token: accessToken,
+      expires: accessTokenExpires.toDate(),
     },
   };
 };
@@ -130,4 +177,6 @@ module.exports = {
   generateAuthTokens,
   generatePasswordToken,
   generateVerifyEmailToken,
+  generateAccessTokenOnly,
+  verifyAccessToken,
 };

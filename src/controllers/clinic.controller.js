@@ -7,6 +7,7 @@ const { Op } = require('sequelize');
 const { Permission } = require('../models/permission.model');
 const { tokenTypes } = require('../config/tokens');
 const config = require('../config/config');
+const sendEmailAzure = require('../services/email.azure.service');
 
 /**
  * Get a list of clinics with pagination, filtering, and sorting
@@ -45,12 +46,11 @@ const approveClinic = catchAsync(async (req, res) => {
   const clinicResponse = await clinicService.updateClinicById(req.params.clinicId, req.body);
 
   const admin = await userService.getUserById(clinicResponse.ownerId);
-  
+
   // update the status of admin
-  admin.status = 'active'
+  admin.status = 'active';
   await admin.save();
 
-  
   // Replicating Templates
   const predefinedTemplates = await getAllFormTemplates(null);
 
@@ -117,14 +117,13 @@ Thank You!
 Best regards,
 The HWRF Team`;
 
-  await emailService.sendEmail(admin.email, subject, text);
+  await sendEmailAzure(admin.email, subject, text);
 
   return res.status(httpStatus.OK).json({
     success: true,
     message: 'Request approved! An email has been sent to the admin',
     data: clinicResponse,
   });
-
 });
 
 /**

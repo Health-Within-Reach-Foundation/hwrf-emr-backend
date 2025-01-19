@@ -50,18 +50,31 @@ const logout = async (refreshToken, userId) => {
  * @param {string} refreshToken
  * @returns {Promise<Object>}
  */
-const refreshAuth = async (refreshToken) => {
+const refreshAuth = async (refreshToken, accessToken) => {
   try {
+    //single renewal of access token after
+    const accessTokenDocValidity = await tokenService.verifyAccessToken(accessToken);
     const refreshTokenDoc = await tokenService.verifyToken(refreshToken, tokenTypes.REFRESH);
-    console.log('refreshToken doc -->', refreshTokenDoc);
-    const user = await userService.getUserById(refreshTokenDoc.userId);
-    if (!user) {
-      throw new Error();
+    if (accessTokenDocValidity && refreshTokenDoc) {
+      console.group('*Expired access so creating a new access token only as refresh token is still valid');
+      const user = await userService.getUserById(refreshTokenDoc.userId);
+      if (!user) {
+        throw new Error();
+      }
+      const res = await tokenService.generateAccessTokenOnly(user, refreshToken);
+      return res;
+    } else {
+      const refreshTokenDoc = await tokenService.verifyToken(refreshToken, tokenTypes.REFRESH);
+      console.group('*Expired refresh token');
+      const user = await userService.getUserById(refreshTokenDoc.userId);
+      await refreshTokenDoc.destroy({ force: true });
+      // const res = await tokenService.generateAuthTokens(user);
+      return { access: { token: null }, refresh: { token: null } };
     }
-    await refreshTokenDoc.destroy({ force: true });
-    return tokenService.generateAuthTokens(user);
   } catch (error) {
-    throw new ApiError(httpStatus.UNAUTHORIZED, 'Please authenticate');
+    console.error('error in auth service line 65: ', error);
+    // throw new ApiError(httpStatus.UNAUTHORIZED, 'Please authenticate');
+    return { access: { token: null }, refresh: { token: null } };
   }
 };
 

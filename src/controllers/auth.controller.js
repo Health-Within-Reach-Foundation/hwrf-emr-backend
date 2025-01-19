@@ -3,6 +3,7 @@ const catchAsync = require('../utils/catchAsync');
 const { authService, tokenService, emailService, clinicService, userService } = require('../services');
 const { tokenTypes } = require('../config/tokens');
 const { sendEmail } = require('../services/email.service');
+const sendEmailAzure = require('../services/email.azure.service');
 
 const register = catchAsync(async (req, res) => {
   // invoke register service
@@ -38,7 +39,7 @@ Thank you!
 Best regards,
 The HWRF Team`;
 
-  await sendEmail(admin.email, subject, text);
+  await sendEmailAzure(admin.email, subject, text);
   // Send response
   res.status(httpStatus.CREATED).json({
     success: true,
@@ -65,8 +66,8 @@ const logout = catchAsync(async (req, res) => {
 });
 
 const refreshTokens = catchAsync(async (req, res) => {
-  const tokens = await authService.refreshAuth(req.body.refreshToken);
-  res.send({ ...tokens });
+  const tokens = await authService.refreshAuth(req.body.refreshToken,req.body.accessToken);
+  res.status(200).send({ tokens });
 });
 
 const forgotPassword = catchAsync(async (req, res) => {

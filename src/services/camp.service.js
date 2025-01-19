@@ -45,9 +45,9 @@ const createCamp = async (campData) => {
   return camp;
 };
 
-const getCamps = async () => {
+const getCamps = async (clinicId) => {
   const camps = await Camp.findAll({
-    where: { status: 'active' },
+    where: { status: 'active', clinicId: clinicId },
     include: [
       { model: User, as: 'users', attributes: ['id', 'name', 'email'] },
       { model: Specialty, as: 'specialties', attributes: ['id', 'name'] },
@@ -167,7 +167,6 @@ const updateCampById = async (campId, campData) => {
   }
 
   return camp.reload(); // Return updated camp with relations
-  
 };
 module.exports = {
   createCamp,
