@@ -67,6 +67,8 @@ const refreshAuth = async (refreshToken, accessToken) => {
       const refreshTokenDoc = await tokenService.verifyToken(refreshToken, tokenTypes.REFRESH);
       console.group('*Expired refresh token');
       const user = await userService.getUserById(refreshTokenDoc.userId);
+      user.currentCampId = null;
+      await user.save();
       await refreshTokenDoc.destroy({ force: true });
       // const res = await tokenService.generateAuthTokens(user);
       return { access: { token: null }, refresh: { token: null } };

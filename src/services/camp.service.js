@@ -45,9 +45,19 @@ const createCamp = async (campData) => {
   return camp;
 };
 
-const getCamps = async (clinicId) => {
+const getCamps = async (clinicId, status = null) => {
+  let where = { clinicId };
+  if (status) {
+    where.status = status;
+  }
+
+
+  console.log('updated where clause', where);
+  
+  
   const camps = await Camp.findAll({
-    where: { status: 'active', clinicId: clinicId },
+    // where: { status: 'active', clinicId: clinicId },
+    where,
     include: [
       { model: User, as: 'users', attributes: ['id', 'name', 'email'] },
       { model: Specialty, as: 'specialties', attributes: ['id', 'name'] },
