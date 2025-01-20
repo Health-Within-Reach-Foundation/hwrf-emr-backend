@@ -3,7 +3,8 @@ const catchAsync = require('../utils/catchAsync');
 const { campService } = require('../services');
 
 const getCamps = catchAsync(async (req, res) => {
-  const camps = await campService.getCamps();
+  const clinicId = req?.user?.clinicId;
+  const camps = await campService.getCamps(clinicId);
   res.status(httpStatus.OK).json({ camps });
 });
 
@@ -45,9 +46,21 @@ const setCurrentCamp = catchAsync(async (req, res) => {
   });
 });
 
+const updateCampById = catchAsync(async (req, res) => {
+  const { campId } = req.params;
+  const updatedCamp = await campService.updateCampById(campId, req.body);
+
+  res.status(httpStatus.OK).json({
+    success: true,
+    message: 'Camp updated successfully',
+    data: updatedCamp,
+  });
+});
+
 module.exports = {
   getCamps,
   createCamp,
   setCurrentCamp,
   getCampById,
+  updateCampById,
 };

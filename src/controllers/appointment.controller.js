@@ -15,7 +15,7 @@ const bookAppointment = catchAsync(async (req, res) => {
   // Return response
   res.status(httpStatus.CREATED).json({
     success: true,
-    message: 'Appointment booked successfully',
+    message: 'Patient added in queue',
     data: appointment,
   });
 });
@@ -51,8 +51,8 @@ const getAppointments = catchAsync(async (req, res) => {
 
 const markAppointment = catchAsync(async (req, res) => {
   const appointmentId = req.params.appointmentId;
-
-  const markedAppointment = await appointmentService.markAppointment(appointmentId,req.body);
+  console.log('MArking appointmet');
+  const markedAppointment = await appointmentService.markAppointment(appointmentId, req.body);
 
   res.status(httpStatus.OK).json({
     success: true,

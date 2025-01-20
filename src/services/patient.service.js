@@ -189,8 +189,11 @@ const getPatientDetailsById = async (patientId, specialtyId) => {
             model: Treatment, // Include Dentist-specific data
             as: 'treatments',
             attributes: { exclude: ['createdAt', 'updatedAt'] },
+            order: [['createdAt', 'ASC']], // Sort by creation date (latest first)
           },
         ],
+
+        order: [['createdAt', 'ASC']], // Sort by creation date (latest first)
         required: false, // Ensure patient is returned even if no records exist
       },
       // {
@@ -225,7 +228,7 @@ const getPatientDetailsById = async (patientId, specialtyId) => {
 };
 
 const createDiagnosis = async (diagnosisBody) => {
-  const { selectedTeeth, complaints, treatments, dentalQuadrantType, xrayStatus, notes, patientId } = diagnosisBody;
+  const { selectedTeeth, complaints, treatmentsSuggested, dentalQuadrantType, xrayStatus, notes, patientId } = diagnosisBody;
 
   // Ensure the patient exists
   const patient = await Patient.findByPk(patientId);
@@ -247,7 +250,7 @@ const createDiagnosis = async (diagnosisBody) => {
     selectedTeeth.forEach(async (element) => {
       diagnosis = await Diagnosis.create({
         complaints,
-        treatments,
+        treatmentsSuggested,
         selectedTeeth: element,
         dentalQuadrantType,
         xrayStatus,
@@ -258,7 +261,7 @@ const createDiagnosis = async (diagnosisBody) => {
   } else {
     diagnosis = await Diagnosis.create({
       complaints,
-      treatments,
+      treatmentsSuggested,
       dentalQuadrantType,
       xrayStatus,
       notes,

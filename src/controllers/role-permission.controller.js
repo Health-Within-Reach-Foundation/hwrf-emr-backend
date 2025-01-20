@@ -3,8 +3,10 @@ const catchAsync = require('../utils/catchAsync');
 const { rolePermissionService } = require('../services');
 
 const createRole = catchAsync(async (req, res) => {
-  const { name, permissions } = req.body;
-  const role = await rolePermissionService.createRoleWithPermissions(name, permissions);
+  const { roleName, permissions, roleDescription } = req.body;
+  const clinicId = req.user.clinicId;
+  const roleBody = { roleName, roleDescription, clinicId };
+  const role = await rolePermissionService.createRoleWithPermissions(roleBody, permissions);
 
   res.status(httpStatus.CREATED).json({
     success: true,

@@ -2,28 +2,44 @@ const httpStatus = require('http-status');
 const catchAsync = require('../utils/catchAsync');
 const { authService, tokenService, emailService, clinicService, userService } = require('../services');
 const { tokenTypes } = require('../config/tokens');
+const { sendEmail } = require('../services/email.service');
+const sendEmailAzure = require('../services/email.azure.service');
 
 const register = catchAsync(async (req, res) => {
   // invoke register service
-  const user = await authService.register(req.body);
+  const { name, email, role, phoneNumber } = req.body;
+  const user = await authService.register({ name, email, phoneNumber, password: 'TzR6!wS@7bH9', role });
+  // const user = await userService.createUser({ name, email, phoneNumber, password: 'TzR6!wS@7bH9', });
+
+  const setPasswordToken = await tokenService.generatePasswordToken(user.email, tokenTypes.SET_PASSWORD);
+
+  await emailService.sendPasswordEmail(user.email, setPasswordToken, tokenTypes.SET_PASSWORD);
 
   // Send response
-  res.status(httpStatus.CREATED).json({
+  res.status(httpStatus.NO_CONTENT).json({
     success: true,
-    message: 'User registered successfully',
-    data: {
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      role: user.role,
-    },
+    message: `Hi ! ${user.name}, A link to set your password has been sent to your email. Please check your inbox and follow the instructions`,
+    data: null,
   });
 });
 
 const onboardClinic = catchAsync(async (req, res) => {
   // Invoke service to handle clinic and admin creation
-  const { clinic, admin } = await clinicService.onboardClinic(req.body);
+  const { clinic, admin } = await clinicService.onboardClinicNew(req.body);
 
+  // console.log(clin)
+
+  const subject = 'Thank You for Onboarding with HWRF!';
+  const text = `Thank you for filling out the onboarding form and expressing interest in joining HWRF. We are thrilled to have you onboard!
+  
+We wanted to let you know that your submission is currently under review. Once the review process is complete, your request will be approved, and you'll receive an email with the next steps.
+
+Thank you!
+
+Best regards,
+The HWRF Team`;
+
+  await sendEmailAzure(admin.email, subject, text);
   // Send response
   res.status(httpStatus.CREATED).json({
     success: true,
@@ -39,7 +55,7 @@ const login = catchAsync(async (req, res) => {
   const { email, password } = req.body;
   const user = await authService.loginUserWithEmailAndPassword(email, password);
   const tokens = await tokenService.generateAuthTokens(user);
-  
+
   res.send({ user, tokens });
 });
 
@@ -50,8 +66,8 @@ const logout = catchAsync(async (req, res) => {
 });
 
 const refreshTokens = catchAsync(async (req, res) => {
-  const tokens = await authService.refreshAuth(req.body.refreshToken);
-  res.send({ ...tokens });
+  const tokens = await authService.refreshAuth(req.body.refreshToken,req.body.accessToken);
+  res.status(200).send({ tokens });
 });
 
 const forgotPassword = catchAsync(async (req, res) => {

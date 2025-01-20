@@ -10,9 +10,9 @@ const ApiError = require('../utils/ApiError');
  * @param {Array<string>} permissions - Array of permission IDs.
  * @returns {Promise<Role>}
  */
-const createRoleWithPermissions = async (name, permissions) => {
+const createRoleWithPermissions = async (roleBody, permissions) => {
   // Create role
-  const role = await Role.create({ name });
+  const role = await Role.create(roleBody);
 
   // Associate permissions
   const permissionInstances = await Permission.findAll({
@@ -136,6 +136,8 @@ const updateRoleWithPermissions = async (roleId, roleBody) => {
     throw new Error(`Failed to update role: ${error.message}`);
   }
 };
+
+// const get
 
 module.exports = {
   createRoleWithPermissions,

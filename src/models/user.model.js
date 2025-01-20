@@ -2,6 +2,7 @@ const { DataTypes, Model, Op } = require('sequelize');
 const bcrypt = require('bcryptjs');
 const { roles, ermRoles } = require('../config/roles');
 const { Role } = require('./role.model');
+const { clinicStatus } = require('../config/constants');
 
 class User extends Model {
   /**
@@ -132,6 +133,10 @@ const initModel = (sequelize) => {
       currentCampId: {
         type: DataTypes.UUID,
         allowNull: true,
+      },
+      status: {
+        type: DataTypes.ENUM(clinicStatus),
+        defaultValue: 'pending',
       },
     },
     {

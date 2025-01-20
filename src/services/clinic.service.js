@@ -1,5 +1,5 @@
 const httpStatus = require('http-status');
-const { userService, emailService, rolePermissionService, formTemplateService } = require('.');
+const { userService, emailService } = require('.');
 const { Clinic } = require('../models/clinic.model');
 const ApiError = require('../utils/ApiError');
 const { createRole } = require('./role.service');
@@ -9,6 +9,8 @@ const { User } = require('../models/user.model');
 const { Role } = require('../models/role.model');
 const { bulkCreateRole } = require('./role-permission.service');
 const { getAllFormTemplates, createFormTemplate } = require('./form-template.service');
+const { Permission } = require('../models/permission.model');
+const db = require('../models');
 
 /**
  *
@@ -149,7 +151,7 @@ const updateClinicById = async (clinicId, clinicBody) => {
 
   await clinic.save();
 
-  return clinic;
+  return clinic.reload();
 };
 
 /**
@@ -187,6 +189,7 @@ const onboardClinic = async (clinicData) => {
     password,
   } = clinicData;
 
+  // const transaction = await db.sequelize.transaction();
   // console.log(roleService, userService);
   console.log(phoneNumber, contactEmail);
   // Step 1: Check if the clinic email already exists
@@ -249,18 +252,33 @@ const onboardClinic = async (clinicData) => {
   const predefinedRole = [
     { roleName: 'admin', roleDescription: 'Has full access to all resources', clinicId: clinic.id },
     { roleName: 'doctor', roleDescription: 'default role doctor', clinicId: clinic.id },
-    { roleName: 'assistant', roleDescription: 'default role assistant', clinicId: clinic.id },
+    // { roleName: 'assistant', roleDescription: 'default role assistant', clinicId: clinic.id },
   ];
 
-  console.log('role permission service -->', formTemplateService);
   const defaultClinicRoles = await bulkCreateRole(predefinedRole);
+
+  const adminRole = defaultClinicRoles.find((role) => role.roleName === 'admin');
+  await admin.addRoles(adminRole);
+
+  const docotorPermission = ['queues:read', 'queues:write', 'camps:read', 'camps:write', 'patients:read', 'patients:write'];
+  const predefinedDoctorPermissions = await Permission.findAll({
+    where: {
+      action: {
+        [Op.in]: docotorPermission, // Match any of the given actions
+      },
+    },
+    attributes: ['id', 'action'], // Fetch only necessary fields
+  });
+
+  const doctorRole = defaultClinicRoles.find((role) => role.roleName === 'doctor');
+  // Assign permissions to the doctor role (Many-to-Many)
+  await doctorRole.addPermissions(predefinedDoctorPermissions); // Sequelize method
+
+  console.log('Doctor role permissions assigned successfully.');
 
   // await roleService.createRole({ roleName: 'admin', userId: admin.id, clinicId: clinic.id });
   // await createRole({ roleName: 'admin', clinicId: clinic.id }, admin);
   // await admin.addRoles(adminRole);
-
-  const adminRole = defaultClinicRoles.find((role) => role.roleName === 'admin');
-  await admin.addRoles(adminRole);
 
   // Step 6: Update the clinic's ownerId to the admin's UUID after user creation
   clinic.ownerId = admin.id;
@@ -281,7 +299,7 @@ const onboardClinic = async (clinicData) => {
   if (predefinedTemplates && Array.isArray(predefinedTemplates)) {
     for (const formTemplate of predefinedTemplates) {
       const { dataValues } = formTemplate; // Extract the actual data
-      const { clinicId, ...templateData } = dataValues; // Remove clinicId from dataValues
+      const { id, clinicId, ...templateData } = dataValues; // Remove clinicId from dataValues
 
       try {
         console.log('Replicating template with new clinicId...');
@@ -330,7 +348,7 @@ const getClinic = async (clinicId) => {
       {
         model: Specialty,
         as: 'specialties',
-        attributes: ['id', 'name'],
+        attributes: ['id', 'name', 'departmentName'],
         through: { attributes: [] }, // Exclude junction table
       },
     ],
@@ -354,16 +372,14 @@ const getClinic = async (clinicId) => {
     clinicPhoneNumber: clinic.phoneNumber,
     adminContactNumber: admin.phoneNumber || 'N/A',
     adminContactEmail: admin.email || 'N/A',
-    specialties: clinic.specialties.map((spec) => spec.name).join(', ') || 'N/A',
+    // specialties: clinic.specialties.map((spec) => spec.name).join(', ') || 'N/A',
+    specialties: clinic.specialties || 'N/A',
     status: clinic.status,
     createdAt: clinic.createdAt,
     allUsers: clinic.users,
   };
 
-  return {
-    success: true,
-    data: transformedData,
-  };
+  return transformedData;
 };
 
 const getSpecialtyDepartmentsByClinic = async (clinicId) => {
@@ -392,6 +408,109 @@ const createRoleUnderClinc = async (roleBody) => {
   return Role.create(roleBody);
 };
 
+/**
+ * Update a clinic by ID
+ * @param {string} clinicId - ID of the clinic to update
+ * @param {Object} clinicData - Data to update the clinic
+ * @returns {Promise<Clinic>}
+ */
+const updateClinic = async (clinicId, clinicData) => {
+  const { clinicName, address, city, state, phoneNumber, contactEmail, status, specialties } = clinicData;
+
+  // Find existing clinic
+  const clinic = await Clinic.findByPk(clinicId);
+  if (!clinic) {
+    throw new ApiError(httpStatus.NOT_FOUND, 'Clinic not found');
+  }
+
+  // Update basic clinic details
+  await updateClinicById(clinicId, {
+    clinicName,
+    address,
+    city,
+    state,
+    phoneNumber,
+    contactEmail,
+    status,
+  });
+  // await clinic.update();
+
+  // Handle Specialties (Many-to-Many)
+  if (specialties) {
+    const specialtyRecords = await Specialty.findAll({
+      where: { id: { [Op.in]: specialties } },
+    });
+
+    if (specialtyRecords.length !== specialties.length) {
+      throw new ApiError(httpStatus.BAD_REQUEST, 'One or more specialties not found');
+    }
+
+    await clinic.setSpecialties(specialtyRecords); // Updates clinic specialties
+  }
+
+  return clinic.reload(); // Return updated clinic with relations
+};
+
+const onboardClinicNew = async (clinicData) => {
+  const {
+    clinicName,
+    address = '',
+    city = '',
+    state = '',
+    phoneNumber = '',
+    contactEmail = '',
+    website,
+    specialties,
+    adminName,
+    adminEmail,
+    adminPhoneNumber,
+    password = 'TzR6!wS@7bH9',
+  } = clinicData;
+
+  const existingClinic = await getClinicByContactEmailPhoneNumber(contactEmail, phoneNumber);
+  if (existingClinic) {
+    throw new ApiError(httpStatus.BAD_REQUEST, 'Clinic has already been registered!');
+  }
+
+  // Step 2: Check if the admin email already exists
+  const existingAdmin = await userService.getUserByEmail(adminEmail);
+  if (existingAdmin) {
+    throw new ApiError(httpStatus.BAD_REQUEST, 'Admin email is already in use.');
+  }
+
+  const clinic = await createClinic({
+    clinicName,
+    address,
+    city,
+    state,
+    phoneNumber,
+    contactEmail,
+  });
+
+  const specialtiesDoc = await Specialty.findAll({
+    where: {
+      id: {
+        [Op.in]: specialties, // Check if the ID is in the array of specialties
+      },
+    },
+  });
+
+  await clinic.addSpecialties(specialtiesDoc);
+
+  const admin = await userService.createUser({
+    name: adminName,
+    email: adminEmail,
+    password: password,
+    clinicId: clinic.id, // Assign clinicId to user after clinic is created
+    phoneNumber: adminPhoneNumber,
+  });
+
+  clinic.ownerId = admin.id;
+  await clinic.save();
+
+  return { clinic, admin };
+};
+
 module.exports = {
   createClinic,
   getClinicById,
@@ -404,4 +523,6 @@ module.exports = {
   getSpecialtyDepartmentsByClinic,
   createRoleUnderClinc,
   // getRolesByClinic,
+  updateClinic,
+  onboardClinicNew
 };

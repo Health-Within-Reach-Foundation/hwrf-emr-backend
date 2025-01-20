@@ -2,6 +2,7 @@ const nodemailer = require('nodemailer');
 const config = require('../config/config');
 const logger = require('../config/logger');
 const emailSubjectBodyForPassword = require('../utils/email-template-password');
+const sendEmailAzure = require('./email.azure.service');
 
 const transport = nodemailer.createTransport(config.email.smtp);
 /* istanbul ignore next */
@@ -20,7 +21,6 @@ if (config.env !== 'test') {
  * @returns {Promise}
  */
 const sendEmail = async (to, subject, text) => {
-  console.log("!@#$%^&*()",to, subject, text);
   const msg = { from: config.email.from, to, subject, text };
 
   await transport.sendMail(msg);
@@ -41,7 +41,7 @@ const sendPasswordEmail = async (to, token, type) => {
   //   const text = `Dear user,
   // To reset your password, click on this link: ${resetPasswordUrl}
   // If you did not request any password resets, then ignore this email.`;
-  await sendEmail(to, subject, body);
+  await sendEmailAzure(to, subject, body);
 };
 
 /**
@@ -57,7 +57,7 @@ const sendVerificationEmail = async (to, token) => {
   const text = `Dear user,
 To verify your email, click on this link: ${verificationEmailUrl}
 If you did not create an account, then ignore this email.`;
-  await sendEmail(to, subject, text);
+  await sendEmailAzure(to, subject, text);
 };
 
 console.log();
@@ -87,7 +87,7 @@ const sendClinicOnboardingNotification = async (clinicDetails) => {
   `;
 
   // Send the email using the helper function
-  await sendEmail(config.superadmin_email, subject, text);
+  await sendEmailAzure(config.superadmin_email, subject, text);
 };
 
 module.exports = {

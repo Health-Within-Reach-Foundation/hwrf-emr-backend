@@ -37,7 +37,7 @@ const logout = async (refreshToken, userId) => {
   const refreshTokenDoc = await Token.findOne({
     where: { token: refreshToken, type: tokenTypes.REFRESH, blacklisted: false },
   });
-  await User.update({currentCampId: null}, {where:{id: userId}})
+  await User.update({ currentCampId: null }, { where: { id: userId } });
 
   if (!refreshTokenDoc) {
     throw new ApiError(httpStatus.NOT_FOUND, 'Not found');
@@ -50,18 +50,33 @@ const logout = async (refreshToken, userId) => {
  * @param {string} refreshToken
  * @returns {Promise<Object>}
  */
-const refreshAuth = async (refreshToken) => {
+const refreshAuth = async (refreshToken, accessToken) => {
   try {
+    //single renewal of access token after
+    const accessTokenDocValidity = await tokenService.verifyAccessToken(accessToken);
     const refreshTokenDoc = await tokenService.verifyToken(refreshToken, tokenTypes.REFRESH);
-    console.log('refreshToken doc -->', refreshTokenDoc);
-    const user = await userService.getUserById(refreshTokenDoc.userId);
-    if (!user) {
-      throw new Error();
+    if (accessTokenDocValidity && refreshTokenDoc) {
+      console.group('*Expired access so creating a new access token only as refresh token is still valid');
+      const user = await userService.getUserById(refreshTokenDoc.userId);
+      if (!user) {
+        throw new Error();
+      }
+      const res = await tokenService.generateAccessTokenOnly(user, refreshToken);
+      return res;
+    } else {
+      const refreshTokenDoc = await tokenService.verifyToken(refreshToken, tokenTypes.REFRESH);
+      console.group('*Expired refresh token');
+      const user = await userService.getUserById(refreshTokenDoc.userId);
+      user.currentCampId = null;
+      await user.save();
+      await refreshTokenDoc.destroy({ force: true });
+      // const res = await tokenService.generateAuthTokens(user);
+      return { access: { token: null }, refresh: { token: null } };
     }
-    await refreshTokenDoc.destroy({ force: true });
-    return tokenService.generateAuthTokens(user);
   } catch (error) {
-    throw new ApiError(httpStatus.UNAUTHORIZED, 'Please authenticate');
+    console.error('error in auth service line 65: ', error);
+    // throw new ApiError(httpStatus.UNAUTHORIZED, 'Please authenticate');
+    return { access: { token: null }, refresh: { token: null } };
   }
 };
 
@@ -82,7 +97,7 @@ const resetPassword = async (resetPasswordToken, newPassword) => {
       throw new Error();
     }
     console.log('FILE: authService --> reset password destroyed');
-    await userService.updateUserById(user.id, { password: newPassword });
+    await userService.updateUserById(user.id, { password: newPassword, status: 'active' });
     await Token.destroy({ where: { userId: user.id, type: tokenTypes.SET_PASSWORD }, force: true });
   } catch (error) {
     logger.error(error);
@@ -118,17 +133,12 @@ const register = async (userBody) => {
     name,
     email,
     password,
-    phoneNumber
+    phoneNumber,
   });
   const superadminRole = await Role.create({ roleName: role, userId: superadmin.id });
 
   // Associate the superadmin with the role using the automatically created junction table
   await superadmin.addRole(superadminRole);
-
-  // await UserRole.create({
-  //   userId: superadmin.id,
-  //   roleId: superadminRole.id,
-  // });
 
   return superadmin;
 };

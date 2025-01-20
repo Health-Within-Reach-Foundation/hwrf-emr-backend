@@ -16,13 +16,21 @@ const { Op, Sequelize } = require('sequelize');
 const bookAppointment = async (appointmentBody) => {
   const { patientId, specialties, appointmentDate, status, clinicId, campId } = appointmentBody;
 
+  console.log('Received appointmentDate (Raw) -->', appointmentDate, typeof appointmentDate);
+
+  // Ensure we store the date in 'YYYY-MM-DD' format without timezone conversion
+  // const formattedDate = new Date(appointmentDate).toISOString().split("T")[0];
+  const formattedDate = appointmentDate.toISOString().split("T")[0]; // No need to format, it's already "YYYY-MM-DD"
+
+  console.log('Formatted appointmentDate for DB -->', formattedDate);
+
   // Initialize an array to store created appointments
   const createdAppointments = [];
 
   for (const specialty of specialties) {
     // Check if an appointment already exists for this specialty and date
     const existingAppointment = await Appointment.findOne({
-      where: { patientId, specialtyId: specialty, appointmentDate, campId },
+      where: { patientId, specialtyId: specialty, appointmentDate: formattedDate, campId },
     });
 
     if (existingAppointment) {
@@ -32,30 +40,29 @@ const bookAppointment = async (appointmentBody) => {
       );
     }
 
-    // Create a new appointment for the current specialty and camp
+    // Create a new appointment
     const appointment = await Appointment.create({
       patientId,
       specialtyId: specialty,
       clinicId,
-      appointmentDate,
+      appointmentDate: formattedDate, // Store formatted date
       status,
       campId: campId || null, // Handle null campId explicitly
     });
 
-    // Push created appointment to the array
     createdAppointments.push(appointment);
 
-    // Add patient to the queue if appointment is today
-    const localAppointmentDate = new Date(appointmentDate).toLocaleDateString('en-CA'); // 'YYYY-MM-DD'
-    const today = new Date().toLocaleDateString('en-CA'); // 'YYYY-MM-DD'
+    // Compare dates correctly
+    const today = new Date().toLocaleDateString('en-CA'); // Ensure today's date is correct
 
-    if (localAppointmentDate === today) {
+    console.log(today, "today date is matching with formateed Date -->" , today === formattedDate, typeof formattedDate, typeof today, today);
+    if (formattedDate == today) {
       console.log(`Adding to queue for specialty (${specialty}) and camp (${campId || 'No Camp'})`);
-      await addToQueue(patientId, specialty, appointmentDate, clinicId, campId);
+      await addToQueue(patientId, specialty, formattedDate, clinicId, campId);
     }
   }
 
-  return createdAppointments; // Return all created appointments
+  return createdAppointments;
 };
 
 /**
@@ -207,15 +214,7 @@ const updateAppointmentStatus = async (appointmentId, updateBody) => {
 const getAppointments = async (queryOptions, clinicId, campId) => {
   console.log('ClinicId -->', clinicId);
 
-  const {
-    appointmentDate,
-    status,
-    specialtyId,
-    sortBy = 'appointmentDate',
-    order = 'asc',
-    page = 1,
-    limit = 10,
-  } = queryOptions;
+  const { appointmentDate, status, specialtyId, sortBy = 'createdAt', order = 'desc', page = 1, limit = 10 } = queryOptions;
 
   console.log('appointmentDate -->', appointmentDate);
 
@@ -281,13 +280,10 @@ const getAppointments = async (queryOptions, clinicId, campId) => {
     ],
   });
 
-  console.log('Raw Appointments -->', appointments);
-
   // **Flatten Response** to remove nesting
   const flattenedAppointments = appointments.map((appointment, index) => {
     const { patient, specialty, records } = appointment;
 
-    console.log('Patient -->', patient.queues);
     return {
       id: appointment.id,
       appointmentDate: appointment.appointmentDate,
@@ -310,8 +306,6 @@ const getAppointments = async (queryOptions, clinicId, campId) => {
       medicalRecords: records,
     };
   });
-
-  console.log('Flattened Appointments -->', flattenedAppointments);
 
   // Return paginated response
   return {
