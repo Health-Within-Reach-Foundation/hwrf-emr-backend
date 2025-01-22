@@ -51,10 +51,8 @@ const getCamps = async (clinicId, status = null) => {
     where.status = status;
   }
 
-
   console.log('updated where clause', where);
-  
-  
+
   const camps = await Camp.findAll({
     // where: { status: 'active', clinicId: clinicId },
     where,
@@ -92,12 +90,26 @@ const getCampById = async (campId) => {
         as: 'patients',
         attributes: ['id', 'name', 'regNo', 'age', 'sex', 'mobile'],
         through: { attributes: [] }, // Exclude intermediate table fields
+        include: [
+          {
+            model: Appointment,
+            as: 'appointments',
+            attributes: { exclude: ['createdAt', 'updatedAt'] },
+            include: [
+              {
+                model: Specialty,
+                as: 'specialty',
+                attributes: { exclude: ['id', 'createdAt', 'updatedAt'] },
+              },
+            ],
+          },
+        ],
       },
-      {
-        model: Appointment,
-        as: 'appointments',
-        attributes: ['id', 'appointmentDate', 'status', 'specialtyId', 'patientId', 'campId'],
-      },
+      // {
+      //   model: Appointment,
+      //   as: 'appointments',
+      //   attributes: ['id', 'appointmentDate', 'status', 'specialtyId', 'patientId', 'campId'],
+      // },
       {
         model: Specialty,
         as: 'specialties',
@@ -141,14 +153,16 @@ const updateCampById = async (campId, campData) => {
 
   await camp.save();
 
-  // await camp.update({
-  //   name,
-  //   location,
-  //   city,
-  //   startDate,
-  //   endDate,
-  //   vans,
-  // });
+  // Check if endDate is today or in the future, and update status to "active"
+  if (endDate && new Date(endDate) >= new Date()) {
+    camp.status = 'active'; // Set camp status to 'active'
+    await camp.save(); // Save the updated status
+  }
+
+  if (endDate && new Date(endDate) < new Date()) {
+    camp.status = 'inactive'; // Set camp status to 'inactive'
+    await camp.save(); // Save the updated status
+  }
 
   // Handle Specialties (Many-to-Many)
   if (specialties) {

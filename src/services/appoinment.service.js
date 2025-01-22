@@ -7,6 +7,8 @@ const { Patient } = require('../models/patient.model');
 const { PatientRecord } = require('../models/patient-record.model');
 const { DentistPatientRecord } = require('../models/dentist-patient-record');
 const { Op, Sequelize } = require('sequelize');
+const { Camp } = require('../models/camp.model');
+const { patientService } = require('.');
 
 /**
  * Book multiple appointments for the patient, segregated by camp.
@@ -16,11 +18,37 @@ const { Op, Sequelize } = require('sequelize');
 const bookAppointment = async (appointmentBody) => {
   const { patientId, specialties, appointmentDate, status, clinicId, campId } = appointmentBody;
 
+  if (campId) {
+    // Step 1: Check if the patient is already associated with the camp
+    const camp = await Camp.findByPk(campId, {
+      include: {
+        model: Patient,
+        as: 'patients',
+        where: { id: patientId },
+        required: false, // Do not enforce join condition
+      },
+    });
+
+    if (!camp || camp.patients.length === 0) {
+      console.log(`⛺ Patient ${patientId} is NOT associated with Camp ${campId}, adding now...`);
+
+      // Step 2: Associate the patient with the camp
+      const patient = await patientService.getPatientById(patientId);
+
+      if (!patient) {
+        throw new ApiError(httpStatus.NOT_FOUND, 'Patient not found');
+      }
+
+      await camp.addPatient(patient);
+      console.log(`✅ Patient ${patientId} successfully associated with Camp ${campId}`);
+    }
+  }
+
   console.log('Received appointmentDate (Raw) -->', appointmentDate, typeof appointmentDate);
 
   // Ensure we store the date in 'YYYY-MM-DD' format without timezone conversion
   // const formattedDate = new Date(appointmentDate).toISOString().split("T")[0];
-  const formattedDate = appointmentDate.toISOString().split("T")[0]; // No need to format, it's already "YYYY-MM-DD"
+  const formattedDate = appointmentDate.toISOString().split('T')[0]; // No need to format, it's already "YYYY-MM-DD"
 
   console.log('Formatted appointmentDate for DB -->', formattedDate);
 
@@ -55,7 +83,14 @@ const bookAppointment = async (appointmentBody) => {
     // Compare dates correctly
     const today = new Date().toLocaleDateString('en-CA'); // Ensure today's date is correct
 
-    console.log(today, "today date is matching with formateed Date -->" , today === formattedDate, typeof formattedDate, typeof today, today);
+    console.log(
+      today,
+      'today date is matching with formateed Date -->',
+      today === formattedDate,
+      typeof formattedDate,
+      typeof today,
+      today
+    );
     if (formattedDate == today) {
       console.log(`Adding to queue for specialty (${specialty}) and camp (${campId || 'No Camp'})`);
       await addToQueue(patientId, specialty, formattedDate, clinicId, campId);
@@ -254,7 +289,7 @@ const getAppointments = async (queryOptions, clinicId, campId) => {
             attributes: ['tokenNumber', 'queueDate', 'queueType', 'specialtyId'], // Queue details
             where: {
               clinicId, // Filter queues by clinic
-              queueDate: appointmentDate, // Filter queues by date
+              // queueDate: appointmentDate, // Filter queues by date
             },
             required: false, // Allow patients without queue data
           },

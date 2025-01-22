@@ -7,11 +7,11 @@ const createPatient = catchAsync(async (req, res) => {
   const clinic = await clinicService.getClinicById(req.user.clinicId);
 
   const clinicInitials = clinic.clinicName.substring(0, 2).toUpperCase();
-  const lastPatient = await patientService.getLastPatientRegistered(req.user.clinicId, clinicInitials);
+  const lastPatient = await patientService.getLastPatientRegistered(req.user.clinicId, "HWRF");
   const currentCampId = req.user.currentCampId;
 
-  console.log(clinicInitials, lastPatient, '***************');
-  const registrationNumber = generateRegNo(clinicInitials, lastPatient);
+  // console.log(clinicInitials, lastPatient, '***************');
+  const registrationNumber = generateRegNo("HWRF", lastPatient);
   console.log(registrationNumber, '***************');
   const patientData = {
     ...req.body, // Spread the properties from req.body

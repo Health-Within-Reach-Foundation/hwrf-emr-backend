@@ -29,7 +29,7 @@ const initModel = (sequelize) => {
         allowNull: true,
       },
       dentalQuadrantType: {
-        type: DataTypes.ENUM('adult', 'child'),
+        type: DataTypes.ENUM('adult', 'child', 'all'),
         defaultValue: 'adult',
       },
       dentalQuadrant: {

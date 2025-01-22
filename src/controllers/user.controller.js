@@ -2,7 +2,7 @@ const httpStatus = require('http-status');
 const pick = require('../utils/pick');
 const ApiError = require('../utils/ApiError');
 const catchAsync = require('../utils/catchAsync');
-const { userService, tokenService, emailService } = require('../services');
+const { userService, tokenService, emailService, rolePermissionService } = require('../services');
 const { tokenTypes } = require('../config/tokens');
 const { createRole } = require('../services/role.service');
 const { Specialty } = require('../models/specialty.model');
@@ -20,8 +20,12 @@ const createClinicUser = catchAsync(async (req, res) => {
     password: 'TzR6!wS@7bH9',
   };
 
-  // Create the user
   const user = await userService.createUser(userPayload);
+  // Create the user
+  // const roleDoc = (await rolePermissionService.getRolesByClinic(clinicId)).find((role) => role?.roleName === "doctor");
+  // if(roleDoc && roles?.includes(roleDoc.id)){
+  //     user
+  // }
   // user.addSpecialties({specialtyId: re});
   if (specialities && specialities.length > 0) {
     // 'addSpecialties' automatically inserts entries in 'user_specialties'

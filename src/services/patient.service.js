@@ -367,7 +367,8 @@ const createTreatment = async (treatmentBody) => {
     });
     return treatmentCreated;
   } catch (error) {
-    throw ApiError(httpStatus.INTERNAL_SERVER_ERROR, 'Internal Server error');
+    console.error(error)
+    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, 'Internal Server error');
   }
 };
 

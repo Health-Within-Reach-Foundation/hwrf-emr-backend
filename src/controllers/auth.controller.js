@@ -66,19 +66,27 @@ const logout = catchAsync(async (req, res) => {
 });
 
 const refreshTokens = catchAsync(async (req, res) => {
-  const tokens = await authService.refreshAuth(req.body.refreshToken,req.body.accessToken);
+  const tokens = await authService.refreshAuth(req.body.refreshToken, req.body.accessToken);
   res.status(200).send({ tokens });
 });
 
 const forgotPassword = catchAsync(async (req, res) => {
   const resetPasswordToken = await tokenService.generatePasswordToken(req.body.email, tokenTypes.SET_PASSWORD);
   await emailService.sendPasswordEmail(req.body.email, resetPasswordToken, tokenTypes.RESET_PASSWORD);
-  res.status(httpStatus.NO_CONTENT).send();
+  res.status(httpStatus.OK).json({
+    success: true,
+    message: `A password reset link has been sent to your ${req.body.email}. Please check your inbox to set a new password.`,
+    data: null, // No additional data is required for this operation
+  });
 });
 
 const resetPassword = catchAsync(async (req, res) => {
   await authService.resetPassword(req.query.token, req.body.password);
-  res.status(httpStatus.NO_CONTENT).send();
+  res.status(httpStatus.OK).json({
+    success: true,
+    message: 'Your password set Successfully !',
+    data: null,
+  });
 });
 
 const sendVerificationEmail = catchAsync(async (req, res) => {
