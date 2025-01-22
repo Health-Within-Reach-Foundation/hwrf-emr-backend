@@ -1,34 +1,53 @@
 const httpStatus = require('http-status');
 const catchAsync = require('../utils/catchAsync');
-const { patientService, clinicService, appointmentService, dentalService } = require('../services');
+const { patientService, clinicService, appointmentService, dentalService, campService } = require('../services');
 const generateRegNo = require('../utils/generate-regNo');
 
 const createPatient = catchAsync(async (req, res) => {
   const clinic = await clinicService.getClinicById(req.user.clinicId);
+  if (!clinic) {
+    throw new ApiError(httpStatus.NOT_FOUND, 'Clinic not found');
+  }
 
   const clinicInitials = clinic.clinicName.substring(0, 2).toUpperCase();
-  const lastPatient = await patientService.getLastPatientRegistered(req.user.clinicId, "HWRF");
+  const lastPatient = await patientService.getLastPatientRegistered(req.user.clinicId);
   const currentCampId = req.user.currentCampId;
 
-  // console.log(clinicInitials, lastPatient, '***************');
-  const registrationNumber = generateRegNo("HWRF", lastPatient);
-  console.log(registrationNumber, '***************');
+  console.log(lastPatient);
+  const registrationNumber = lastPatient?.regNo ? lastPatient?.regNo + 1 : 1;
+  // const registrationNumber = generateRegNo("HWRF", lastPatient);
+
+  if (!registrationNumber) {
+    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, 'Failed to generate registration number');
+  }
+
   const patientData = {
-    ...req.body, // Spread the properties from req.body
-    regNo: registrationNumber, // Add regNo to the patientData object
+    ...req.body,
+    regNo: registrationNumber,
     clinicId: req.user.clinicId,
   };
+
+  // Validate required fields
+  if (!patientData.name || !patientData.age || !patientData.sex || !patientData.mobile || !patientData.clinicId) {
+    throw new ApiError(httpStatus.BAD_REQUEST, 'Missing required fields for patient creation');
+  }
+
+  console.log('--------------------->', patientService, patientData);
+
   const patient = await patientService.createPatient(patientData);
 
-  // Add the patient to the camp
+  // Associate patient with the camp if applicable
   if (currentCampId) {
-    await patient.addCamps([currentCampId]); // `addCamps` is Sequelize's many-to-many association method
+    const camp = await campService.getCampById(currentCampId);
+    if (!camp) {
+      throw new ApiError(httpStatus.BAD_REQUEST, 'Camp not found for the given ID');
+    }
+    await patient.addCamps([camp]);
   }
 
   res.status(httpStatus.CREATED).json({
     success: true,
     message: 'Patient added successfully',
-    // patientId: patient.id,
     data: patient,
   });
 });

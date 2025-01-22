@@ -138,20 +138,25 @@ const deletePatientById = async (patientId, permanent = false) => {
   }
 };
 
-const getLastPatientRegistered = async (clinicId, clinicInitials) => {
-  // Find the last patient registered for the given clinic based on createdAt and regNo
-  const lastPatient = await Patient.findOne({
-    where: {
-      regNo: { [Op.like]: `${clinicInitials}%` }, // regNo starts with the clinic ID (e.g., AP)
-    },
-    order: [
-      ['createdAt', 'DESC'], // Order by createdAt in descending order to get the most recent patient
-      ['regNo', 'DESC'], // If two patients were created at the same time, sort by regNo
-    ],
-    limit: 1, // Only fetch the first result after ordering
-  });
+/**
+ * Get the last registered patient with the highest regNo for a given clinic.
+ * @param {UUID} clinicId - The clinic ID.
+ * @returns {Promise<Patient | null>} The last registered patient or null if none exist.
+ */
+const getLastPatientRegistered = async (clinicId) => {
+  try {
+    // Find the patient with the highest regNo in the given clinic
+    const lastPatient = await Patient.findOne({
+      where: { clinicId },
+      order: [["regNo", "DESC"]], // Sorting by regNo to get the highest number
+      limit: 1, // Fetch only the top record
+    });
 
-  return lastPatient;
+    return lastPatient || null; // Return null if no patient is found
+  } catch (error) {
+    console.error("Error fetching last registered patient:", error);
+    throw new Error("Failed to fetch last registered patient");
+  }
 };
 
 /**
@@ -367,7 +372,7 @@ const createTreatment = async (treatmentBody) => {
     });
     return treatmentCreated;
   } catch (error) {
-    console.error(error)
+    console.error(error);
     throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, 'Internal Server error');
   }
 };

@@ -8,7 +8,7 @@ class Patient extends Model {
   static associate(models) {
     // One Patient can have many Appointments
     Patient.hasMany(models.Appointment, { foreignKey: 'patientId', as: 'appointments' });
-   
+
     // Each Patient belongs to a Clinic
     Patient.belongsTo(models.Clinic, { foreignKey: 'clinicId', as: 'clinic' });
 
@@ -43,8 +43,8 @@ const initModel = (sequelize) => {
         primaryKey: true,
       },
       regNo: {
-        type: DataTypes.STRING(20),
-        unique: true,
+        type: DataTypes.INTEGER,
+        // unique: true,
         allowNull: false,
       },
       name: {
@@ -91,7 +91,7 @@ const initModel = (sequelize) => {
       primaryDoctor: {
         type: DataTypes.JSON,
         allowNull: true, // Each patient must belong to a clinic
-      },
+      },
     },
     {
       sequelize,
