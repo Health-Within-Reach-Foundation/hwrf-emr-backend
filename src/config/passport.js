@@ -120,6 +120,8 @@ const jwtVerify = async (payload, done) => {
           as: 'camps', // Camp relationship
           through: { attributes: [] },
           where: { status: 'active' },
+        required:false,
+
           attributes: { exclude: ['clinicId', 'updatedAt'] },
         },
       ],

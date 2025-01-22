@@ -58,6 +58,7 @@ const getUserById = async (id) => {
         as: 'camps',
         through: { attributes: [] },
         where: { status: 'active' },
+        required:false,
         attributes: { exclude: ['clinicId', 'updatedAt'] },
       },
     ],
