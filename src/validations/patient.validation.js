@@ -198,21 +198,31 @@ const deleteDiagnosis = {
   }),
 };
 
+// const createTreatment = {
+//   body: Joi.object().keys({
+//     diagnosisId: Joi.string().uuid().required().description('Diagnosis ID'),
+//     treatmentDate: Joi.date().required().description('Date of treatment'),
+//     treatmentStatus: Joi.array().items(Joi.string()).optional(),
+//     notes: Joi.string().allow('', null).optional(),
+//     additionalDetails: Joi.object().optional(),
+//     totalAmount: Joi.number().required(),
+//     paidAmount: Joi.number().default(0),
+//     remainingAmount: Joi.number().required(),
+//     paymentStatus: Joi.string().valid('paid', 'pending').default('pending'),
+//   }),
+// };
+
 const createTreatment = {
   body: Joi.object().keys({
     diagnosisId: Joi.string().uuid().required().description('Diagnosis ID'),
     treatmentDate: Joi.date().required().description('Date of treatment'),
-    // complaints: Joi.array().items(Joi.string()).optional(),
-    // treatment: Joi.array().items(Joi.string()).required(),
-    // dentalQuadrant: Joi.object().pattern(Joi.string(), Joi.array().items(Joi.number())).optional(),
-    // xrayStatus: Joi.boolean().optional(),
-    // xray: Joi.array().items(Joi.string().uri()).optional(),
     treatmentStatus: Joi.array().items(Joi.string()).optional(),
     notes: Joi.string().allow('', null).optional(),
     additionalDetails: Joi.object().optional(),
     totalAmount: Joi.number().required(),
     paidAmount: Joi.number().default(0),
     remainingAmount: Joi.number().required(),
+    settingPaidAmount: Joi.number().optional(),
     paymentStatus: Joi.string().valid('paid', 'pending').default('pending'),
   }),
 };
@@ -231,18 +241,36 @@ const getTreatmentById = {
   }),
 };
 
+// const updateTreatment = {
+//   params: Joi.object().keys({
+//     treatmentId: Joi.string().uuid().required().description('Treatment ID'),
+//   }),
+//   body: Joi.object()
+//     .keys({
+//       treatmentDate: Joi.date().optional(),
+//       // complaints: Joi.array().items(Joi.string()).optional(),
+//       // treatments: Joi.array().items(Joi.string()).optional(),
+//       // dentalQuadrant: Joi.object().pattern(Joi.string(), Joi.array().items(Joi.number())).optional(),
+//       // xrayStatus: Joi.boolean().optional(),
+//       // xray: Joi.array().items(Joi.string().uri()).optional(),
+//       treatmentStatus: Joi.array().items(Joi.string()).optional(),
+//       notes: Joi.string().allow('', null).optional(),
+//       additionalDetails: Joi.object().optional(),
+//       totalAmount: Joi.number().optional(),
+//       paidAmount: Joi.number().optional(),
+//       remainingAmount: Joi.number().optional(),
+//       paymentStatus: Joi.string().valid('paid', 'pending').optional(),
+//     })
+//     .min(1),
+// };
+
 const updateTreatment = {
   params: Joi.object().keys({
     treatmentId: Joi.string().uuid().required().description('Treatment ID'),
   }),
   body: Joi.object()
     .keys({
-      treatmentDate: Joi.date().optional(),
-      // complaints: Joi.array().items(Joi.string()).optional(),
-      // treatments: Joi.array().items(Joi.string()).optional(),
-      // dentalQuadrant: Joi.object().pattern(Joi.string(), Joi.array().items(Joi.number())).optional(),
-      // xrayStatus: Joi.boolean().optional(),
-      // xray: Joi.array().items(Joi.string().uri()).optional(),
+      // treatmentDate: Joi.date().optional(),
       treatmentStatus: Joi.array().items(Joi.string()).optional(),
       notes: Joi.string().allow('', null).optional(),
       additionalDetails: Joi.object().optional(),
@@ -250,6 +278,13 @@ const updateTreatment = {
       paidAmount: Joi.number().optional(),
       remainingAmount: Joi.number().optional(),
       paymentStatus: Joi.string().valid('paid', 'pending').optional(),
+
+      // Fields related to TreatmentSetting
+      treatmentSettingId: Joi.string().uuid().optional().description('TreatmentSetting ID'),
+      settingTreatmentDate: Joi.date().optional(),
+      settingNotes: Joi.string().allow('', null).optional(),
+      settingAdditionalDetails: Joi.object().optional(),
+      settingPaidAmount: Joi.number().optional(),
     })
     .min(1),
 };

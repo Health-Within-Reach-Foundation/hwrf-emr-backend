@@ -72,7 +72,7 @@ router
       next();
     },
 
-    parseArrayFields(['complaints', 'treatmentsSuggested', 'currentStatus', 'dentalQuadrant','selectedTeeth']),
+    parseArrayFields(['complaints', 'treatmentsSuggested', 'currentStatus', 'dentalQuadrant', 'selectedTeeth']),
     // roleAuthorization('diagnosis:write'),
     validate(patientValidation.updateDiagnosis),
     patientController.updateDiagnosis
@@ -86,14 +86,34 @@ router
 
 router
   .route('/treatment')
-  .post(auth(), validate(patientValidation.createTreatment), patientController.createTreatment)
-  .get(auth(), validate(patientValidation.getTreatments), patientController.getTreatments);
+  .post(
+    auth(),
+    validate(patientValidation.createTreatment), 
+    patientController.createTreatment
+  )
+  .get(
+    auth(), 
+    validate(patientValidation.getTreatments), 
+    patientController.getTreatments
+  );
 
 router
   .route('/treatment/:treatmentId')
-  .get(auth(), validate(patientValidation.getTreatmentById), patientController.getTreatmentById)
-  .patch(auth(), validate(patientValidation.updateTreatment), patientController.updateTreatment)
-  .delete(auth(), validate(patientValidation.deleteTreatment), patientController.deleteTreatment);
+  .get(
+    auth(), 
+    validate(patientValidation.getTreatmentById), 
+    patientController.getTreatmentById
+  )
+  .patch(
+    auth(), 
+    validate(patientValidation.updateTreatment), 
+    patientController.updateTreatment
+  )
+  .delete(
+    auth(), 
+    validate(patientValidation.deleteTreatment), 
+    patientController.deleteTreatment
+  );
 
 router
   .route('/:patientId')

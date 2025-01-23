@@ -8,7 +8,7 @@ class Diagnosis extends Model {
     Diagnosis.belongsTo(models.Patient, { foreignKey: 'patientId', as: 'diagnosis' });
 
     // Each Diagnosis can have many Treatments
-    Diagnosis.hasMany(models.Treatment, { foreignKey: 'diagnosisId', as: 'treatments' });
+    Diagnosis.hasOne(models.Treatment, { foreignKey: 'diagnosisId', as: 'treatment', });
   }
 }
 

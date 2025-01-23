@@ -112,12 +112,12 @@ const createDiagnosis = catchAsync(async (req, res) => {
     xray: xrayFilePaths, // Attach uploaded file paths if available
   };
 
-  const diagnosis = await patientService.createDiagnosis(diagnosisData);
+  await patientService.createDiagnosis(diagnosisData);
 
   res.status(httpStatus.CREATED).json({
     success: true,
     message: 'Diagnosis created successfully',
-    data: diagnosis,
+    // data: diagnosis,
   });
 });
 
@@ -171,10 +171,19 @@ const deleteDiagnosis = catchAsync(async (req, res) => {
   });
 });
 
+// const createTreatment = catchAsync(async (req, res) => {
+//   const treatment = await patientService.createTreatment(req.body);
+//   res.status(httpStatus.CREATED).json({ success: true, data: treatment });
+// });
 const createTreatment = catchAsync(async (req, res) => {
-  const treatment = await patientService.createTreatment(req.body);
-  res.status(httpStatus.CREATED).json({ success: true, data: treatment });
+  const treatmentSetting = await patientService.createTreatment(req.body);
+  res.status(httpStatus.CREATED).json({
+    success: true,
+    message: "Treatment created successfully",
+    data: treatmentSetting,
+  });
 });
+
 
 const getTreatments = catchAsync(async (req, res) => {
   const treatments = await patientService.getTreatments(req.query);
@@ -186,10 +195,16 @@ const getTreatmentById = catchAsync(async (req, res) => {
   res.status(httpStatus.OK).json({ success: true, data: treatment });
 });
 
+// const updateTreatment = catchAsync(async (req, res) => {
+//   const updatedTreatment = await patientService.updateTreatment(req.params.treatmentId, req.body);
+//   res.status(httpStatus.OK).json({ success: true, data: updatedTreatment });
+// });
+
 const updateTreatment = catchAsync(async (req, res) => {
   const updatedTreatment = await patientService.updateTreatment(req.params.treatmentId, req.body);
   res.status(httpStatus.OK).json({ success: true, data: updatedTreatment });
 });
+
 
 const deleteTreatment = catchAsync(async (req, res) => {
   await patientService.deleteTreatment(req.params.treatmentId);
