@@ -227,7 +227,18 @@ const getPatientDetailsById = async (patientId, specialtyId) => {
 };
 
 const createDiagnosis = async (diagnosisBody) => {
-  const { selectedTeeth, complaints, treatmentsSuggested, dentalQuadrantType, xrayStatus, notes, patientId } = diagnosisBody;
+  const {
+    selectedTeeth,
+    childSelectedTeeth,
+    adultSelectedTeeth,
+    complaints,
+    treatmentsSuggested,
+    dentalQuadrantType,
+    xrayStatus,
+    notes,
+    patientId,
+    xray,
+  } = diagnosisBody;
 
   // Ensure the patient exists
   const patient = await Patient.findByPk(patientId);
@@ -245,25 +256,42 @@ const createDiagnosis = async (diagnosisBody) => {
 
   // Create the diagnosis
   let diagnosis;
-  if (selectedTeeth.length > 0) {
-    selectedTeeth.forEach(async (element) => {
+  if (childSelectedTeeth.length > 0) {
+    childSelectedTeeth.forEach(async (element) => {
       diagnosis = await Diagnosis.create({
         complaints,
         treatmentsSuggested,
         selectedTeeth: element,
-        dentalQuadrantType,
+        dentalQuadrantType: 'child',
         xrayStatus,
         notes,
+        xray,
         patientId,
       });
     });
-  } else {
+  }
+  if (adultSelectedTeeth.length > 0) {
+    adultSelectedTeeth.forEach(async (element) => {
+      diagnosis = await Diagnosis.create({
+        complaints,
+        treatmentsSuggested,
+        selectedTeeth: element,
+        dentalQuadrantType: 'adult',
+        xrayStatus,
+        notes,
+        xray,
+        patientId,
+      });
+    });
+  }
+  if (dentalQuadrantType === 'all') {
     diagnosis = await Diagnosis.create({
       complaints,
       treatmentsSuggested,
       dentalQuadrantType,
       xrayStatus,
       notes,
+      xray,
       patientId,
     });
   }
@@ -395,6 +423,8 @@ const createTreatment = async (treatmentBody) => {
     totalAmount,
     // paidAmount,
     // remainingAmount,
+    xrayStatus,
+    xray,
     paymentStatus,
     settingPaidAmount,
   } = treatmentBody;
@@ -439,6 +469,8 @@ const createTreatment = async (treatmentBody) => {
       treatmentStatus,
       notes,
       settingPaidAmount,
+      xrayStatus,
+      xray,
       additionalDetails: treatmentBody.additionalDetails || {},
       treatmentId: treatment.id, // Associate with the found/created Treatment
     });
@@ -548,8 +580,8 @@ const updateTreatment = async (treatmentId, updateBody) => {
   // }
 
   // ✅ Recalculate Paid & Remaining Amounts for Treatment
-  const totalPaidAmount = treatment.paidAmount + settingPaidAmount;
-  const remainingAmount = treatment.totalAmount - totalPaidAmount;
+  const totalPaidAmount = Number(treatment.paidAmount) + Number(settingPaidAmount);
+  const remainingAmount = Number(treatment.totalAmount) - Number(totalPaidAmount);
 
   // ✅ Update Treatment's financial details
   treatment.paidAmount = totalPaidAmount;

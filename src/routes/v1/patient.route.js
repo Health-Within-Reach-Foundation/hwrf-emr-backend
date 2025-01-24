@@ -45,7 +45,14 @@ router
   .post(
     auth(),
     upload.array('xrayFiles'),
-    parseArrayFields(['complaints', 'treatmentsSuggested', 'currentStatus', 'selectedTeeth']),
+    parseArrayFields([
+      'complaints',
+      'treatmentsSuggested',
+      'currentStatus',
+      'selectedTeeth',
+      'childSelectedTeeth',
+      'adultSelectedTeeth',
+    ]),
     (req, res, next) => {
       console.log('req body --------', req.body, req.files);
       next();
@@ -88,32 +95,20 @@ router
   .route('/treatment')
   .post(
     auth(),
-    validate(patientValidation.createTreatment), 
+    upload.array('xrayFiles'),
+    parseArrayFields([
+      'treatmentStatus',
+    ]),
+    validate(patientValidation.createTreatment),
     patientController.createTreatment
   )
-  .get(
-    auth(), 
-    validate(patientValidation.getTreatments), 
-    patientController.getTreatments
-  );
+  .get(auth(), validate(patientValidation.getTreatments), patientController.getTreatments);
 
 router
   .route('/treatment/:treatmentId')
-  .get(
-    auth(), 
-    validate(patientValidation.getTreatmentById), 
-    patientController.getTreatmentById
-  )
-  .patch(
-    auth(), 
-    validate(patientValidation.updateTreatment), 
-    patientController.updateTreatment
-  )
-  .delete(
-    auth(), 
-    validate(patientValidation.deleteTreatment), 
-    patientController.deleteTreatment
-  );
+  .get(auth(), validate(patientValidation.getTreatmentById), patientController.getTreatmentById)
+  .patch(auth(), validate(patientValidation.updateTreatment), patientController.updateTreatment)
+  .delete(auth(), validate(patientValidation.deleteTreatment), patientController.deleteTreatment);
 
 router
   .route('/:patientId')

@@ -50,6 +50,14 @@ const initModel = (sequelize) => {
         onDelete: 'CASCADE',
         onUpdate: 'CASCADE',
       },
+      xrayStatus: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false,
+      },
+      xray: {
+        type: DataTypes.ARRAY(DataTypes.STRING),
+        allowNull: true, // URLs for X-rays
+      },
     },
     {
       sequelize,

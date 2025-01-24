@@ -122,6 +122,8 @@ const createDiagnosis = {
     currentStatus: Joi.array().items(Joi.string()).optional(),
     // dentalQuadrant: Joi.array().items(Joi.string()).optional(),
     selectedTeeth: Joi.array().items(Joi.number()).optional(),
+    childSelectedTeeth: Joi.array().items(Joi.number()).optional(),
+    adultSelectedTeeth: Joi.array().items(Joi.number()).optional(),
     dentalQuadrantType: Joi.string().valid('adult', 'child', 'all').optional(),
     xrayStatus: Joi.boolean().optional(),
     notes: Joi.string().allow('', null).optional(),
@@ -223,8 +225,24 @@ const createTreatment = {
     paidAmount: Joi.number().default(0),
     remainingAmount: Joi.number().required(),
     settingPaidAmount: Joi.number().optional(),
+    xrayStatus: Joi.boolean().optional(),
     paymentStatus: Joi.string().valid('paid', 'pending').default('pending'),
   }),
+  files: (files) => {
+    if (!files.length) return null; // No files, validation passes
+
+    for (const file of files) {
+      if (!['image/jpeg', 'image/png', 'application/pdf', 'image/avif'].includes(file.mimetype)) {
+        return `Invalid file type for file: ${file.originalname}. Only JPEG, PNG, or PDF files are allowed.`;
+      }
+      // if (file.size > 5 * 1024 * 1024) {
+      //   // 5 MB limit
+      //   return `File ${file.originalname} exceeds the maximum size of 5MB.`;
+      // }
+    }
+
+    return null; // No errors
+  },
 };
 
 const getTreatments = {
@@ -276,6 +294,7 @@ const updateTreatment = {
       additionalDetails: Joi.object().optional(),
       totalAmount: Joi.number().optional(),
       paidAmount: Joi.number().optional(),
+      status: Joi.string().optional(),
       remainingAmount: Joi.number().optional(),
       paymentStatus: Joi.string().valid('paid', 'pending').optional(),
 

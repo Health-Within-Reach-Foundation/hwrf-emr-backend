@@ -176,7 +176,16 @@ const deleteDiagnosis = catchAsync(async (req, res) => {
 //   res.status(httpStatus.CREATED).json({ success: true, data: treatment });
 // });
 const createTreatment = catchAsync(async (req, res) => {
-  const treatmentSetting = await patientService.createTreatment(req.body);
+  const {files, body} = req;
+
+  const xrayFilePaths = files?.map((file) => file.path) || [];
+ 
+  const treatmentBody = {
+    ...body,
+    xray: xrayFilePaths, // Attach uploaded file paths if available
+  };
+  const treatmentSetting = await patientService.createTreatment(treatmentBody);
+  
   res.status(httpStatus.CREATED).json({
     success: true,
     message: "Treatment created successfully",

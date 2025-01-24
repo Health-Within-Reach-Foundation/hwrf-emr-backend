@@ -62,10 +62,7 @@ const bookAppointment = async (appointmentBody) => {
     });
 
     if (existingAppointment) {
-      throw new ApiError(
-        httpStatus.BAD_REQUEST,
-        `Appointment already exists for this date, specialty (${specialty}), and camp (${campId || 'No Camp'}).`
-      );
+      throw new ApiError(httpStatus.BAD_REQUEST, `Already added into queue.`);
     }
 
     // Create a new appointment
