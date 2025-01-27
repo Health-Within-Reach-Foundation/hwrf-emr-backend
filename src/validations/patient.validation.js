@@ -171,11 +171,13 @@ const updateDiagnosis = {
     // currentStatus: Joi.array().items(Joi.string()).optional(),
     selectedTeeth: Joi.array().items(Joi.number()).optional(),
     dentalQuadrantType: Joi.string().valid('adult', 'child', 'all').optional(),
-
+    childSelectedTeeth: Joi.array().items(Joi.number()).optional(),
+    adultSelectedTeeth: Joi.array().items(Joi.number()).optional(),
     // dentalQuadrant: Joi.array().items(Joi.string()).optional(),
     xrayStatus: Joi.boolean().optional(),
     notes: Joi.string().allow('', null).optional(),
     additionalDetails: Joi.object().optional(),
+    patientId: Joi.string().uuid().optional(),
   }),
   files: (files) => {
     if (!files.length) return null; // No files, validation passes
@@ -227,6 +229,7 @@ const createTreatment = {
     settingPaidAmount: Joi.number().optional(),
     xrayStatus: Joi.boolean().optional(),
     paymentStatus: Joi.string().valid('paid', 'pending').default('pending'),
+    patientId: Joi.string().uuid().optional(),
   }),
   files: (files) => {
     if (!files.length) return null; // No files, validation passes
@@ -289,6 +292,7 @@ const updateTreatment = {
   body: Joi.object()
     .keys({
       // treatmentDate: Joi.date().optional(),
+      patientId: Joi.string().uuid().optional(),
       treatmentStatus: Joi.array().items(Joi.string()).optional(),
       notes: Joi.string().allow('', null).optional(),
       additionalDetails: Joi.object().optional(),
@@ -297,6 +301,7 @@ const updateTreatment = {
       status: Joi.string().optional(),
       remainingAmount: Joi.number().optional(),
       paymentStatus: Joi.string().valid('paid', 'pending').optional(),
+      xrayStatus: Joi.boolean().optional(),
 
       // Fields related to TreatmentSetting
       treatmentSettingId: Joi.string().uuid().optional().description('TreatmentSetting ID'),
@@ -306,6 +311,21 @@ const updateTreatment = {
       settingPaidAmount: Joi.number().optional(),
     })
     .min(1),
+  files: (files) => {
+    if (!files.length) return null; // No files, validation passes
+
+    for (const file of files) {
+      if (!['image/jpeg', 'image/png', 'application/pdf', 'image/avif'].includes(file.mimetype)) {
+        return `Invalid file type for file: ${file.originalname}. Only JPEG, PNG, or PDF files are allowed.`;
+      }
+      // if (file.size > 5 * 1024 * 1024) {
+      //   // 5 MB limit
+      //   return `File ${file.originalname} exceeds the maximum size of 5MB.`;
+      // }
+    }
+
+    return null; // No errors
+  },
 };
 
 const deleteTreatment = {

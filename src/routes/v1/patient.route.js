@@ -74,12 +74,21 @@ router
   .patch(
     auth(),
     upload.array('xrayFiles'),
+
+    parseArrayFields([
+      'complaints',
+      'treatmentsSuggested',
+      'currentStatus',
+      'dentalQuadrant',
+      'selectedTeeth',
+      'childSelectedTeeth',
+      'adultSelectedTeeth',
+    ]),
+
     (req, res, next) => {
       console.log('req body --------', req.body, req.files);
       next();
     },
-
-    parseArrayFields(['complaints', 'treatmentsSuggested', 'currentStatus', 'dentalQuadrant', 'selectedTeeth']),
     // roleAuthorization('diagnosis:write'),
     validate(patientValidation.updateDiagnosis),
     patientController.updateDiagnosis
@@ -96,9 +105,11 @@ router
   .post(
     auth(),
     upload.array('xrayFiles'),
-    parseArrayFields([
-      'treatmentStatus',
-    ]),
+    parseArrayFields(['treatmentStatus']),
+    (req, res, next) => {
+      console.log('req body --------', req.body, req.files);
+      next();
+    },
     validate(patientValidation.createTreatment),
     patientController.createTreatment
   )
@@ -107,7 +118,17 @@ router
 router
   .route('/treatment/:treatmentId')
   .get(auth(), validate(patientValidation.getTreatmentById), patientController.getTreatmentById)
-  .patch(auth(), validate(patientValidation.updateTreatment), patientController.updateTreatment)
+  .patch(
+    auth(),
+    upload.array('xrayFiles'),
+    (req, res, next) => {
+      console.log('req body --------', req.body, req.files);
+      next();
+    },
+    parseArrayFields(['treatmentStatus']),
+    validate(patientValidation.updateTreatment),
+    patientController.updateTreatment
+  )
   .delete(auth(), validate(patientValidation.deleteTreatment), patientController.deleteTreatment);
 
 router

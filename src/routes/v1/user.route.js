@@ -28,5 +28,11 @@ router
   auth(), // Authentication middleware
   validate(userValidation.updateUser), // Validation middleware
   userController.updateUser // Controller for updating user details
-);
+)
+.delete(
+  auth(),
+  validate(userValidation.deleteUser),
+  userController.deleteUser
+)
+;
 module.exports = router;

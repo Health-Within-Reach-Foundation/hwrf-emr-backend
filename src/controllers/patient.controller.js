@@ -2,6 +2,9 @@ const httpStatus = require('http-status');
 const catchAsync = require('../utils/catchAsync');
 const { patientService, clinicService, appointmentService, dentalService, campService } = require('../services');
 const generateRegNo = require('../utils/generate-regNo');
+const { uploadFile } = require('../utils/azure-service');
+const fs = require('fs');
+const ApiError = require('../utils/ApiError');
 
 const createPatient = catchAsync(async (req, res) => {
   const clinic = await clinicService.getClinicById(req.user.clinicId);
@@ -104,7 +107,30 @@ const createDiagnosis = catchAsync(async (req, res) => {
   const { files, body } = req;
 
   // Extract file URLs from uploaded files, if any
-  const xrayFilePaths = files?.map((file) => file.path) || [];
+  // const xrayFilePaths = files?.map((file) => file.path) || [];
+  const xrayFilePaths = [];
+
+  if (files && files.length > 0) {
+    for (const file of files) {
+      try {
+        const fileKey = `clinics/${req?.user?.clinicId}/xray/${body.patientId}/${Date.now()}_${file.originalname}`; // Generate unique key
+        const uploadResult = await uploadFile(file, fileKey);
+
+        if (!uploadResult.success) {
+          throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, `Failed to upload ${file.originalname}`);
+        }
+
+        xrayFilePaths.push(fileKey); // Store only file key (Azure path)
+
+        // Delete the temporary file from local storage
+        fs.unlink(file.path, (err) => {
+          if (err) console.error(`Error deleting temporary file: ${err}`);
+        });
+      } catch (err) {
+        console.error(`Error processing file ${file.originalname}:`, err);
+      }
+    }
+  }
 
   // Append file paths to the request body
   const diagnosisData = {
@@ -147,8 +173,31 @@ const updateDiagnosis = catchAsync(async (req, res) => {
   const { files, body } = req;
 
   // Extract file URLs from uploaded files, if any
-  const xrayFilePaths = files?.map((file) => file.path) || [];
+  // const xrayFilePaths = files?.map((file) => file.path) || [];
 
+  const xrayFilePaths = [];
+
+  if (files && files.length > 0) {
+    for (const file of files) {
+      try {
+        const fileKey = `clinics/${req?.user?.clinicId}/xray/${body.patientId}/${Date.now()}_${file.originalname}`; // Generate unique key
+        const uploadResult = await uploadFile(file, fileKey);
+
+        if (!uploadResult.success) {
+          throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, `Failed to upload ${file.originalname}`);
+        }
+
+        xrayFilePaths.push(fileKey); // Store only file key (Azure path)
+
+        // Delete the temporary file from local storage
+        fs.unlink(file.path, (err) => {
+          if (err) console.error(`Error deleting temporary file: ${err}`);
+        });
+      } catch (err) {
+        console.error(`Error processing file ${file.originalname}:`, err);
+      }
+    }
+  }
   // Append file paths to the request body
   const diagnosisData = {
     ...body,
@@ -165,7 +214,7 @@ const updateDiagnosis = catchAsync(async (req, res) => {
 
 const deleteDiagnosis = catchAsync(async (req, res) => {
   await patientService.deleteDiagnosis(req.params.diagnosisId);
-  res.status(httpStatus.NO_CONTENT).json({
+  res.status(httpStatus.OK).json({
     message: 'diagnosis deleted !',
     success: true,
   });
@@ -176,23 +225,46 @@ const deleteDiagnosis = catchAsync(async (req, res) => {
 //   res.status(httpStatus.CREATED).json({ success: true, data: treatment });
 // });
 const createTreatment = catchAsync(async (req, res) => {
-  const {files, body} = req;
+  const { files, body } = req;
 
-  const xrayFilePaths = files?.map((file) => file.path) || [];
- 
+  // const xrayFilePaths = files?.map((file) => file.path) || [];
+
+  const xrayFilePaths = [];
+
+  if (files && files.length > 0) {
+    for (const file of files) {
+      try {
+        const fileKey = `clinics/${req?.user?.clinicId}/xray/${body.patientId}/${Date.now()}_${file.originalname}`; // Generate unique key
+        const uploadResult = await uploadFile(file, fileKey);
+
+        if (!uploadResult.success) {
+          throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, `Failed to upload ${file.originalname}`);
+        }
+
+        xrayFilePaths.push(fileKey); // Store only file key (Azure path)
+
+        // Delete the temporary file from local storage
+        fs.unlink(file.path, (err) => {
+          if (err) console.error(`Error deleting temporary file: ${err}`);
+        });
+      } catch (err) {
+        console.error(`Error processing file ${file.originalname}:`, err);
+      }
+    }
+  }
+
   const treatmentBody = {
     ...body,
     xray: xrayFilePaths, // Attach uploaded file paths if available
   };
   const treatmentSetting = await patientService.createTreatment(treatmentBody);
-  
+
   res.status(httpStatus.CREATED).json({
     success: true,
-    message: "Treatment created successfully",
+    message: 'Treatment created successfully',
     data: treatmentSetting,
   });
 });
-
 
 const getTreatments = catchAsync(async (req, res) => {
   const treatments = await patientService.getTreatments(req.query);
@@ -210,10 +282,43 @@ const getTreatmentById = catchAsync(async (req, res) => {
 // });
 
 const updateTreatment = catchAsync(async (req, res) => {
-  const updatedTreatment = await patientService.updateTreatment(req.params.treatmentId, req.body);
+  const { files, body } = req;
+
+  // const xrayFilePaths = files?.map((file) => file.path) || [];
+
+  const xrayFilePaths = [];
+
+  if (files && files.length > 0) {
+    for (const file of files) {
+      try {
+        const fileKey = `clinics/${req?.user?.clinicId}/xray/${body.patientId}/${Date.now()}_${file.originalname}`; // Generate unique key
+        const uploadResult = await uploadFile(file, fileKey);
+
+        if (!uploadResult.success) {
+          throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, `Failed to upload ${file.originalname}`);
+        }
+
+        xrayFilePaths.push(fileKey); // Store only file key (Azure path)
+
+        // Delete the temporary file from local storage
+        fs.unlink(file.path, (err) => {
+          if (err) console.error(`Error deleting temporary file: ${err}`);
+        });
+        
+      } catch (err) {
+        console.error(`Error processing file ${file.originalname}:`, err);
+      }
+    }
+  }
+
+  const treatmentBody = {
+    ...body,
+    xray: xrayFilePaths, // Attach uploaded file paths if available
+  };
+
+  const updatedTreatment = await patientService.updateTreatment(req.params.treatmentId, treatmentBody);
   res.status(httpStatus.OK).json({ success: true, data: updatedTreatment });
 });
-
 
 const deleteTreatment = catchAsync(async (req, res) => {
   await patientService.deleteTreatment(req.params.treatmentId);

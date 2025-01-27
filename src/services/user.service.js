@@ -58,7 +58,7 @@ const getUserById = async (id) => {
         as: 'camps',
         through: { attributes: [] },
         where: { status: 'active' },
-        required:false,
+        required: false,
         attributes: { exclude: ['clinicId', 'updatedAt'] },
       },
     ],
@@ -307,8 +307,8 @@ const deleteUserById = async (userId) => {
   if (!user) {
     throw new ApiError(httpStatus.NOT_FOUND, 'User not found');
   }
-  await user.remove();
-  return user;
+  await user.destroy({ force: true });
+  // return user;
 };
 
 module.exports = {

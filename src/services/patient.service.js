@@ -352,15 +352,38 @@ const getDiagnosisById = async (diagnosisId) => {
 const updateDiagnosis = async (diagnosisId, updateBody) => {
   const diagnosis = await getDiagnosisById(diagnosisId);
   const treatments = await Treatment.findAll({ where: { diagnosisId } });
-  const { complaints, treatmentsSuggested, dentalQuadrantType, selectedTeeth, xrayStatus, xray, notes } = updateBody;
+  // Ensure selectedTeeth is NULL when empty, instead of an empty string
+  const selectedTeeth = 
+    Array.isArray(updateBody?.selectedTeeth) && updateBody.selectedTeeth.length > 0
+      ? updateBody.selectedTeeth[0] // Take first element if exists
+      : null; // Otherwise, set to null
+
+  const {
+    complaints,
+    treatmentsSuggested,
+    dentalQuadrantType,
+    xrayStatus,
+    xray,
+    notes,
+  } = updateBody;
+
+  const updatedDiagnosisBody = {
+    complaints,
+    treatmentsSuggested,
+    selectedTeeth,
+    dentalQuadrantType,
+    xrayStatus,
+    xray,
+    notes,
+  }
   const updatedTreatmentBody = {
     complaints,
     treatments: treatmentsSuggested,
     dentalQuadrantType,
-    selectedTeeth,
-    xrayStatus,
-    xray,
-    notes,
+    // selectedTeeth,
+    // xrayStatus,
+    // xray,
+    // notes,
   };
 
   if (treatments.length > 0) {
@@ -370,7 +393,7 @@ const updateDiagnosis = async (diagnosisId, updateBody) => {
     });
   }
 
-  Object.assign(diagnosis, updateBody);
+  Object.assign(diagnosis, updatedDiagnosisBody);
   await diagnosis.save();
   return diagnosis;
 };
@@ -535,6 +558,8 @@ const updateTreatment = async (treatmentId, updateBody) => {
     settingTreatmentDate,
     settingNotes,
     settingAdditionalDetails,
+    xray, 
+    xrayStatus,
     settingPaidAmount = 0, // Default to 0 if not provided
     ...treatmentFields // Extract Treatment fields separately
   } = updateBody;
@@ -564,6 +589,8 @@ const updateTreatment = async (treatmentId, updateBody) => {
       notes: settingNotes,
       additionalDetails: settingAdditionalDetails,
       paidAmount: settingPaidAmount, // Storing paid amount at setting level
+      xrayStatus,
+      xray,
     });
     await updatedTreatmentSetting.save();
   }

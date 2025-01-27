@@ -13,6 +13,8 @@ class Camp extends Model {
       foreignKey: 'campId',
       otherKey: 'userId',
       as: 'users',
+      onDelete: 'CASCADE',
+      onUpdate: 'CASCADE',
     });
 
     // 2. Camp and Clinic - Many-to-One
