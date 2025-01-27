@@ -9,6 +9,7 @@ const ApiError = require('../utils/ApiError');
 const httpStatus = require('http-status');
 const { Diagnosis } = require('../models/diagnosis.model');
 const { Treatment } = require('../models/treatment.model');
+const { Mammography } = require('../models/mammography.model');
 
 /**
  *
@@ -148,14 +149,14 @@ const getLastPatientRegistered = async (clinicId) => {
     // Find the patient with the highest regNo in the given clinic
     const lastPatient = await Patient.findOne({
       where: { clinicId },
-      order: [["regNo", "DESC"]], // Sorting by regNo to get the highest number
+      order: [['regNo', 'DESC']], // Sorting by regNo to get the highest number
       limit: 1, // Fetch only the top record
     });
 
     return lastPatient || null; // Return null if no patient is found
   } catch (error) {
-    console.error("Error fetching last registered patient:", error);
-    throw new Error("Failed to fetch last registered patient");
+    console.error('Error fetching last registered patient:', error);
+    throw new Error('Failed to fetch last registered patient');
   }
 };
 
@@ -199,6 +200,12 @@ const getPatientDetailsById = async (patientId, specialtyId) => {
         ],
 
         order: [['createdAt', 'ASC']], // Sort by creation date (latest first)
+        required: false, // Ensure patient is returned even if no records exist
+      },
+      // Include Mammography Records
+      {
+        model: Mammography,
+        as: 'mammography',
         required: false, // Ensure patient is returned even if no records exist
       },
       // {
@@ -407,9 +414,74 @@ const deleteTreatment = async (treatmentId) => {
   await treatment.destroy();
 };
 
+const createMammography = async (patientId, mammographyBody) => {
+  try {
+    const existingMammo = await Mammography.findOne({ where: { patientId } });
+    if (existingMammo) {
+      await updateMammography(patientId, {
+        ...mammographyBody,
+        patientId,
+      });
+    }
+    const mammographyCreated = await Mammography.create({
+      ...mammographyBody,
+      patientId,
+    });
+    return mammographyCreated;
+  } catch (error) {
+    console.error(error);
+    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, 'Error While Adding Mammography Details');
+  }
+};
+
+const getMammographyById = async (patientId) => {
+  try {
+    const mammography = await Mammography.findOne({ where: { patientId } });
+    if (!mammography) {
+      throw new ApiError(httpStatus.NOT_FOUND, 'Mammography record not found');
+    }
+    const patientDoc = await Patient.findByPk(patientId);
+
+    return { ...mammography.dataValues, ...patientDoc.dataValues };
+  } catch (error) {
+    console.error(error);
+    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, 'Error While Fetching Mammography Details');
+  }
+};
+
+const updateMammography = async (patientId, updateBody) => {
+  try {
+    const mammography = await Mammography.findOne({ where: { patientId } });
+    if (!mammography) {
+      throw new ApiError(httpStatus.NOT_FOUND, 'Mammography record not found');
+    }
+    Object.assign(mammography, updateBody);
+    await mammography.save();
+    return mammography;
+  } catch (error) {
+    console.error(error);
+    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, 'Error While Updating Mammography Details');
+  }
+};
+
+const deleteMammography = async (patientId) => {
+  try {
+    const mammography = await Mammography.findOne({ where: { patientId } });
+    if (!mammography) {
+      throw new ApiError(httpStatus.NOT_FOUND, 'Mammography record not found');
+    }
+    await mammography.destroy();
+    return { message: 'Mammography record deleted successfully' };
+  } catch (error) {
+    console.error(error);
+    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, 'Error While Deleting Mammography Details');
+  }
+};
+
 module.exports = {
   createPatient,
   searchPatients,
+  deleteMammography,
   getPatientById,
   getPatientsByClinic,
   updatePatientById,
@@ -426,4 +498,7 @@ module.exports = {
   getTreatmentById,
   updateTreatment,
   deleteTreatment,
+  createMammography,
+  updateMammography,
+  getMammographyById,
 };

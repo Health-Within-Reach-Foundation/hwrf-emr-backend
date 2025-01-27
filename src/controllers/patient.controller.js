@@ -58,7 +58,37 @@ const addDentalPatientRecord = catchAsync(async (req, res) => {
   const record = await dentalService.addDentalPatientRecord(req.body);
   res.status(httpStatus.CREATED).json({
     success: true,
-    message: 'Denatal patient record added successfully!',
+    message: 'Dental patient record added successfully!' ,
+    
+    data: record,
+  });
+});
+// Controller to add dentist patient mammography
+const createMammography = catchAsync(async (req, res) => {
+  const { patientId } = req.params;
+  const record = await patientService.createMammography(patientId, req.body);
+  res.status(httpStatus.CREATED).json({
+    success: true,
+    message: 'Mammography Details added successfully!',
+    data: record,
+  });
+});
+const getMammography = catchAsync(async (req, res) => {
+  const { patientId } = req.params;
+  const record = await patientService.getMammographyById(patientId);
+  res.status(httpStatus.CREATED).json({
+    success: true,
+    message: 'Mammography Reports!',
+    data: record,
+  });
+});
+// Controller to add dentist patient mammography
+const updateMammography = catchAsync(async (req, res) => {
+  const { patientId } = req.params;
+  const record = await patientService.updateMammography(patientId, req.body);
+  res.status(httpStatus.CREATED).json({
+    success: true,
+    message: 'Mammography Details updated successfully!',
     data: record,
   });
 });
@@ -209,7 +239,10 @@ module.exports = {
   deleteDiagnosis,
   createTreatment,
   getTreatments,
+  getMammography,
+  createMammography,
   getTreatmentById,
   updateTreatment,
+  updateMammography,
   deleteTreatment,
 };

@@ -72,7 +72,7 @@ router
       next();
     },
 
-    parseArrayFields(['complaints', 'treatmentsSuggested', 'currentStatus', 'dentalQuadrant','selectedTeeth']),
+    parseArrayFields(['complaints', 'treatmentsSuggested', 'currentStatus', 'dentalQuadrant', 'selectedTeeth']),
     // roleAuthorization('diagnosis:write'),
     validate(patientValidation.updateDiagnosis),
     patientController.updateDiagnosis
@@ -96,6 +96,19 @@ router
   .delete(auth(), validate(patientValidation.deleteTreatment), patientController.deleteTreatment);
 
 router
+  .route('/mammography/:patientId')
+  .post(
+    auth(),
+    (req, res, next) => {
+      console.log(req.params.patientId, req.body);
+      next();
+    },
+    validate(patientValidation.createMammography),
+    patientController.createMammography
+  )
+  .patch(auth(), validate(patientValidation.updateMammography), patientController.updateMammography)
+  .get(auth(), validate(patientValidation.getMammography), patientController.getMammography);
+router
   .route('/:patientId')
   .get(auth(), validate(patientValidation.getPatientById), patientController.getPatientDetailsById)
   .patch(
@@ -104,5 +117,4 @@ router
     validate(patientValidation.updatePatient),
     patientController.updatePatientDetails
   );
-
 module.exports = router;
