@@ -7,6 +7,8 @@ const { Patient } = require('../models/patient.model');
 const { PatientRecord } = require('../models/patient-record.model');
 const { DentistPatientRecord } = require('../models/dentist-patient-record');
 const { Op, Sequelize } = require('sequelize');
+const { Camp } = require('../models/camp.model');
+const { patientService } = require('.');
 
 /**
  * Book multiple appointments for the patient, segregated by camp.
@@ -16,11 +18,37 @@ const { Op, Sequelize } = require('sequelize');
 const bookAppointment = async (appointmentBody) => {
   const { patientId, specialties, appointmentDate, status, clinicId, campId } = appointmentBody;
 
+  if (campId) {
+    // Step 1: Check if the patient is already associated with the camp
+    const camp = await Camp.findByPk(campId, {
+      include: {
+        model: Patient,
+        as: 'patients',
+        where: { id: patientId },
+        required: false, // Do not enforce join condition
+      },
+    });
+
+    if (!camp || camp.patients.length === 0) {
+      console.log(`⛺ Patient ${patientId} is NOT associated with Camp ${campId}, adding now...`);
+
+      // Step 2: Associate the patient with the camp
+      const patient = await patientService.getPatientById(patientId);
+
+      if (!patient) {
+        throw new ApiError(httpStatus.NOT_FOUND, 'Patient not found');
+      }
+
+      await camp.addPatient(patient);
+      console.log(`✅ Patient ${patientId} successfully associated with Camp ${campId}`);
+    }
+  }
+
   console.log('Received appointmentDate (Raw) -->', appointmentDate, typeof appointmentDate);
 
   // Ensure we store the date in 'YYYY-MM-DD' format without timezone conversion
   // const formattedDate = new Date(appointmentDate).toISOString().split("T")[0];
-  const formattedDate = appointmentDate.toISOString().split("T")[0]; // No need to format, it's already "YYYY-MM-DD"
+  const formattedDate = appointmentDate.toISOString().split('T')[0]; // No need to format, it's already "YYYY-MM-DD"
 
   console.log('Formatted appointmentDate for DB -->', formattedDate);
 
@@ -34,10 +62,7 @@ const bookAppointment = async (appointmentBody) => {
     });
 
     if (existingAppointment) {
-      throw new ApiError(
-        httpStatus.BAD_REQUEST,
-        `Appointment already exists for this date, specialty (${specialty}), and camp (${campId || 'No Camp'}).`
-      );
+      throw new ApiError(httpStatus.BAD_REQUEST, `Already added into queue.`);
     }
 
     // Create a new appointment
@@ -55,7 +80,14 @@ const bookAppointment = async (appointmentBody) => {
     // Compare dates correctly
     const today = new Date().toLocaleDateString('en-CA'); // Ensure today's date is correct
 
-    console.log(today, "today date is matching with formateed Date -->" , today === formattedDate, typeof formattedDate, typeof today, today);
+    console.log(
+      today,
+      'today date is matching with formateed Date -->',
+      today === formattedDate,
+      typeof formattedDate,
+      typeof today,
+      today
+    );
     if (formattedDate == today) {
       console.log(`Adding to queue for specialty (${specialty}) and camp (${campId || 'No Camp'})`);
       await addToQueue(patientId, specialty, formattedDate, clinicId, campId);
@@ -72,25 +104,47 @@ const bookAppointment = async (appointmentBody) => {
  * @param {Date} queueDate
  */
 const addToQueue = async (patientId, specialtyId, queueDate, clinicId, campId) => {
-  // Increment token number for the day and specialty
-  const lastToken = await Queue.findOne({
-    where: { queueDate, specialtyId, campId },
-    order: [['tokenNumber', 'DESC']],
-  });
+  try {
+    // ✅ Ensure All Required Fields Exist
+    if (!patientId || !specialtyId || !queueDate || !clinicId) {
+      throw new Error('Missing required fields to add patient to queue');
+    }
 
-  const queueType = await Specialty.findByPk(specialtyId);
+    // ✅ Fetch Last Token for the Specialty, Clinic & Camp
+    const lastToken = await Queue.findOne({
+      where: { queueDate, specialtyId, clinicId, campId }, // Ensure clinicId is included
+      order: [['tokenNumber', 'DESC']],
+      lock: true, // Helps prevent race conditions in transactions
+    });
 
-  const tokenNumber = lastToken ? lastToken.tokenNumber + 1 : 1;
+    // ✅ Get the Department Name for Queue Type
+    const specialty = await Specialty.findByPk(specialtyId);
+    if (!specialty) {
+      throw new Error(`Specialty with ID ${specialtyId} not found.`);
+    }
 
-  await Queue.create({
-    patientId,
-    specialtyId,
-    queueDate,
-    tokenNumber,
-    clinicId,
-    campId,
-    queueType: queueType.departmentName,
-  });
+    // ✅ Assign New Token Number
+    const newTokenNumber = lastToken ? lastToken.tokenNumber + 1 : 1;
+
+    // ✅ Ensure Atomicity with a Transaction (Prevents Duplicate Token Issues)
+    const newQueueEntry = await Queue.create(
+      {
+        patientId,
+        specialtyId,
+        queueDate,
+        tokenNumber: newTokenNumber,
+        clinicId,
+        campId,
+        queueType: specialty.departmentName,
+      },
+      { lock: true } // Helps avoid duplicate token numbers
+    );
+
+    return newQueueEntry; // Return the created queue entry
+  } catch (error) {
+    console.error('[ERROR] Failed to add patient to queue:', error);
+    throw new Error('Failed to add patient to queue. Please try again.');
+  }
 };
 
 /**
@@ -214,7 +268,7 @@ const updateAppointmentStatus = async (appointmentId, updateBody) => {
 const getAppointments = async (queryOptions, clinicId, campId) => {
   console.log('ClinicId -->', clinicId);
 
-  const { appointmentDate, status, specialtyId, sortBy = 'createdAt', order = 'desc', page = 1, limit = 10 } = queryOptions;
+  const { appointmentDate, status, specialtyId, sortBy = 'createdAt', order = 'desc', page = 1, limit } = queryOptions;
 
   console.log('appointmentDate -->', appointmentDate);
 
@@ -234,13 +288,13 @@ const getAppointments = async (queryOptions, clinicId, campId) => {
   }
 
   // Pagination
-  const offset = (page - 1) * limit;
+  // const offset = (page - 1) * limit;
 
   // Fetch appointments with relations and pagination
   const { rows: appointments, count: total } = await Appointment.findAndCountAll({
     where,
-    limit: parseInt(limit, 10),
-    offset: parseInt(offset, 10),
+    // limit: parseInt(limit, 10),
+    // offset: parseInt(offset, 10),
     order: [[sortBy, order]],
     include: [
       {
@@ -254,7 +308,7 @@ const getAppointments = async (queryOptions, clinicId, campId) => {
             attributes: ['tokenNumber', 'queueDate', 'queueType', 'specialtyId'], // Queue details
             where: {
               clinicId, // Filter queues by clinic
-              queueDate: appointmentDate, // Filter queues by date
+              // queueDate: appointmentDate, // Filter queues by date
             },
             required: false, // Allow patients without queue data
           },
@@ -311,12 +365,12 @@ const getAppointments = async (queryOptions, clinicId, campId) => {
   return {
     success: true,
     data: flattenedAppointments,
-    meta: {
-      total,
-      page: parseInt(page, 10),
-      limit: parseInt(limit, 10),
-      totalPages: Math.ceil(total / limit),
-    },
+    // meta: {
+    //   total,
+    //   // page: parseInt(page, 10),
+    //   // limit: parseInt(limit, 10),
+    //   // totalPages: Math.ceil(total / limit),
+    // },
   };
 };
 

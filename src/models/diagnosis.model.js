@@ -8,7 +8,7 @@ class Diagnosis extends Model {
     Diagnosis.belongsTo(models.Patient, { foreignKey: 'patientId', as: 'diagnosis' });
 
     // Each Diagnosis can have many Treatments
-    Diagnosis.hasMany(models.Treatment, { foreignKey: 'diagnosisId', as: 'treatments' });
+    Diagnosis.hasOne(models.Treatment, { foreignKey: 'diagnosisId', as: 'treatment', });
   }
 }
 
@@ -29,7 +29,7 @@ const initModel = (sequelize) => {
         allowNull: true,
       },
       dentalQuadrantType: {
-        type: DataTypes.ENUM('adult', 'child'),
+        type: DataTypes.ENUM('adult', 'child', 'all'),
         defaultValue: 'adult',
       },
       dentalQuadrant: {
@@ -49,7 +49,7 @@ const initModel = (sequelize) => {
         defaultValue: false,
       },
       xray: {
-        type: DataTypes.ARRAY(DataTypes.STRING),
+        type: DataTypes.JSONB,
         allowNull: true, // URLs for X-rays
       },
       notes: {

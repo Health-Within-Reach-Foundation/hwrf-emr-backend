@@ -3,7 +3,17 @@ const { DataTypes, Model } = require('sequelize');
 class Treatment extends Model {
   static associate(models) {
     // Each Treatment belongs to a Diagnosis
-    Treatment.belongsTo(models.Diagnosis, { foreignKey: 'diagnosisId', as: 'diagnosis' });
+    Treatment.belongsTo(models.Diagnosis, {
+      foreignKey: 'diagnosisId',
+      as: 'diagnosis',
+      onDelete: 'CASCADE', // Automatically delete related TreatmentSettings
+      onUpdate: 'CASCADE',
+    });
+
+    Treatment.hasMany(models.TreatmentSetting, {
+      foreignKey: 'treatmentId',
+      as: 'treatmentSettings',
+    });
   }
 }
 
@@ -15,37 +25,36 @@ const initModel = (sequelize) => {
         defaultValue: DataTypes.UUIDV4,
         primaryKey: true,
       },
-      treatmentDate: {
-        type: DataTypes.DATEONLY,
-        allowNull: true,
-      },
+      // treatmentDate: {
+      //   type: DataTypes.DATEONLY,
+      //   allowNull: true,
+      // },
       complaints: {
         type: DataTypes.ARRAY(DataTypes.TEXT),
         allowNull: true,
       },
-      
       treatments: {
         type: DataTypes.ARRAY(DataTypes.STRING),
         allowNull: true,
       },
-      dentalQuadrant: {
-        type: DataTypes.JSONB,
-        allowNull: true,
-      },
-      dentalQuadrantType: {
-        type: DataTypes.ENUM('adult', 'child'),
-        defaultValue: 'adult',
-      },
-      selectedTeeth: {
-        type: DataTypes.INTEGER,
-        allowNull: true
-      },
+      // dentalQuadrant: {
+      //   type: DataTypes.JSONB,
+      //   allowNull: true,
+      // },
+      // dentalQuadrantType: {
+      //   type: DataTypes.ENUM('adult', 'child', 'all'),
+      //   defaultValue: 'adult',
+      // },
+      // selectedTeeth: {
+      //   type: DataTypes.INTEGER,
+      //   allowNull: true
+      // },
       xrayStatus: {
         type: DataTypes.BOOLEAN,
         defaultValue: false,
       },
       xray: {
-        type: DataTypes.ARRAY(DataTypes.STRING),
+        type: DataTypes.JSONB,
         allowNull: true, // URLs for X-rays
       },
       treatmentStatus: {
@@ -75,6 +84,10 @@ const initModel = (sequelize) => {
       paymentStatus: {
         type: DataTypes.ENUM('paid', 'pending'),
         defaultValue: 'pending',
+      },
+      status: {
+        type: DataTypes.ENUM('started', 'completed'),
+        defaultValue: 'started',
       },
       diagnosisId: {
         type: DataTypes.UUID,

@@ -51,10 +51,8 @@ const getCamps = async (clinicId, status = null) => {
     where.status = status;
   }
 
-
   console.log('updated where clause', where);
-  
-  
+
   const camps = await Camp.findAll({
     // where: { status: 'active', clinicId: clinicId },
     where,
@@ -92,12 +90,26 @@ const getCampById = async (campId) => {
         as: 'patients',
         attributes: ['id', 'name', 'regNo', 'age', 'sex', 'mobile'],
         through: { attributes: [] }, // Exclude intermediate table fields
+        include: [
+          {
+            model: Appointment,
+            as: 'appointments',
+            attributes: { exclude: ['createdAt', 'updatedAt'] },
+            include: [
+              {
+                model: Specialty,
+                as: 'specialty',
+                attributes: { exclude: ['id', 'createdAt', 'updatedAt'] },
+              },
+            ],
+          },
+        ],
       },
-      {
-        model: Appointment,
-        as: 'appointments',
-        attributes: ['id', 'appointmentDate', 'status', 'specialtyId', 'patientId', 'campId'],
-      },
+      // {
+      //   model: Appointment,
+      //   as: 'appointments',
+      //   attributes: ['id', 'appointmentDate', 'status', 'specialtyId', 'patientId', 'campId'],
+      // },
       {
         model: Specialty,
         as: 'specialties',
@@ -128,6 +140,8 @@ const setCurrentCamp = async (campId, userId) => {
 const updateCampById = async (campId, campData) => {
   const { name, location, city, startDate, endDate, specialties, vans, users } = campData;
 
+  console.log('campData -->', campData, new Date());
+
   // Find existing camp
   const camp = await Camp.findByPk(campId);
   if (!camp) {
@@ -140,15 +154,48 @@ const updateCampById = async (campId, campData) => {
   Object.assign(camp, updatedCampBody);
 
   await camp.save();
+  const originalEndDate = camp.endDate;
 
-  // await camp.update({
-  //   name,
-  //   location,
-  //   city,
-  //   startDate,
-  //   endDate,
-  //   vans,
-  // });
+  // // Check if endDate is today or in the future, and update status to "active"
+  // if (endDate && new Date(endDate) >= new Date()) {
+  //   camp.status = 'active'; // Set camp status to 'active'
+  //   await camp.save(); // Save the updated status
+  // }
+
+  // if (endDate && new Date(endDate) < new Date()) {
+  //   console.log("inside if condition -->", endDate, new Date(endDate), typeof endDate, typeof new Date(endDate))
+
+  //   camp.status = 'inactive'; // Set camp status to 'inactive'
+  //   await camp.save(); // Save the updated status
+  // }
+
+  const today = new Date().toISOString().split('T')[0]; // Strip time
+  const formattedEndDate = new Date(endDate).toISOString().split('T')[0];
+
+  console.log(`Comparing Dates - Today: ${today}, End Date: ${formattedEndDate}`);
+
+  // 🔹 If endDate has changed, update the camp status accordingly
+  if (formattedEndDate !== originalEndDate) {
+    if (formattedEndDate >= today) {
+      camp.status = 'active';
+      console.log('✅ Setting camp as ACTIVE');
+    } else {
+      camp.status = 'inactive';
+      console.log('❌ Setting camp as INACTIVE');
+    }
+  } else {
+    // 🔹 If endDate remains the same but status is incorrect, fix it
+    if (camp.status !== 'active' && formattedEndDate >= today) {
+      camp.status = 'active';
+      console.log('✅ Setting camp as ACTIVE (fallback)');
+    } else if (camp.status !== 'inactive' && formattedEndDate < today) {
+      camp.status = 'inactive';
+      console.log('❌ Setting camp as INACTIVE (fallback)');
+    }
+  }
+
+  await camp.save();
+
 
   // Handle Specialties (Many-to-Many)
   if (specialties) {

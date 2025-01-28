@@ -39,7 +39,7 @@ const markAppointment = {
     appointmentId: Joi.string().uuid().required(), // Filter by specialty
   }),
   body: Joi.object().keys({
-    status: Joi.string().valid('in-queue', 'in', 'out').required(),
+    status: Joi.string().valid('in queue', 'in', 'out', 'cancelled').required(),
   }),
 };
 

@@ -13,7 +13,7 @@ const generateRegNo = (clinicInitials, lastPatient) => {
 
   // Increment the last number (no padding needed)
   const nextNumber = lastNumber + 1;
-  return `${clinicInitials}${nextNumber}`;
+  return `${"HWRF-"}${nextNumber}`;
 };
 
 module.exports = generateRegNo;

@@ -9,6 +9,8 @@ const router = express.Router();
 
 router.route('/specialities').get(auth(), clinicController.getSpecialtyDepartmentsByClinic);
 
+router.route('/files').get(auth(), validate(clinicValidation.getFileByKey), clinicController.getFileByKey);
+
 router
   .route('/form-template')
   .post(auth(), validate(formTemplateValidation.createFormTemplate), formTemplateController.createFormTemplate)

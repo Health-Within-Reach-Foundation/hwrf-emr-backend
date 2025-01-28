@@ -16,7 +16,7 @@ const updateRole = {
     roleId: Joi.string().uuid().required(), // patientId must be a valid UUID and is required
   }),
   body: Joi.object().keys({
-    name: Joi.string().required().description('Name of the role'),
+    roleName: Joi.string().required().description('Name of the role'),
     roleDescription: Joi.string().optional().allow(null, '').default(null),
     permissions: Joi.array()
       .items(Joi.string().uuid().required().description('Permission ID'))

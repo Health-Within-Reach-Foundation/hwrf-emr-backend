@@ -52,7 +52,13 @@ const queryOptionsValidation = {
 
 const getClinic = {
   params: Joi.object().keys({
-    clinicId: Joi.string(),
+    clinicId: Joi.string().uuid(),
+  }),
+};
+
+const getFileByKey = {
+  query: Joi.object().keys({
+    key: Joi.string(),
   }),
 };
 
@@ -98,4 +104,5 @@ module.exports = {
   approveClinic,
   createRole,
   updateClinicById,
+  getFileByKey,
 };

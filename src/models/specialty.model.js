@@ -16,6 +16,8 @@ class Specialty extends Model {
       through: 'user_specialties', // Junction table
       foreignKey: 'specialtyId',
       as: 'users',
+      onDelete: 'CASCADE',
+      onUpdate: 'CASCADE',
     });
 
     Specialty.belongsToMany(models.Camp, {

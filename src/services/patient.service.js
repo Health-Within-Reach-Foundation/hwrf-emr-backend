@@ -9,6 +9,8 @@ const ApiError = require('../utils/ApiError');
 const httpStatus = require('http-status');
 const { Diagnosis } = require('../models/diagnosis.model');
 const { Treatment } = require('../models/treatment.model');
+const { Mammography } = require('../models/mammography.model');
+const { TreatmentSetting } = require('../models/treatment-setting.model');
 
 /**
  *
@@ -138,20 +140,25 @@ const deletePatientById = async (patientId, permanent = false) => {
   }
 };
 
-const getLastPatientRegistered = async (clinicId, clinicInitials) => {
-  // Find the last patient registered for the given clinic based on createdAt and regNo
-  const lastPatient = await Patient.findOne({
-    where: {
-      regNo: { [Op.like]: `${clinicInitials}%` }, // regNo starts with the clinic ID (e.g., AP)
-    },
-    order: [
-      ['createdAt', 'DESC'], // Order by createdAt in descending order to get the most recent patient
-      ['regNo', 'DESC'], // If two patients were created at the same time, sort by regNo
-    ],
-    limit: 1, // Only fetch the first result after ordering
-  });
+/**
+ * Get the last registered patient with the highest regNo for a given clinic.
+ * @param {UUID} clinicId - The clinic ID.
+ * @returns {Promise<Patient | null>} The last registered patient or null if none exist.
+ */
+const getLastPatientRegistered = async (clinicId) => {
+  try {
+    // Find the patient with the highest regNo in the given clinic
+    const lastPatient = await Patient.findOne({
+      where: { clinicId },
+      order: [['regNo', 'DESC']], // Sorting by regNo to get the highest number
+      limit: 1, // Fetch only the top record
+    });
 
-  return lastPatient;
+    return lastPatient || null; // Return null if no patient is found
+  } catch (error) {
+    console.error('Error fetching last registered patient:', error);
+    throw new Error('Failed to fetch last registered patient');
+  }
 };
 
 /**
@@ -187,13 +194,25 @@ const getPatientDetailsById = async (patientId, specialtyId) => {
         include: [
           {
             model: Treatment, // Include Dentist-specific data
-            as: 'treatments',
+            as: 'treatment',
             attributes: { exclude: ['createdAt', 'updatedAt'] },
             order: [['createdAt', 'ASC']], // Sort by creation date (latest first)
+            include: [
+              {
+                model: TreatmentSetting,
+                as: 'treatmentSettings',
+              },
+            ],
           },
         ],
 
         order: [['createdAt', 'ASC']], // Sort by creation date (latest first)
+        required: false, // Ensure patient is returned even if no records exist
+      },
+      // Include Mammography Records
+      {
+        model: Mammography,
+        as: 'mammography',
         required: false, // Ensure patient is returned even if no records exist
       },
       // {
@@ -228,7 +247,18 @@ const getPatientDetailsById = async (patientId, specialtyId) => {
 };
 
 const createDiagnosis = async (diagnosisBody) => {
-  const { selectedTeeth, complaints, treatmentsSuggested, dentalQuadrantType, xrayStatus, notes, patientId } = diagnosisBody;
+  const {
+    selectedTeeth,
+    childSelectedTeeth,
+    adultSelectedTeeth,
+    complaints,
+    treatmentsSuggested,
+    dentalQuadrantType,
+    xrayStatus,
+    notes,
+    patientId,
+    xray,
+  } = diagnosisBody;
 
   // Ensure the patient exists
   const patient = await Patient.findByPk(patientId);
@@ -246,30 +276,47 @@ const createDiagnosis = async (diagnosisBody) => {
 
   // Create the diagnosis
   let diagnosis;
-  if (selectedTeeth.length > 0) {
-    selectedTeeth.forEach(async (element) => {
+  if (childSelectedTeeth.length > 0) {
+    childSelectedTeeth.forEach(async (element) => {
       diagnosis = await Diagnosis.create({
         complaints,
         treatmentsSuggested,
         selectedTeeth: element,
-        dentalQuadrantType,
+        dentalQuadrantType: 'child',
         xrayStatus,
         notes,
+        xray,
         patientId,
       });
     });
-  } else {
+  }
+  if (adultSelectedTeeth.length > 0) {
+    adultSelectedTeeth.forEach(async (element) => {
+      diagnosis = await Diagnosis.create({
+        complaints,
+        treatmentsSuggested,
+        selectedTeeth: element,
+        dentalQuadrantType: 'adult',
+        xrayStatus,
+        notes,
+        xray,
+        patientId,
+      });
+    });
+  }
+  if (dentalQuadrantType === 'all') {
     diagnosis = await Diagnosis.create({
       complaints,
       treatmentsSuggested,
       dentalQuadrantType,
       xrayStatus,
       notes,
+      xray,
       patientId,
     });
   }
 
-  return diagnosis;
+  // return diagnosis;
 };
 
 const getDiagnoses = async (queryOptions) => {
@@ -300,7 +347,22 @@ const getDiagnoses = async (queryOptions) => {
 };
 
 const getDiagnosisById = async (diagnosisId) => {
-  const diagnosis = await Diagnosis.findByPk(diagnosisId);
+  const diagnosis = await Diagnosis.findByPk(diagnosisId, {
+    include: [
+      {
+        model: Treatment,
+        as: 'treatment',
+        include: [
+          {
+            model: TreatmentSetting,
+            as: 'treatmentSettings',
+          },
+        ],
+        // attributes:
+      },
+    ],
+  });
+
   if (!diagnosis) {
     throw new ApiError(httpStatus.NOT_FOUND, 'Diagnosis not found');
   }
@@ -310,15 +372,38 @@ const getDiagnosisById = async (diagnosisId) => {
 const updateDiagnosis = async (diagnosisId, updateBody) => {
   const diagnosis = await getDiagnosisById(diagnosisId);
   const treatments = await Treatment.findAll({ where: { diagnosisId } });
-  const { complaints, treatmentsSuggested, dentalQuadrantType, selectedTeeth, xrayStatus, xray, notes } = updateBody;
+  // Ensure selectedTeeth is NULL when empty, instead of an empty string
+  const selectedTeeth = 
+    Array.isArray(updateBody?.selectedTeeth) && updateBody.selectedTeeth.length > 0
+      ? updateBody.selectedTeeth[0] // Take first element if exists
+      : null; // Otherwise, set to null
+
+  const {
+    complaints,
+    treatmentsSuggested,
+    dentalQuadrantType,
+    xrayStatus,
+    xray,
+    notes,
+  } = updateBody;
+
+  const updatedDiagnosisBody = {
+    complaints,
+    treatmentsSuggested,
+    selectedTeeth,
+    dentalQuadrantType,
+    xrayStatus,
+    xray,
+    notes,
+  }
   const updatedTreatmentBody = {
     complaints,
     treatments: treatmentsSuggested,
     dentalQuadrantType,
-    selectedTeeth,
-    xrayStatus,
-    xray,
-    notes,
+    // selectedTeeth,
+    // xrayStatus,
+    // xray,
+    // notes,
   };
 
   if (treatments.length > 0) {
@@ -328,7 +413,7 @@ const updateDiagnosis = async (diagnosisId, updateBody) => {
     });
   }
 
-  Object.assign(diagnosis, updateBody);
+  Object.assign(diagnosis, updatedDiagnosisBody);
   await diagnosis.save();
   return diagnosis;
 };
@@ -338,36 +423,105 @@ const deleteDiagnosis = async (diagnosisId) => {
   await diagnosis.destroy({ force: true });
 };
 
+// const createTreatment = async (treatmentBody) => {
+//   const { diagnosisId, treatmentDate, treatmentStatus, notes, totalAmount, paidAmount, remainingAmount, paymentStatus } =
+//     treatmentBody;
+
+//   try {
+//     const diagnosis = await Diagnosis.findByPk(diagnosisId);
+
+//     if (!diagnosis) {
+//       throw ApiError(httpStatus.NOT_FOUND, 'Diagnosis not found');
+//     }
+
+//     const treatmentCreated = await Treatment.create({
+//       treatmentDate,
+//       complaints: diagnosis.complaints,
+//       treatments: diagnosis.treatmentsSuggested,
+//       dentalQuadrantType: diagnosis.dentalQuadrantType,
+//       selectedTeeth: diagnosis.selectedTeeth,
+//       xrayStatus: diagnosis.xrayStatus,
+//       xray: diagnosis.xray,
+//       treatmentStatus,
+//       notes,
+//       totalAmount,
+//       paidAmount,
+//       remainingAmount,
+//       paymentStatus,
+//       diagnosisId,
+//     });
+//     return treatmentCreated;
+//   } catch (error) {
+//     console.error(error);
+//     throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, 'Internal Server error');
+//   }
+// };
+
 const createTreatment = async (treatmentBody) => {
-  const { diagnosisId, treatmentDate, treatmentStatus, notes, totalAmount, paidAmount, remainingAmount, paymentStatus } =
-    treatmentBody;
+  const {
+    diagnosisId,
+    treatmentDate,
+    treatmentStatus,
+    notes,
+    totalAmount,
+    // paidAmount,
+    // remainingAmount,
+    xrayStatus,
+    xray,
+    paymentStatus,
+    settingPaidAmount,
+  } = treatmentBody;
 
   try {
+    // Find existing diagnosis
     const diagnosis = await Diagnosis.findByPk(diagnosisId);
-
     if (!diagnosis) {
-      throw ApiError(httpStatus.NOT_FOUND, 'Diagnosis not found');
+      throw new ApiError(httpStatus.NOT_FOUND, 'Diagnosis not found');
     }
 
-    const treatmentCreated = await Treatment.create({
+    // Check if there's an existing treatment for this diagnosis
+    let treatment = await Treatment.findOne({
+      where: { diagnosisId },
+    });
+
+    // If no existing treatment, create one
+    if (!treatment) {
+      treatment = await Treatment.create({
+        complaints: diagnosis.complaints,
+        treatments: diagnosis.treatmentsSuggested,
+        xrayStatus: diagnosis.xrayStatus,
+        xray: diagnosis.xray,
+        treatmentStatus,
+        // notes,
+        totalAmount,
+        paidAmount: settingPaidAmount,
+        remainingAmount: totalAmount - settingPaidAmount,
+        paymentStatus,
+        diagnosisId,
+      });
+    } else {
+      treatment.paidAmount = Number(treatment.paidAmount) + Number(settingPaidAmount);
+      treatment.remainingAmount = Number(treatment.totalAmount) - Number(treatment.paidAmount + settingPaidAmount);
+
+      await treatment.save();
+    }
+
+    // Create an entry in TreatmentSetting linked to this treatment
+    const treatmentSetting = await TreatmentSetting.create({
       treatmentDate,
-      complaints: diagnosis.complaints,
-      treatments: diagnosis.treatmentsSuggested,
-      dentalQuadrantType: diagnosis.dentalQuadrantType,
-      selectedTeeth: diagnosis.selectedTeeth,
-      xrayStatus: diagnosis.xrayStatus,
-      xray: diagnosis.xray,
       treatmentStatus,
       notes,
-      totalAmount,
-      paidAmount,
-      remainingAmount,
-      paymentStatus,
-      diagnosisId,
+      settingPaidAmount,
+      xrayStatus,
+      xray,
+      additionalDetails: treatmentBody.additionalDetails || {},
+      treatmentId: treatment.id, // Associate with the found/created Treatment
     });
-    return treatmentCreated;
+
+    return treatmentSetting;
   } catch (error) {
-    throw ApiError(httpStatus.INTERNAL_SERVER_ERROR, 'Internal Server error');
+    console.error(error);
+    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, 'Internal Server Error');
   }
 };
 
@@ -378,32 +532,200 @@ const getTreatments = async ({ diagnosisId, page = 1, limit = 10 }) => {
     limit,
     offset,
     order: [['treatmentDate', 'DESC']],
+    include: [
+      {
+        model: TreatmentSetting,
+        as: 'treatmentSettings',
+      },
+      {
+        model: Diagnosis,
+        as: 'diagnosis',
+      },
+    ],
   });
 
   return { treatments: rows, total: count, page, totalPages: Math.ceil(count / limit) };
 };
 
 const getTreatmentById = async (treatmentId) => {
-  const treatment = await Treatment.findByPk(treatmentId);
+  const treatment = await Treatment.findByPk(treatmentId, {
+    include: [
+      {
+        model: TreatmentSetting,
+        as: 'treatmentSettings',
+      },
+      {
+        model: Diagnosis,
+        as: 'diagnosis',
+      },
+    ],
+  });
+
   if (!treatment) throw new Error('Treatment not found');
   return treatment;
 };
 
+// const updateTreatment = async (treatmentId, updateBody) => {
+//   const treatment = await getTreatmentById(treatmentId);
+//   Object.assign(treatment, updateBody);
+//   await treatment.save();
+//   return treatment;
+// };
+
 const updateTreatment = async (treatmentId, updateBody) => {
+  const {
+    treatmentSettingId,
+    settingTreatmentDate,
+    settingNotes,
+    settingAdditionalDetails,
+    xray, 
+    xrayStatus,
+    settingPaidAmount = 0, // Default to 0 if not provided
+    ...treatmentFields // Extract Treatment fields separately
+  } = updateBody;
+
+  // Fetch Treatment by ID
   const treatment = await getTreatmentById(treatmentId);
-  Object.assign(treatment, updateBody);
+  if (!treatment) {
+    throw new ApiError(httpStatus.NOT_FOUND, 'Treatment not found');
+  }
+
+  // ✅ Update Treatment only if there are fields to update
+  if (Object.keys(treatmentFields).length > 0) {
+    Object.assign(treatment, treatmentFields);
+    await treatment.save();
+  }
+
+  let updatedTreatmentSetting = null;
+  if (treatmentSettingId) {
+    // If treatmentSettingId is provided, update the existing TreatmentSetting
+    updatedTreatmentSetting = await TreatmentSetting.findByPk(treatmentSettingId);
+    if (!updatedTreatmentSetting) {
+      throw new ApiError(httpStatus.NOT_FOUND, 'Treatment setting not found');
+    }
+
+    Object.assign(updatedTreatmentSetting, {
+      treatmentDate: settingTreatmentDate,
+      notes: settingNotes,
+      additionalDetails: settingAdditionalDetails,
+      paidAmount: settingPaidAmount, // Storing paid amount at setting level
+      xrayStatus,
+      xray,
+    });
+    await updatedTreatmentSetting.save();
+  }
+  //  else {
+  //   // If no treatmentSettingId, create a new TreatmentSetting under this treatment
+  //   updatedTreatmentSetting = await TreatmentSetting.create({
+  //     treatmentId,
+  //     treatmentDate: settingTreatmentDate || treatment.createdAt,
+  //     notes: settingNotes,
+  //     additionalDetails: settingAdditionalDetails,
+  //     treatmentStatus: treatmentFields.treatmentStatus, // Use from treatment fields
+  //     paidAmount: settingPaidAmount,
+  //   });
+  // }
+
+  // ✅ Recalculate Paid & Remaining Amounts for Treatment
+  const totalPaidAmount = Number(treatment.paidAmount) + Number(settingPaidAmount);
+  const remainingAmount = Number(treatment.totalAmount) - Number(totalPaidAmount);
+
+  // ✅ Update Treatment's financial details
+  treatment.paidAmount = totalPaidAmount;
   await treatment.save();
-  return treatment;
+  treatment.remainingAmount = remainingAmount <= 0 ? 0 : remainingAmount;
+  await treatment.save();
+
+  // ✅ Ensure paymentStatus updates correctly
+  if (remainingAmount <= 0) {
+    treatment.paymentStatus = 'paid'; // Mark as paid if no remaining balance
+  } else {
+    treatment.paymentStatus = 'pending'; // Keep it pending if amount is due
+  }
+
+  // ✅ Save the updated Treatment
+  await treatment.save();
+
+  // ✅ Return updated treatment with the treatment setting
+  return {
+    treatment: await treatment.reload(),
+    treatmentSetting: updatedTreatmentSetting,
+  };
 };
 
 const deleteTreatment = async (treatmentId) => {
   const treatment = await getTreatmentById(treatmentId);
-  await treatment.destroy();
+  await treatment.destroy({ force: true });
+};
+
+const createMammography = async (patientId, mammographyBody) => {
+  try {
+    const existingMammo = await Mammography.findOne({ where: { patientId } });
+    if (existingMammo) {
+      await updateMammography(patientId, {
+        ...mammographyBody,
+        patientId,
+      });
+    }
+    const mammographyCreated = await Mammography.create({
+      ...mammographyBody,
+      patientId,
+    });
+    return mammographyCreated;
+  } catch (error) {
+    console.error(error);
+    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, 'Error While Adding Mammography Details');
+  }
+};
+
+const getMammographyById = async (patientId) => {
+  try {
+    const mammography = await Mammography.findOne({ where: { patientId } });
+    if (!mammography) {
+      throw new ApiError(httpStatus.NOT_FOUND, 'Mammography record not found');
+    }
+    const patientDoc = await Patient.findByPk(patientId);
+
+    return { ...mammography.dataValues, ...patientDoc.dataValues };
+  } catch (error) {
+    console.error(error);
+    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, 'Error While Fetching Mammography Details');
+  }
+};
+
+const updateMammography = async (patientId, updateBody) => {
+  try {
+    const mammography = await Mammography.findOne({ where: { patientId } });
+    if (!mammography) {
+      throw new ApiError(httpStatus.NOT_FOUND, 'Mammography record not found');
+    }
+    Object.assign(mammography, updateBody);
+    await mammography.save();
+    return mammography;
+  } catch (error) {
+    console.error(error);
+    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, 'Error While Updating Mammography Details');
+  }
+};
+
+const deleteMammography = async (patientId) => {
+  try {
+    const mammography = await Mammography.findOne({ where: { patientId } });
+    if (!mammography) {
+      throw new ApiError(httpStatus.NOT_FOUND, 'Mammography record not found');
+    }
+    await mammography.destroy();
+    return { message: 'Mammography record deleted successfully' };
+  } catch (error) {
+    console.error(error);
+    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, 'Error While Deleting Mammography Details');
+  }
 };
 
 module.exports = {
   createPatient,
   searchPatients,
+  deleteMammography,
   getPatientById,
   getPatientsByClinic,
   updatePatientById,
@@ -420,4 +742,7 @@ module.exports = {
   getTreatmentById,
   updateTreatment,
   deleteTreatment,
+  createMammography,
+  updateMammography,
+  getMammographyById,
 };

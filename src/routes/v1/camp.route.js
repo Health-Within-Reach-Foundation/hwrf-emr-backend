@@ -16,7 +16,7 @@ router.post('/set-camp', auth(), campController.setCurrentCamp);
 router
   .route('/:campId')
   .get(
-    auth(),
+    // auth(),
     // roleAuthorization('admin', 'organizer'),
     validate(campValidation.getCampById),
     campController.getCampById

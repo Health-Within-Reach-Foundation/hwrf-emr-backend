@@ -7,7 +7,14 @@ const { User } = require('./user.model');
 class Role extends Model {
   static associate(models) {
     // Many-to-Many: Roles and Users
-    Role.belongsToMany(models.User, { through: 'user_roles', foreignKey: 'roleId', otherKey: 'userId', as: 'users' });
+    Role.belongsToMany(models.User, {
+      through: 'user_roles',
+      foreignKey: 'roleId',
+      otherKey: 'userId',
+      as: 'users',
+      onDelete: 'CASCADE',
+      onUpdate: 'CASCADE',
+    });
 
     Role.belongsToMany(models.Permission, {
       through: 'role_permissions', // Junction table
@@ -15,7 +22,6 @@ class Role extends Model {
       otherKey: 'permissionId',
       as: 'permissions',
     });
-
   }
 }
 
