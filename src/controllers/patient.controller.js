@@ -61,7 +61,110 @@ const addDentalPatientRecord = catchAsync(async (req, res) => {
   const record = await dentalService.addDentalPatientRecord(req.body);
   res.status(httpStatus.CREATED).json({
     success: true,
-    message: 'Denatal patient record added successfully!',
+    message: 'Dental patient record added successfully!',
+
+    data: record,
+  });
+});
+// Controller to add dentist patient mammography
+const createMammography = catchAsync(async (req, res) => {
+  const { file, body } = req;
+
+  const { patientId } = req.params;
+  const screeningImageFilePath = {};
+
+  if (file) {
+    try {
+      const fileKey = `clinics/${req?.user?.clinicId}/mammography/${patientId}/${file.originalname}`; // Generate unique key
+      const uploadResult = await uploadFile(file, fileKey);
+
+      if (!uploadResult.success) {
+        throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, `Failed to upload ${file.originalname}`);
+      }
+
+      // Save file metadata
+      screeningImageFilePath.key = fileKey;
+      screeningImageFilePath.fileName = file.originalname;
+      screeningImageFilePath.uploadedAt = new Date().toISOString();
+
+      // Delete the temporary file from local storage
+      fs.unlink(file.path, (err) => {
+        if (err) console.error(`Error deleting temporary file: ${err}`);
+      });
+    } catch (err) {
+      console.error(`Error processing file ${file.originalname}:`, err);
+      throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, `Error uploading file: ${err.message}`);
+    }
+  }
+
+  // Append file paths to the request body
+  const mammographyBody = {
+    ...body,
+    screeningImage: screeningImageFilePath, // Attach uploaded file paths if available
+  };
+  const record = await patientService.createMammography(patientId, mammographyBody);
+  res.status(httpStatus.CREATED).json({
+    success: true,
+    message: 'Mammography Details added successfully!',
+    data: record,
+  });
+});
+const getMammography = catchAsync(async (req, res) => {
+  const { patientId } = req.params;
+  const record = await patientService.getMammographyById(patientId);
+  res.status(httpStatus.CREATED).json({
+    success: true,
+    message: 'Mammography Reports!',
+    data: record,
+  });
+});
+// Controller to add dentist patient mammography
+const updateMammography = catchAsync(async (req, res) => {
+  const { patientId } = req.params;
+  const { file, body } = req;
+  const screeningImageFilePath = {};
+
+  if (file) {
+    try {
+      const fileKey = `clinics/${req?.user?.clinicId}/mammography/${body.patientId}/${file.originalname}`; // Generate unique key
+      const uploadResult = await uploadFile(file, fileKey);
+
+      if (!uploadResult.success) {
+        throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, `Failed to upload ${file.originalname}`);
+      }
+
+      // Save file metadata
+      screeningImageFilePath.key = fileKey;
+      screeningImageFilePath.fileName = file.originalname;
+      screeningImageFilePath.uploadedAt = new Date().toISOString();
+
+      // Delete the temporary file from local storage
+      fs.unlink(file.path, (err) => {
+        if (err) console.error(`Error deleting temporary file: ${err}`);
+      });
+    } catch (err) {
+      console.error(`Error processing file ${file.originalname}:`, err);
+      throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, `Error uploading file: ${err.message}`);
+    }
+  }
+
+  // Append file paths to the request body
+  let mammographyBody;
+  if (Object.keys(screeningImageFilePath).length > 0) {
+    mammographyBody = {
+      ...body,
+      screeningImage: screeningImageFilePath, // Attach uploaded file paths if available
+    };
+  } else {
+    mammographyBody = {
+      ...body,
+    };
+  }
+
+  const record = await patientService.updateMammography(patientId, mammographyBody);
+  res.status(httpStatus.CREATED).json({
+    success: true,
+    message: 'Mammography Details updated successfully!',
     data: record,
   });
 });
@@ -120,7 +223,12 @@ const createDiagnosis = catchAsync(async (req, res) => {
           throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, `Failed to upload ${file.originalname}`);
         }
 
-        xrayFilePaths.push(fileKey); // Store only file key (Azure path)
+        // Push object with required format into xrayFilePaths
+        xrayFilePaths.push({
+          key: fileKey,
+          fileName: file.originalname,
+          uploadedAt: new Date().toISOString(),
+        });
 
         // Delete the temporary file from local storage
         fs.unlink(file.path, (err) => {
@@ -133,10 +241,18 @@ const createDiagnosis = catchAsync(async (req, res) => {
   }
 
   // Append file paths to the request body
-  const diagnosisData = {
-    ...body,
-    xray: xrayFilePaths, // Attach uploaded file paths if available
-  };
+  let diagnosisData = {};
+  if (xrayFilePaths?.length > 0) {
+    diagnosisData = {
+      ...body,
+      xray: xrayFilePaths,
+    };
+  } else {
+    diagnosisData = {
+      ...body,
+    };
+  }
+  // Attach uploaded file paths if available
 
   await patientService.createDiagnosis(diagnosisData);
 
@@ -187,7 +303,13 @@ const updateDiagnosis = catchAsync(async (req, res) => {
           throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, `Failed to upload ${file.originalname}`);
         }
 
-        xrayFilePaths.push(fileKey); // Store only file key (Azure path)
+        // xrayFilePaths.push(fileKey); // Store only file key (Azure path)
+        // Push object with required format into xrayFilePaths
+        xrayFilePaths.push({
+          key: fileKey,
+          fileName: file.originalname,
+          uploadedAt: new Date().toISOString(),
+        });
 
         // Delete the temporary file from local storage
         fs.unlink(file.path, (err) => {
@@ -199,12 +321,19 @@ const updateDiagnosis = catchAsync(async (req, res) => {
     }
   }
   // Append file paths to the request body
-  const diagnosisData = {
-    ...body,
-    xray: xrayFilePaths, // Attach uploaded file paths if available
-  };
+  let diagnosisBody = {};
+  if (xrayFilePaths?.length > 0) {
+    diagnosisBody = {
+      ...body,
+      xray: xrayFilePaths,
+    };
+  } else {
+    diagnosisBody = {
+      ...body,
+    };
+  }
 
-  const diagnosis = await patientService.updateDiagnosis(req.params.diagnosisId, diagnosisData);
+  const diagnosis = await patientService.updateDiagnosis(req.params.diagnosisId, diagnosisBody);
   res.status(httpStatus.OK).json({
     success: true,
     message: 'Diagnosis updated successfully',
@@ -241,7 +370,13 @@ const createTreatment = catchAsync(async (req, res) => {
           throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, `Failed to upload ${file.originalname}`);
         }
 
-        xrayFilePaths.push(fileKey); // Store only file key (Azure path)
+        // xrayFilePaths.push(fileKey); // Store only file key (Azure path)
+        // Push object with required format into xrayFilePaths
+        xrayFilePaths.push({
+          key: fileKey,
+          fileName: file.originalname,
+          uploadedAt: new Date().toISOString(),
+        });
 
         // Delete the temporary file from local storage
         fs.unlink(file.path, (err) => {
@@ -253,10 +388,17 @@ const createTreatment = catchAsync(async (req, res) => {
     }
   }
 
-  const treatmentBody = {
-    ...body,
-    xray: xrayFilePaths, // Attach uploaded file paths if available
-  };
+  let treatmentBody = {};
+  if (xrayFilePaths?.length > 0) {
+    treatmentBody = {
+      ...body,
+      xray: xrayFilePaths,
+    };
+  } else {
+    treatmentBody = {
+      ...body,
+    };
+  }
   const treatmentSetting = await patientService.createTreatment(treatmentBody);
 
   res.status(httpStatus.CREATED).json({
@@ -298,23 +440,34 @@ const updateTreatment = catchAsync(async (req, res) => {
           throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, `Failed to upload ${file.originalname}`);
         }
 
-        xrayFilePaths.push(fileKey); // Store only file key (Azure path)
+        // xrayFilePaths.push(fileKey); // Store only file key (Azure path)// Push object with required format into xrayFilePaths
+        xrayFilePaths.push({
+          key: fileKey,
+          fileName: file.originalname,
+          uploadedAt: new Date().toISOString(),
+        });
 
         // Delete the temporary file from local storage
         fs.unlink(file.path, (err) => {
           if (err) console.error(`Error deleting temporary file: ${err}`);
         });
-        
       } catch (err) {
         console.error(`Error processing file ${file.originalname}:`, err);
       }
     }
   }
 
-  const treatmentBody = {
-    ...body,
-    xray: xrayFilePaths, // Attach uploaded file paths if available
-  };
+  const treatmentBody = {};
+  if (xrayFilePaths?.length > 0) {
+    treatmentBody = {
+      ...body,
+      xray: xrayFilePaths,
+    };
+  } else {
+    treatmentBody = {
+      ...body,
+    };
+  }
 
   const updatedTreatment = await patientService.updateTreatment(req.params.treatmentId, treatmentBody);
   res.status(httpStatus.OK).json({ success: true, data: updatedTreatment });
@@ -338,7 +491,10 @@ module.exports = {
   deleteDiagnosis,
   createTreatment,
   getTreatments,
+  getMammography,
+  createMammography,
   getTreatmentById,
   updateTreatment,
+  updateMammography,
   deleteTreatment,
 };

@@ -132,6 +132,31 @@ router
   .delete(auth(), validate(patientValidation.deleteTreatment), patientController.deleteTreatment);
 
 router
+  .route('/mammography/:patientId')
+  .post(
+    auth(),
+    upload.single('screeningFile'),
+    (req, res, next) => {
+      console.log('req body --------', req.body, req.files);
+      next();
+    },
+    parseArrayFields(['smokingDetails', 'imagingStudies', 'obstetricHistory']),
+    validate(patientValidation.createMammography),
+    patientController.createMammography
+  )
+  .patch(
+    auth(),
+    upload.single('screeningFile'),
+    (req, res, next) => {
+      console.log('req body --------', req.body, req.files);
+      next();
+    },
+    parseArrayFields(['smokingDetails', 'imagingStudies', 'obstetricHistory']),
+    validate(patientValidation.updateMammography),
+    patientController.updateMammography
+  )
+  .get(auth(), validate(patientValidation.getMammography), patientController.getMammography);
+router
   .route('/:patientId')
   .get(auth(), validate(patientValidation.getPatientById), patientController.getPatientDetailsById)
   .patch(
@@ -140,5 +165,4 @@ router
     validate(patientValidation.updatePatient),
     patientController.updatePatientDetails
   );
-
 module.exports = router;

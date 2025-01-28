@@ -8,6 +8,7 @@ const { Permission } = require('../models/permission.model');
 const { tokenTypes } = require('../config/tokens');
 const config = require('../config/config');
 const sendEmailAzure = require('../services/email.azure.service');
+const { getFile } = require('../utils/azure-service');
 
 /**
  * Get a list of clinics with pagination, filtering, and sorting
@@ -183,6 +184,15 @@ const updateClinicById = catchAsync(async (req, res) => {
   });
 });
 
+const getFileByKey = catchAsync(async (req, res) => {
+  const key = req.query.key;
+
+  console.log('Key --.', key);
+
+  await getFile(key, res);
+});
+
+
 module.exports = {
   getClinics,
   getClinic,
@@ -190,6 +200,7 @@ module.exports = {
   getUsersByClinic,
   getSpecialtyDepartmentsByClinic,
   updateClinicById,
+  getFileByKey,
   // createRole,
   // getRolesByClinic
 };

@@ -49,7 +49,7 @@ const initModel = (sequelize) => {
         defaultValue: false,
       },
       xray: {
-        type: DataTypes.ARRAY(DataTypes.STRING),
+        type: DataTypes.JSONB,
         allowNull: true, // URLs for X-rays
       },
       notes: {

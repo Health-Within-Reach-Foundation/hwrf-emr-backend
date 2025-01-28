@@ -334,8 +334,156 @@ const deleteTreatment = {
   }),
 };
 
+const createMammography = {
+  params: Joi.object().keys({
+    patientId: Joi.string().uuid().required().description('Patient ID'),
+  }),
+  body: Joi.object().keys({
+    menstrualAge: Joi.number().integer().min(0).allow(null).optional(),
+    lastMenstrualDate: Joi.date().allow(null).optional(),
+    cycleType: Joi.string().valid('Regular', 'Irregular').allow('', null).optional(),
+    obstetricHistory: Joi.object()
+      .keys({
+        g: Joi.boolean().optional(),
+        p: Joi.boolean().optional(),
+        l: Joi.boolean().optional(),
+      })
+      .optional()
+      .default({ g: false, p: false, l: false }),
+    menopause: Joi.string().valid('Yes', 'No').allow('', null).optional(),
+    familyHistory: Joi.string().valid('Yes', 'No').allow('', null).optional(),
+    familyHistoryDetails: Joi.string().allow('', null).optional(),
+    clinicalDiagnosis: Joi.string().valid('Yes', 'No').allow('', null).optional(),
+    diagnosisDetails: Joi.string().allow('', null).optional(),
+    firstDegreeRelatives: Joi.string().valid('Yes', 'No').allow('', null).optional(),
+    previousCancer: Joi.string().valid('Yes', 'No').allow('', null).optional(),
+    previousBiopsy: Joi.string().valid('Yes', 'No').allow('', null).optional(),
+    previousSurgery: Joi.string().valid('Yes', 'No').allow('', null).optional(),
+    implants: Joi.string().valid('Yes', 'No').allow('', null).optional(),
+    // screeningImage: Joi.string().optional(), // JSON object for the screening image
+    relevantDiagnosis: Joi.string().valid('Yes', 'No').allow('', null).optional(),
+    relevantDiagnosisDetails: Joi.string().allow('', null).optional(), // JSON object for the screening image
+    smoking: Joi.string().valid('Yes', 'No').allow('', null).optional(),
+    smokingDetails: Joi.object()
+      .keys({
+        packsPerDay: Joi.number().min(0).allow(null).optional(),
+        yearsSmoked: Joi.number().min(0).allow(null).optional(),
+      })
+      .optional()
+      .default({ packsPerDay: null, yearsSmoked: null }),
+    imagingStudies: Joi.object()
+      .keys({
+        location: Joi.string().allow('', null).optional(),
+        type: Joi.string().allow('', null).optional(),
+        date: Joi.date().allow(null).optional(),
+      })
+      .optional()
+      .default({ location: '', type: '', date: null }),
+    lump: Joi.string().valid('No', 'Right', 'Left', 'Both').allow('', null).optional(),
+    discharge: Joi.string().valid('No', 'Right', 'Left', 'Both').allow('', null).optional(),
+    dischargeDetails: Joi.string().allow('', null).optional(),
+    skinChanges: Joi.string().valid('Yes', 'No').allow('', null).optional(),
+    pain: Joi.string().valid('Yes', 'No').allow('', null).optional(),
+    skinChangesDetails: Joi.string().allow('', null).optional(),
+    nippleRetraction: Joi.string().valid('Yes', 'No').allow('', null).optional(),
+    nippleRetractionDetails: Joi.string().allow('', null).optional(),
+    additionalInfo: Joi.string().allow('', null).optional(),
+  }),
+  files: (files) => {
+    if (!files.length) return null; // No files, validation passes
+
+    for (const file of files) {
+      // Check if the file is an image based on MIME type
+      if (!file.mimetype.startsWith('image/')) {
+        return `Invalid file type for file: ${file.originalname}. Only image files are allowed.`;
+      }
+      // Uncomment the below section to add a size limit if needed
+      // if (file.size > 5 * 1024 * 1024) {
+      //   return `File ${file.originalname} exceeds the maximum size of 5MB.`;
+      // }
+    }
+
+    return null; // No errors
+  },
+};
+const getMammography = {
+  params: Joi.object().keys({
+    patientId: Joi.string().uuid().required().description('Patient ID'),
+  }),
+};
+const updateMammography = {
+  body: Joi.object().keys({
+    menstrualAge: Joi.number().integer().min(0).allow(null).optional(),
+    lastMenstrualDate: Joi.date().allow(null).optional(),
+    pain: Joi.string().valid('Yes', 'No').allow('', null).optional(),
+
+    cycleType: Joi.string().valid('Regular', 'Irregular').allow('', null).optional(),
+    obstetricHistory: Joi.object()
+      .keys({
+        g: Joi.boolean().optional(),
+        p: Joi.boolean().optional(),
+        l: Joi.boolean().optional(),
+      })
+      .optional(),
+    menopause: Joi.string().valid('Yes', 'No').allow('', null).optional(),
+    relevantDiagnosis: Joi.string().valid('Yes', 'No').allow('', null).optional(),
+    relevantDiagnosisDetails: Joi.string().allow('', null).optional(), // JSON object for the screening image
+    familyHistory: Joi.string().valid('Yes', 'No').allow('', null).optional(),
+    familyHistoryDetails: Joi.string().allow('', null).optional(),
+    clinicalDiagnosis: Joi.string().valid('Yes', 'No').allow('', null).optional(),
+    diagnosisDetails: Joi.string().allow('', null).optional(),
+    firstDegreeRelatives: Joi.string().valid('Yes', 'No').allow('', null).optional(),
+    previousCancer: Joi.string().valid('Yes', 'No').allow('', null).optional(),
+    previousBiopsy: Joi.string().valid('Yes', 'No').allow('', null).optional(),
+    previousSurgery: Joi.string().valid('Yes', 'No').allow('', null).optional(),
+    implants: Joi.string().valid('Yes', 'No').allow('', null).optional(),
+    // screeningImage: Joi.string().optional(), // JSON object for the screening image
+    smoking: Joi.string().valid('Yes', 'No').allow('', null).optional(),
+    smokingDetails: Joi.object()
+      .keys({
+        packsPerDay: Joi.number().min(0).allow(null).optional(),
+        yearsSmoked: Joi.number().min(0).allow(null).optional(),
+      })
+      .optional(),
+    imagingStudies: Joi.object()
+      .keys({
+        location: Joi.string().allow('', null).optional(),
+        type: Joi.string().allow('', null).optional(),
+        date: Joi.date().allow(null).optional(),
+      })
+      .optional(),
+    lump: Joi.string().valid('No', 'Right', 'Left', 'Both').allow('', null).optional(),
+    discharge: Joi.string().valid('No', 'Right', 'Left', 'Both').allow('', null).optional(),
+    dischargeDetails: Joi.string().allow('', null).optional(),
+    skinChanges: Joi.string().valid('Yes', 'No').allow('', null).optional(),
+    skinChangesDetails: Joi.string().allow('', null).optional(),
+    nippleRetraction: Joi.string().valid('Yes', 'No').allow('', null).optional(),
+    nippleRetractionDetails: Joi.string().allow('', null).optional(),
+    additionalInfo: Joi.string().allow('', null).optional(),
+    patientId: Joi.string().uuid().optional(), // Foreign key, optional during updates
+    mammoReport: Joi.string().optional(), // Foreign key, optional during updates
+  }),
+  files: (files) => {
+    if (!files.length) return null; // No files, validation passes
+
+    for (const file of files) {
+      // Check if the file is an image based on MIME type
+      if (!file.mimetype.startsWith('image/')) {
+        return `Invalid file type for file: ${file.originalname}. Only image files are allowed.`;
+      }
+      // Uncomment the below section to add a size limit if needed
+      // if (file.size > 5 * 1024 * 1024) {
+      //   return `File ${file.originalname} exceeds the maximum size of 5MB.`;
+      // }
+    }
+
+    return null; // No errors
+  },
+};
+
 module.exports = {
   createPatient,
+  updateMammography,
   updatePatient,
   // getPatients,
   addDentalPatientRecord,
@@ -351,4 +499,6 @@ module.exports = {
   getTreatmentById,
   updateTreatment,
   deleteTreatment,
+  getMammography,
+  createMammography,
 };
