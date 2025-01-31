@@ -16,6 +16,7 @@ const createRole = catchAsync(async (req, res) => {
 });
 
 const getRolesByClinic = catchAsync(async (req, res) => {
+  console.log(req.user);
   const clinicId = req.user.clinicId;
 
   const roles = await rolePermissionService.getRolesByClinic(clinicId);

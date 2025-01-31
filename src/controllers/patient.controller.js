@@ -457,7 +457,7 @@ const updateTreatment = catchAsync(async (req, res) => {
     }
   }
 
-  const treatmentBody = {};
+  let treatmentBody = {};
   if (xrayFilePaths?.length > 0) {
     treatmentBody = {
       ...body,

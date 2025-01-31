@@ -5,7 +5,6 @@ const roleAuthorization = require('../../middlewares/role-authorise');
 const { patientValidation, appointmentValidation } = require('../../validations');
 const { patientController } = require('../../controllers');
 const multer = require('multer');
-const path = require('path');
 const parseArrayFields = require('../../middlewares/parser');
 const { storage } = require('../../utils/file-upload-to-storage');
 // Define custom multer instance in the route
@@ -43,7 +42,7 @@ router.route('/dental-records').post(
 router
   .route('/diagnosis')
   .post(
-    auth(),
+    // auth(),
     upload.array('xrayFiles'),
     parseArrayFields([
       'complaints',
@@ -66,13 +65,13 @@ router
 router
   .route('/diagnosis/:diagnosisId')
   .get(
-    auth(),
+    // auth(),
     // roleAuthorization('diagnosis:read'),
     validate(patientValidation.getDiagnosis),
     patientController.getDiagnosis
   )
   .patch(
-    auth(),
+    // auth(),
     upload.array('xrayFiles'),
 
     parseArrayFields([
@@ -94,7 +93,7 @@ router
     patientController.updateDiagnosis
   )
   .delete(
-    auth(),
+    // auth(),
     // roleAuthorization('diagnosis:delete'),
     validate(patientValidation.deleteDiagnosis),
     patientController.deleteDiagnosis
@@ -103,9 +102,9 @@ router
 router
   .route('/treatment')
   .post(
-    auth(),
+    // auth(),
     upload.array('xrayFiles'),
-    parseArrayFields(['treatmentStatus']),
+    parseArrayFields(['treatmentStatus', 'treatingDoctor', 'treatmentDate', 'nextDate']),
     (req, res, next) => {
       console.log('req body --------', req.body, req.files);
       next();
@@ -119,13 +118,13 @@ router
   .route('/treatment/:treatmentId')
   .get(auth(), validate(patientValidation.getTreatmentById), patientController.getTreatmentById)
   .patch(
-    auth(),
+    // auth(),
     upload.array('xrayFiles'),
     (req, res, next) => {
       console.log('req body --------', req.body, req.files);
       next();
     },
-    parseArrayFields(['treatmentStatus']),
+    parseArrayFields(['treatmentStatus', 'treatingDoctor','nextDate']),
     validate(patientValidation.updateTreatment),
     patientController.updateTreatment
   )
@@ -134,7 +133,7 @@ router
 router
   .route('/mammography/:patientId')
   .post(
-    auth(),
+    // auth(),
     upload.single('screeningFile'),
     (req, res, next) => {
       console.log('req body --------', req.body, req.files);
@@ -145,7 +144,7 @@ router
     patientController.createMammography
   )
   .patch(
-    auth(),
+    // auth(),
     upload.single('screeningFile'),
     (req, res, next) => {
       console.log('req body --------', req.body, req.files);
@@ -158,9 +157,13 @@ router
   .get(auth(), validate(patientValidation.getMammography), patientController.getMammography);
 router
   .route('/:patientId')
-  .get(auth(), validate(patientValidation.getPatientById), patientController.getPatientDetailsById)
+  .get(
+    // auth(),
+    validate(patientValidation.getPatientById),
+    patientController.getPatientDetailsById
+  )
   .patch(
-    auth(),
+    // auth(),
     // roleAuthorization('admin', 'receptionist', 'doctor'),
     validate(patientValidation.updatePatient),
     patientController.updatePatientDetails

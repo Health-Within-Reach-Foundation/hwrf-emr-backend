@@ -129,6 +129,7 @@ const createDiagnosis = {
     notes: Joi.string().allow('', null).optional(),
     additionalDetails: Joi.object().optional(),
     patientId: Joi.string().uuid().required(),
+    estimatedCost: Joi.number().optional(),
   }),
   files: (files) => {
     if (!files.length) return null; // No files, validation passes
@@ -178,6 +179,7 @@ const updateDiagnosis = {
     notes: Joi.string().allow('', null).optional(),
     additionalDetails: Joi.object().optional(),
     patientId: Joi.string().uuid().optional(),
+    estimatedCost: Joi.number().optional(),
   }),
   files: (files) => {
     if (!files.length) return null; // No files, validation passes
@@ -230,6 +232,18 @@ const createTreatment = {
     xrayStatus: Joi.boolean().optional(),
     paymentStatus: Joi.string().valid('paid', 'pending').default('pending'),
     patientId: Joi.string().uuid().optional(),
+    treatingDoctor: Joi.object()
+      .keys({
+        label: Joi.string().optional(),
+        value: Joi.string().uuid().optional(),
+        phoneNumber: Joi.string().optional(),
+      })
+      .optional(),
+    onlineAmount: Joi.number().optional(),
+    offlineAmount: Joi.number().optional(),
+    paymentMode: Joi.string().optional(),
+    // settingPaidAmount: Joi.number().optional(),
+    nextDate: Joi.date().optional().description('follow up date of treatment'),
   }),
   files: (files) => {
     if (!files.length) return null; // No files, validation passes
@@ -309,6 +323,17 @@ const updateTreatment = {
       settingNotes: Joi.string().allow('', null).optional(),
       settingAdditionalDetails: Joi.object().optional(),
       settingPaidAmount: Joi.number().optional(),
+      treatingDoctor: Joi.object()
+        .keys({
+          label: Joi.string().optional(),
+          value: Joi.string().uuid().optional(),
+          phoneNumber: Joi.string().optional(),
+        })
+        .optional(),
+      onlineAmount: Joi.number().optional(),
+      offlineAmount: Joi.number().optional(),
+      paymentMode: Joi.string().optional(),
+      nextDate: Joi.date().optional().description('follow up date of treatment'),
     })
     .min(1),
   files: (files) => {

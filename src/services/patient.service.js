@@ -258,6 +258,7 @@ const createDiagnosis = async (diagnosisBody) => {
     notes,
     patientId,
     xray,
+    estimatedCost,
   } = diagnosisBody;
 
   // Ensure the patient exists
@@ -287,6 +288,7 @@ const createDiagnosis = async (diagnosisBody) => {
         notes,
         xray,
         patientId,
+        estimatedCost,
       });
     });
   }
@@ -301,6 +303,7 @@ const createDiagnosis = async (diagnosisBody) => {
         notes,
         xray,
         patientId,
+        estimatedCost,
       });
     });
   }
@@ -313,6 +316,7 @@ const createDiagnosis = async (diagnosisBody) => {
       notes,
       xray,
       patientId,
+      estimatedCost,
     });
   }
 
@@ -373,19 +377,12 @@ const updateDiagnosis = async (diagnosisId, updateBody) => {
   const diagnosis = await getDiagnosisById(diagnosisId);
   const treatments = await Treatment.findAll({ where: { diagnosisId } });
   // Ensure selectedTeeth is NULL when empty, instead of an empty string
-  const selectedTeeth = 
+  const selectedTeeth =
     Array.isArray(updateBody?.selectedTeeth) && updateBody.selectedTeeth.length > 0
       ? updateBody.selectedTeeth[0] // Take first element if exists
       : null; // Otherwise, set to null
 
-  const {
-    complaints,
-    treatmentsSuggested,
-    dentalQuadrantType,
-    xrayStatus,
-    xray,
-    notes,
-  } = updateBody;
+  const { complaints, treatmentsSuggested, dentalQuadrantType, xrayStatus, xray, notes, estimatedCost } = updateBody;
 
   const updatedDiagnosisBody = {
     complaints,
@@ -395,11 +392,13 @@ const updateDiagnosis = async (diagnosisId, updateBody) => {
     xrayStatus,
     xray,
     notes,
-  }
+    estimatedCost,
+  };
   const updatedTreatmentBody = {
     complaints,
     treatments: treatmentsSuggested,
     dentalQuadrantType,
+    totalAmount: estimatedCost,
     // selectedTeeth,
     // xrayStatus,
     // xray,
@@ -470,7 +469,14 @@ const createTreatment = async (treatmentBody) => {
     xray,
     paymentStatus,
     settingPaidAmount,
+    onlineAmount,
+    offlineAmount,
+    paymentMode,
+    treatingDoctor,
+    nextDate,
   } = treatmentBody;
+
+  let newSettingPaidAmount = Number(onlineAmount) + Number(offlineAmount);
 
   try {
     // Find existing diagnosis
@@ -493,15 +499,15 @@ const createTreatment = async (treatmentBody) => {
         xray: diagnosis.xray,
         treatmentStatus,
         // notes,
-        totalAmount,
-        paidAmount: settingPaidAmount,
-        remainingAmount: totalAmount - settingPaidAmount,
+        totalAmount: diagnosis.estimatedCost,
+        paidAmount: newSettingPaidAmount,
+        remainingAmount: totalAmount - newSettingPaidAmount,
         paymentStatus,
         diagnosisId,
       });
     } else {
-      treatment.paidAmount = Number(treatment.paidAmount) + Number(settingPaidAmount);
-      treatment.remainingAmount = Number(treatment.totalAmount) - Number(treatment.paidAmount + settingPaidAmount);
+      treatment.paidAmount = Number(treatment.paidAmount) + Number(newSettingPaidAmount);
+      treatment.remainingAmount = Number(treatment.totalAmount) - Number(treatment.paidAmount + newSettingPaidAmount);
 
       await treatment.save();
     }
@@ -511,9 +517,14 @@ const createTreatment = async (treatmentBody) => {
       treatmentDate,
       treatmentStatus,
       notes,
-      settingPaidAmount,
+      settingPaidAmount: newSettingPaidAmount,
       xrayStatus,
       xray,
+      treatingDoctor,
+      paymentMode,
+      onlineAmount,
+      offlineAmount,
+      nextDate,
       additionalDetails: treatmentBody.additionalDetails || {},
       treatmentId: treatment.id, // Associate with the found/created Treatment
     });
@@ -578,11 +589,19 @@ const updateTreatment = async (treatmentId, updateBody) => {
     settingTreatmentDate,
     settingNotes,
     settingAdditionalDetails,
-    xray, 
+    xray,
     xrayStatus,
     settingPaidAmount = 0, // Default to 0 if not provided
+    treatingDoctor,
+    paymentMode,
+    onlineAmount,
+    offlineAmount,
+    nextDate,
+    treatmentStatus,
     ...treatmentFields // Extract Treatment fields separately
   } = updateBody;
+
+  let newSettingPaidAmount = Number(onlineAmount) + Number(offlineAmount);
 
   // Fetch Treatment by ID
   const treatment = await getTreatmentById(treatmentId);
@@ -605,12 +624,18 @@ const updateTreatment = async (treatmentId, updateBody) => {
     }
 
     Object.assign(updatedTreatmentSetting, {
+      treatmentStatus,
       treatmentDate: settingTreatmentDate,
       notes: settingNotes,
       additionalDetails: settingAdditionalDetails,
-      paidAmount: settingPaidAmount, // Storing paid amount at setting level
+      settingPaidAmount: newSettingPaidAmount, // Storing paid amount at setting level
+      onlineAmount,
+      offlineAmount,
+      paymentMode,
+      nextDate,
       xrayStatus,
       xray,
+      treatingDoctor,
     });
     await updatedTreatmentSetting.save();
   }
@@ -627,7 +652,7 @@ const updateTreatment = async (treatmentId, updateBody) => {
   // }
 
   // ✅ Recalculate Paid & Remaining Amounts for Treatment
-  const totalPaidAmount = Number(treatment.paidAmount) + Number(settingPaidAmount);
+  const totalPaidAmount = Number(treatment.paidAmount) + Number(newSettingPaidAmount);
   const remainingAmount = Number(treatment.totalAmount) - Number(totalPaidAmount);
 
   // ✅ Update Treatment's financial details

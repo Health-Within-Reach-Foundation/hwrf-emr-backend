@@ -58,6 +58,26 @@ const initModel = (sequelize) => {
         type: DataTypes.JSONB,
         allowNull: true, // URLs for X-rays
       },
+      treatingDoctor: {
+        type: DataTypes.JSON,
+        allowNull: true, // Each patient must belong to a clinic
+      },
+      nextDate: {
+        type: DataTypes.DATEONLY,
+        allowNull: true,
+      },
+      paymentMode: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+      onlineAmount: {
+        type: DataTypes.DECIMAL,
+        defaultValue: 0,
+      },
+      offlineAmount: {
+        type: DataTypes.DECIMAL,
+        defaultValue: 0,
+      },
     },
     {
       sequelize,

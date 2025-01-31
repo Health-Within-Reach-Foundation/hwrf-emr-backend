@@ -82,7 +82,7 @@ const getAllPermissions = async () => {
  * @returns {Promise<Object>}
  */
 const updateRoleWithPermissions = async (roleId, roleBody) => {
-  const { name, roleDescription, permissions } = roleBody;
+  const { roleName, roleDescription, permissions } = roleBody;
 
   // Start a transaction to ensure atomicity
 
@@ -96,7 +96,7 @@ const updateRoleWithPermissions = async (roleId, roleBody) => {
 
     // Update role name and description
     await role.update({
-      name,
+      roleName,
       roleDescription,
     });
 

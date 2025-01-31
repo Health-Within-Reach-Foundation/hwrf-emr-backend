@@ -82,6 +82,10 @@ const initModel = (sequelize) => {
           key: 'id',
         },
       },
+      estimatedCost: {
+        type: DataTypes.DECIMAL,
+        allowNull: true,
+      },
     },
     {
       sequelize,
