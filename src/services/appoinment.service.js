@@ -171,100 +171,6 @@ const updateAppointmentStatus = async (appointmentId, updateBody) => {
  * @param {String} clinicId
  * @returns {Promise<Object>}
  */
-// const getAppointments = async (queryOptions, clinicId) => {
-//   console.log('ClinicId -->', clinicId);
-
-//   const {
-//     appointmentDate,
-//     status,
-//     specialtyId,
-//     sortBy = 'appointmentDate',
-//     order = 'asc',
-//     page = 1,
-//     limit = 10,
-//   } = queryOptions;
-
-//   console.log('appointmentDate -->', appointmentDate);
-
-//   // Build dynamic filters
-//   const where = { clinicId }; // Filter by clinic ID
-
-//   if (appointmentDate) {
-//     where.appointmentDate = appointmentDate; // Directly match DATE, no time zone
-//   }
-
-//   // Filter by status
-//   if (status) {
-//     where.status = status;
-//   }
-
-//   // Filter by specialty
-//   if (specialtyId) {
-//     where.specialtyId = specialtyId;
-//   }
-
-//   // Pagination
-//   const offset = (page - 1) * limit;
-
-//   // Fetch appointments with relations and pagination
-//   const { rows: appointments, count: total } = await Appointment.findAndCountAll({
-//     where,
-//     limit: parseInt(limit, 10),
-//     offset: parseInt(offset, 10),
-//     order: [[sortBy, order]],
-//     include: [
-//       {
-//         model: Patient,
-//         as: 'patient',
-//         attributes: ['id', 'name', 'age', 'sex', 'mobile', 'regNo'], // Include patient details
-//         include: [
-//           {
-//             model: Queue, // Include Queue via Patient
-//             as: 'queues',
-//             attributes: ['tokenNumber', 'queueDate', 'queueType', 'specialtyId', 'patientId'], // Only required fields
-//             where: {
-//               clinicId, // Ensure queue is for the same clinic
-//               queueDate: appointmentDate, // Match the queue date with appointmentDate
-//             },
-//             required: false, // Allow patients without queue data
-//           },
-//         ],
-//       },
-//       {
-//         model: Specialty,
-//         as: 'specialty',
-//         attributes: ['id', 'name'], // Include specialty details
-//       },
-//       {
-//         model: PatientRecord,
-//         as: 'record',
-//         attributes: ['id', 'description', 'billingDetails'], // Include patient record
-//         include: [
-//           {
-//             model: DentistPatientRecord, // Include Dentist-specific data
-//             as: 'dentalData',
-//             attributes: { exclude: ['createdAt', 'updatedAt'] },
-//           },
-//         ],
-//       },
-//     ],
-//   });
-
-//   console.log('Appointments -->', appointments);
-
-//   // Return paginated response
-//   return {
-//     success: true,
-//     data: appointments,
-//     meta: {
-//       total,
-//       page: parseInt(page, 10),
-//       limit: parseInt(limit, 10),
-//       totalPages: Math.ceil(total / limit),
-//     },
-//   };
-// };
-
 const getAppointments = async (queryOptions, clinicId, campId) => {
   console.log('ClinicId -->', clinicId);
 
@@ -300,7 +206,7 @@ const getAppointments = async (queryOptions, clinicId, campId) => {
       {
         model: Patient,
         as: 'patient',
-        attributes: ['id', 'name', 'age', 'sex', 'mobile', 'regNo'], // Patient details
+        attributes:{exclude:['createdAt', 'updatedAt', 'deletedAt']},
         include: [
           {
             model: Queue, // Include Queue via Patient
@@ -308,6 +214,7 @@ const getAppointments = async (queryOptions, clinicId, campId) => {
             attributes: ['tokenNumber', 'queueDate', 'queueType', 'specialtyId'], // Queue details
             where: {
               clinicId, // Filter queues by clinic
+              campId
               // queueDate: appointmentDate, // Filter queues by date
             },
             required: false, // Allow patients without queue data
@@ -342,6 +249,7 @@ const getAppointments = async (queryOptions, clinicId, campId) => {
       id: appointment.id,
       appointmentDate: appointment.appointmentDate,
       status: appointment.status,
+      statusUpdatedAt: appointment.statusUpdatedAt,
       specialtyId: specialty?.id,
       specialtyName: specialty?.name,
       patientId: patient?.id,
@@ -353,6 +261,7 @@ const getAppointments = async (queryOptions, clinicId, campId) => {
       tokenNumber: patient?.queues?.find((queue) => queue.specialtyId === appointment.specialtyId).tokenNumber || null, // Extract token number
       queueType: patient?.queues?.find((queue) => queue.specialtyId === appointment.specialtyId).queueType || null, // Extract queue type
       queueDate: patient?.queues?.find((queue) => queue.specialtyId === appointment.specialtyId).queueDate || null, // Extract queue date
+      primaryDoctor: patient?.primaryDoctor?.label || null,
       // recordId: record?.id || null,
       // description: record?.description || null,
       // billingDetails: record?.billingDetails || null,

@@ -36,10 +36,6 @@ const initModel = (sequelize) => {
         type: DataTypes.JSON,
         defaultValue: {},
       },
-      settingPaidAmount: {
-        type: DataTypes.DECIMAL,
-        defaultValue: 0,
-      },
       treatmentId: {
         type: DataTypes.UUID,
         allowNull: false,

@@ -228,7 +228,7 @@ const createTreatment = {
     totalAmount: Joi.number().required(),
     paidAmount: Joi.number().default(0),
     remainingAmount: Joi.number().required(),
-    settingPaidAmount: Joi.number().optional(),
+    // settingPaidAmount: Joi.number().optional(),
     xrayStatus: Joi.boolean().optional(),
     paymentStatus: Joi.string().valid('paid', 'pending').default('pending'),
     patientId: Joi.string().uuid().optional(),
@@ -307,7 +307,6 @@ const updateTreatment = {
     .keys({
       // treatmentDate: Joi.date().optional(),
       patientId: Joi.string().uuid().optional(),
-      treatmentStatus: Joi.array().items(Joi.string()).optional(),
       notes: Joi.string().allow('', null).optional(),
       additionalDetails: Joi.object().optional(),
       totalAmount: Joi.number().optional(),
@@ -315,14 +314,14 @@ const updateTreatment = {
       status: Joi.string().optional(),
       remainingAmount: Joi.number().optional(),
       paymentStatus: Joi.string().valid('paid', 'pending').optional(),
-      xrayStatus: Joi.boolean().optional(),
 
       // Fields related to TreatmentSetting
       treatmentSettingId: Joi.string().uuid().optional().description('TreatmentSetting ID'),
+      treatmentStatus: Joi.array().items(Joi.string()).optional(),
       settingTreatmentDate: Joi.date().optional(),
+      xrayStatus: Joi.boolean().optional(),
       settingNotes: Joi.string().allow('', null).optional(),
       settingAdditionalDetails: Joi.object().optional(),
-      settingPaidAmount: Joi.number().optional(),
       treatingDoctor: Joi.object()
         .keys({
           label: Joi.string().optional(),
@@ -364,7 +363,7 @@ const createMammography = {
     patientId: Joi.string().uuid().required().description('Patient ID'),
   }),
   body: Joi.object().keys({
-    menstrualAge: Joi.number().integer().min(0).allow(null).optional(),
+    menstrualAge: Joi.number().integer().min(0).allow('null', null).optional(),
     lastMenstrualDate: Joi.date().allow(null).optional(),
     cycleType: Joi.string().valid('Regular', 'Irregular').allow('', null).optional(),
     obstetricHistory: Joi.object()
@@ -382,12 +381,13 @@ const createMammography = {
     diagnosisDetails: Joi.string().allow('', null).optional(),
     firstDegreeRelatives: Joi.string().valid('Yes', 'No').allow('', null).optional(),
     previousCancer: Joi.string().valid('Yes', 'No').allow('', null).optional(),
+    previousDiagnosis: Joi.string().allow('', null).optional(),
     previousBiopsy: Joi.string().valid('Yes', 'No').allow('', null).optional(),
     previousSurgery: Joi.string().valid('Yes', 'No').allow('', null).optional(),
     implants: Joi.string().valid('Yes', 'No').allow('', null).optional(),
     // screeningImage: Joi.string().optional(), // JSON object for the screening image
-    relevantDiagnosis: Joi.string().valid('Yes', 'No').allow('', null).optional(),
-    relevantDiagnosisDetails: Joi.string().allow('', null).optional(), // JSON object for the screening image
+    // relevantDiagnosis: Joi.string().valid('Yes', 'No').allow('', null).optional(),
+    // relevantDiagnosisDetails: Joi.string().allow('', null).optional(), // JSON object for the screening image
     smoking: Joi.string().valid('Yes', 'No').allow('', null).optional(),
     smokingDetails: Joi.object()
       .keys({
@@ -407,12 +407,40 @@ const createMammography = {
     lump: Joi.string().valid('No', 'Right', 'Left', 'Both').allow('', null).optional(),
     discharge: Joi.string().valid('No', 'Right', 'Left', 'Both').allow('', null).optional(),
     dischargeDetails: Joi.string().allow('', null).optional(),
-    skinChanges: Joi.string().valid('Yes', 'No').allow('', null).optional(),
-    pain: Joi.string().valid('Yes', 'No').allow('', null).optional(),
+    skinChanges: Joi.string().valid('No', 'Right', 'Left', 'Both').allow('', null).optional(),
+    pain: Joi.string().valid('No', 'Right', 'Left', 'Both').allow('', null).optional(),
     skinChangesDetails: Joi.string().allow('', null).optional(),
-    nippleRetraction: Joi.string().valid('Yes', 'No').allow('', null).optional(),
+    nippleRetraction: Joi.string().valid('No', 'Right', 'Left', 'Both').allow('', null).optional(),
     nippleRetractionDetails: Joi.string().allow('', null).optional(),
     additionalInfo: Joi.string().allow('', null).optional(),
+    painDetails: Joi.string().allow('', null).optional(),
+    // numberOfPregnancies: Joi.alternatives().try(Joi.number().integer().min(0), Joi.string().valid('null').allow(null)).optional(),
+    numberOfPregnancies: Joi.number().integer().min(0).allow('null', null).optional(),
+    numberOfDeliveries: Joi.number().integer().min(0).allow('null', null).optional(),
+    numberOfLivingChildren: Joi.number().integer().min(0).allow('null', null).optional(),
+    previousTreatment: Joi.string().valid('Yes', 'No').allow('', null).optional(),
+
+    // here previousTreatmentDetails is array of strings add the code below
+    previousTreatmentDetails: Joi.array().items(Joi.string()).optional(),
+    // previousTreatmentDetails: Joi.string().allow('', null).optional(),
+    alcohol: Joi.string().valid('Yes', 'No').allow('', null).optional(),
+    alcoholDetails: Joi.object()
+      .keys({
+        mlPerDay: Joi.number().min(0).allow(null).optional(),
+        yearsConsumed: Joi.number().min(0).allow(null).optional(),
+      })
+      .optional()
+      .default({ mlPerDay: null, yearsConsumed: null }),
+    misheriTobacco: Joi.string().valid('Yes', 'No').allow('', null).optional(),
+    misheriTobaccoDetails: Joi.object()
+      .keys({
+        timesPerDay: Joi.number().min(0).allow(null).optional(),
+        yearsUsed: Joi.number().min(0).allow(null).optional(),
+      })
+      .optional()
+      .default({ timesPerDay: null, yearsUsed: null }),
+    previousCancerDetails: Joi.string().allow('', null).optional(),
+    lumpDetails: Joi.string().allow('', null).optional(),
   }),
   files: (files) => {
     if (!files.length) return null; // No files, validation passes
@@ -438,10 +466,10 @@ const getMammography = {
 };
 const updateMammography = {
   body: Joi.object().keys({
-    menstrualAge: Joi.number().integer().min(0).allow(null).optional(),
+    menstrualAge: Joi.number().integer().min(0).allow('null', null).optional(),
     lastMenstrualDate: Joi.date().allow(null).optional(),
-    pain: Joi.string().valid('Yes', 'No').allow('', null).optional(),
-
+    skinChanges: Joi.string().valid('No', 'Right', 'Left', 'Both').allow('', null).optional(),
+    pain: Joi.string().valid('No', 'Right', 'Left', 'Both').allow('', null).optional(),
     cycleType: Joi.string().valid('Regular', 'Irregular').allow('', null).optional(),
     obstetricHistory: Joi.object()
       .keys({
@@ -451,14 +479,13 @@ const updateMammography = {
       })
       .optional(),
     menopause: Joi.string().valid('Yes', 'No').allow('', null).optional(),
-    relevantDiagnosis: Joi.string().valid('Yes', 'No').allow('', null).optional(),
-    relevantDiagnosisDetails: Joi.string().allow('', null).optional(), // JSON object for the screening image
     familyHistory: Joi.string().valid('Yes', 'No').allow('', null).optional(),
     familyHistoryDetails: Joi.string().allow('', null).optional(),
     clinicalDiagnosis: Joi.string().valid('Yes', 'No').allow('', null).optional(),
     diagnosisDetails: Joi.string().allow('', null).optional(),
     firstDegreeRelatives: Joi.string().valid('Yes', 'No').allow('', null).optional(),
     previousCancer: Joi.string().valid('Yes', 'No').allow('', null).optional(),
+    previousDiagnosis: Joi.string().allow('', null).optional(),
     previousBiopsy: Joi.string().valid('Yes', 'No').allow('', null).optional(),
     previousSurgery: Joi.string().valid('Yes', 'No').allow('', null).optional(),
     implants: Joi.string().valid('Yes', 'No').allow('', null).optional(),
@@ -480,13 +507,36 @@ const updateMammography = {
     lump: Joi.string().valid('No', 'Right', 'Left', 'Both').allow('', null).optional(),
     discharge: Joi.string().valid('No', 'Right', 'Left', 'Both').allow('', null).optional(),
     dischargeDetails: Joi.string().allow('', null).optional(),
-    skinChanges: Joi.string().valid('Yes', 'No').allow('', null).optional(),
     skinChangesDetails: Joi.string().allow('', null).optional(),
-    nippleRetraction: Joi.string().valid('Yes', 'No').allow('', null).optional(),
+    nippleRetraction: Joi.string().valid('No', 'Right', 'Left', 'Both').allow('', null).optional(),
     nippleRetractionDetails: Joi.string().allow('', null).optional(),
     additionalInfo: Joi.string().allow('', null).optional(),
     patientId: Joi.string().uuid().optional(), // Foreign key, optional during updates
     mammoReport: Joi.string().optional(), // Foreign key, optional during updates
+    painDetails: Joi.string().allow('', null).optional(),
+    numberOfPregnancies: Joi.number().integer().min(0).allow('null', null).optional(),
+    numberOfDeliveries: Joi.number().integer().min(0).allow('null', null).optional(),
+    numberOfLivingChildren: Joi.number().integer().min(0).allow('null', null).optional(),
+    previousTreatment: Joi.string().valid('Yes', 'No').allow('', null).optional(),
+    previousTreatmentDetails: Joi.array().items(Joi.string()).optional(),
+
+    // previousTreatmentDetails: Joi.string().allow('', null).optional(),
+    alcohol: Joi.string().valid('Yes', 'No').allow('', null).optional(),
+    alcoholDetails: Joi.object()
+      .keys({
+        mlPerDay: Joi.number().min(0).allow(null).optional(),
+        yearsConsumed: Joi.number().min(0).allow(null).optional(),
+      })
+      .optional(),
+    misheriTobacco: Joi.string().valid('Yes', 'No').allow('', null).optional(),
+    misheriTobaccoDetails: Joi.object()
+      .keys({
+        timesPerDay: Joi.number().min(0).allow(null).optional(),
+        yearsUsed: Joi.number().min(0).allow(null).optional(),
+      })
+      .optional(),
+    previousCancerDetails: Joi.string().allow('', null).optional(),
+    lumpDetails: Joi.string().allow('', null).optional(),
   }),
   files: (files) => {
     if (!files.length) return null; // No files, validation passes

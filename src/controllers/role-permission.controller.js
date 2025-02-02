@@ -42,6 +42,7 @@ const updateRole = catchAsync(async (req, res) => {
   const roleId = req.query.roleId;
   const roleData = req.body;
   // const { name, permissions } = req.body;
+  console.group('Role Data', roleData, roleId); 
   await rolePermissionService.updateRoleWithPermissions(roleId, roleData);
 
   res.status(httpStatus.OK).json({

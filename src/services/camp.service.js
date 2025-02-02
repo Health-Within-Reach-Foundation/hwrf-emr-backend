@@ -10,6 +10,11 @@ const { Role } = require('../models/role.model');
 const { Camp } = require('../models/camp.model');
 const { Appointment } = require('../models/appointment.model');
 const { Patient } = require('../models/patient.model');
+const { Queue } = require('../models/queue.model');
+const { Mammography } = require('../models/mammography.model');
+const { Treatment } = require('../models/treatment.model');
+const { Diagnosis } = require('../models/diagnosis.model');
+const { TreatmentSetting } = require('../models/treatment-setting.model');
 
 // function to create camp
 const createCamp = async (campData) => {
@@ -61,6 +66,7 @@ const getCamps = async (clinicId, status = null) => {
       { model: Specialty, as: 'specialties', attributes: ['id', 'name'] },
       { model: Appointment, as: 'appointments', attributes: ['id', 'appointmentDate', 'status'] },
     ],
+    order: [['endDate', 'DESC']],
   });
 
   return camps;
@@ -102,6 +108,16 @@ const getCampById = async (campId) => {
                 attributes: { exclude: ['id', 'createdAt', 'updatedAt'] },
               },
             ],
+          },
+          {
+            model: Queue, // Include Queue via Patient
+            as: 'queues',
+            attributes: ['tokenNumber', 'queueDate', 'queueType', 'specialtyId'], // Queue details
+            where: {
+              campId,
+              // queueDate: appointmentDate, // Filter queues by date
+            },
+            required: false, // Allow patients without queue data
           },
         ],
       },
@@ -196,7 +212,6 @@ const updateCampById = async (campId, campData) => {
 
   await camp.save();
 
-
   // Handle Specialties (Many-to-Many)
   if (specialties) {
     const specialtyRecords = await Specialty.findAll({
@@ -225,10 +240,121 @@ const updateCampById = async (campId, campData) => {
 
   return camp.reload(); // Return updated camp with relations
 };
+
+const getCampDetails = async (campId) => {
+  const camp = await Camp.findByPk(campId, {
+    include: [
+      {
+        model: Clinic,
+        as: 'clinic',
+        attributes: ['id', 'clinicName', 'address', 'city', 'state'],
+      },
+      {
+        model: User,
+        as: 'users',
+        attributes: ['id', 'name', 'email'],
+        through: { attributes: [] },
+      },
+      {
+        model: Patient,
+        as: 'patients',
+        attributes: ['id', 'name', 'regNo', 'age', 'sex', 'mobile'],
+        through: { attributes: [] },
+        include: [
+          {
+            model: Appointment,
+            as: 'appointments',
+            attributes: { exclude: ['createdAt', 'updatedAt'] },
+            required: false,
+            include: [
+              {
+                model: Specialty,
+                as: 'specialty',
+                attributes: { exclude: ['id', 'createdAt', 'updatedAt'] },
+              },
+            ],
+          },
+          {
+            model: Queue,
+            as: 'queues',
+            attributes: ['tokenNumber', 'queueDate', 'queueType', 'specialtyId'],
+            where: { campId },
+            required: false,
+          },
+          {
+            model: Diagnosis,
+            as: 'diagnoses',
+            attributes: ['id', 'createdAt'],
+            required: false,
+            include: [
+              {
+                model: Treatment,
+                as: 'treatment',
+                attributes: ['id', 'paidAmount'],
+                include: [
+                  {
+                    model: TreatmentSetting,
+                    as: 'treatmentSettings',
+                    attributes: ['id', 'treatingDoctor'],
+                    required: false,
+                  },
+                ],
+              },
+            ],
+          },
+          {
+            model: Mammography,
+            as: 'mammography',
+            attributes: ['id'],
+            required: false,
+          },
+        ],
+      },
+      {
+        model: Specialty,
+        as: 'specialties',
+        attributes: ['id', 'name', 'departmentName'],
+        through: { attributes: [] },
+      },
+    ],
+  });
+
+  if (!camp) {
+    throw new ApiError(httpStatus.NOT_FOUND, 'Camp not found');
+  }
+
+  const flatPatients = camp.patients.flatMap((patient) => {
+    return patient.appointments.map((appointment) => {
+      const queue = patient.queues.find((q) => q.specialtyId === appointment.specialtyId);
+      const totalPaidAmount = patient.diagnoses.reduce((sum, diagnosis) => {
+        return sum + (diagnosis.treatment ? Number(diagnosis.treatment.paidAmount) : 0);
+      }, 0);
+
+      const treatingDoctors = Array.from(new Set(patient.diagnoses.flatMap((diagnosis) => {
+        return diagnosis.treatment ? diagnosis.treatment.treatmentSettings.map((ts) => ts.treatingDoctor) : [];
+      })));
+      // const treatingDoctors = treatment ? treatment.treatmentSettings.map((ts) => ts.doctorName) : [];
+
+      return {
+        ...patient.toJSON(),
+        tokenNumber: queue ? queue.tokenNumber : null,
+        serviceTaken: queue ? queue.queueType : null,
+        paidAmount: queue ? (queue.queueType === "Mammography" ? null : (queue.queueType === "Dentistry" ? totalPaidAmount : null)) : null,
+        treatingDoctors: queue ? (queue.queueType === "Dentistry" ? treatingDoctors : null) : null,
+      };
+    });
+  });
+
+  return {
+    ...camp.toJSON(),
+    patients: flatPatients,
+  };
+};
 module.exports = {
   createCamp,
   getCamps,
   getCampById,
   setCurrentCamp,
   updateCampById,
+  getCampDetails,
 };

@@ -44,13 +44,16 @@ const initModel = (sequelize) => {
         type: DataTypes.TEXT,
         allowNull: true,
       },
-   
       firstDegreeRelatives: {
-        type: DataTypes.ENUM('Yes', 'No'),
+        type: DataTypes.STRING,
         allowNull: true,
       },
       previousCancer: {
-        type: DataTypes.ENUM('Yes', 'No'),
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+      previousDiagnosis: {
+        type: DataTypes.TEXT,
         allowNull: true,
       },
       previousBiopsy: {
@@ -93,6 +96,10 @@ const initModel = (sequelize) => {
         type: DataTypes.ENUM('No', 'Right', 'Left', 'Both'),
         allowNull: true,
       },
+      lumpDetails: {
+        type: DataTypes.TEXT,
+        allowNull: true,
+      },
       discharge: {
         type: DataTypes.ENUM('No', 'Right', 'Left', 'Both'),
         allowNull: true,
@@ -102,7 +109,7 @@ const initModel = (sequelize) => {
         allowNull: true,
       },
       skinChanges: {
-        type: DataTypes.ENUM('Yes', 'No'),
+        type: DataTypes.ENUM('No', 'Right', 'Left', 'Both'),
         allowNull: true,
       },
       skinChangesDetails: {
@@ -110,7 +117,7 @@ const initModel = (sequelize) => {
         allowNull: true,
       },
       nippleRetraction: {
-        type: DataTypes.ENUM('Yes', 'No'),
+        type: DataTypes.ENUM('No', 'Right', 'Left', 'Both'),
         allowNull: true,
       },
       nippleRetractionDetails: {
@@ -130,8 +137,50 @@ const initModel = (sequelize) => {
         allowNull: true,
       },
       pain: {
+        type: DataTypes.ENUM('No', 'Right', 'Left', 'Both'),
+        allowNull: true,
+      },
+      painDetails: {
+        type: DataTypes.TEXT,
+        allowNull: true,
+      },
+      numberOfPregnancies: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+      },
+      numberOfDeliveries: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+      },
+      numberOfLivingChildren: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+      },
+      previousTreatment: {
         type: DataTypes.ENUM('Yes', 'No'),
         allowNull: true,
+      },
+      previousTreatmentDetails: {
+        type: DataTypes.ARRAY(DataTypes.TEXT),
+        allowNull: true,
+      },
+      alcohol: {
+        type: DataTypes.ENUM('Yes', 'No'),
+        allowNull: true,
+      },
+      alcoholDetails: {
+        type: DataTypes.JSONB,
+        defaultValue: { frequency: null, quantity: null },
+        allowNull: false,
+      },
+      misheriTobacco:{
+        type: DataTypes.ENUM('Yes', 'No'),
+        allowNull: true,
+      },
+      misheriTobaccoDetails:{
+        type: DataTypes.JSONB,
+        defaultValue: { frequency: null, quantity: null },
+        allowNull: false,
       },
       patientId: {
         type: DataTypes.UUID,
