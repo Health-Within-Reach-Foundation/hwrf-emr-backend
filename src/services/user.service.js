@@ -88,6 +88,7 @@ const getUserByEmail = async (email) => {
             required: false,
           },
         ],
+        required: false,
         attributes: { exclude: ['createdAt', 'updatedAt', 'userId', 'clinicId'] }, // Clean unnecessary fields
       },
       {

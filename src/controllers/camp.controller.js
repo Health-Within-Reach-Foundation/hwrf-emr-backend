@@ -25,7 +25,8 @@ const createCamp = catchAsync(async (req, res) => {
 
 const getCampById = catchAsync(async (req, res) => {
   const { campId } = req.params;
-  const campDetails = await campService.getCampById(campId);
+  const campDetails = await campService.getCampDetails(campId);
+  // const campDetails = await campService.getCampById(campId);
   res.status(200).json({
     success: true,
     message: 'Camp details fetched successfully',

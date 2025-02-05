@@ -23,6 +23,10 @@ router
   .patch(
     auth(),
     // roleAuthorization('roles:write'),
+    (req, res, next) => {
+      console.log('req body --------> ', req.body);
+      next();
+    },
     validate(rolePermissionValidation.updateRole),
     rolePermissionController.updateRole
   )

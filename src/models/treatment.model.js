@@ -25,40 +25,12 @@ const initModel = (sequelize) => {
         defaultValue: DataTypes.UUIDV4,
         primaryKey: true,
       },
-      // treatmentDate: {
-      //   type: DataTypes.DATEONLY,
-      //   allowNull: true,
-      // },
       complaints: {
         type: DataTypes.ARRAY(DataTypes.TEXT),
         allowNull: true,
       },
       treatments: {
         type: DataTypes.ARRAY(DataTypes.STRING),
-        allowNull: true,
-      },
-      // dentalQuadrant: {
-      //   type: DataTypes.JSONB,
-      //   allowNull: true,
-      // },
-      // dentalQuadrantType: {
-      //   type: DataTypes.ENUM('adult', 'child', 'all'),
-      //   defaultValue: 'adult',
-      // },
-      // selectedTeeth: {
-      //   type: DataTypes.INTEGER,
-      //   allowNull: true
-      // },
-      xrayStatus: {
-        type: DataTypes.BOOLEAN,
-        defaultValue: false,
-      },
-      xray: {
-        type: DataTypes.JSONB,
-        allowNull: true, // URLs for X-rays
-      },
-      treatmentStatus: {
-        type: DataTypes.ARRAY(DataTypes.TEXT),
         allowNull: true,
       },
       notes: {
@@ -86,7 +58,7 @@ const initModel = (sequelize) => {
         defaultValue: 'pending',
       },
       status: {
-        type: DataTypes.ENUM('started', 'completed'),
+        type: DataTypes.ENUM('started', 'completed','not started'),
         defaultValue: 'started',
       },
       diagnosisId: {

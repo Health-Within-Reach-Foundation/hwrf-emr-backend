@@ -70,6 +70,8 @@ const verifyAccessToken = async (token) => {
     // Decode the token
     const payload = jwt.decode(token, config.jwt.secret);
 
+    console.log('Payload -->', payload);
+
     if (!payload) {
       throw new Error('Access Token Invalid');
     }
@@ -86,12 +88,14 @@ const verifyAccessToken = async (token) => {
       return true; // Token is expired but user is valid
     }
 
+    console.log('Token is still valid -->', payload.exp, currentTime);
+
     return false; // Token is still valid, or some other condition fails
   } catch (error) {
+    console.log('Error in verifyAccessToken -->', error);
     throw new Error('Access Token Invalid');
   }
 };
-
 
 /**
  * Generate auth tokens
@@ -99,13 +103,15 @@ const verifyAccessToken = async (token) => {
  * @returns {Promise<Object>}
  */
 const generateAuthTokens = async (user) => {
-  const accessTokenExpires = moment().add(config.jwt.accessExpirationMinutes, 'minutes');
+  const accessTokenExpires = moment().add(config.jwt.accessExpirationMinutes, 'days');
   const accessToken = generateToken(user.id, accessTokenExpires, tokenTypes.ACCESS);
 
-  const refreshTokenExpires = moment().add(config.jwt.refreshExpirationDays, 'hours');
+  const refreshTokenExpires = moment().add(config.jwt.refreshExpirationDays, 'days');
   const refreshToken = generateToken(user.id, refreshTokenExpires, tokenTypes.REFRESH);
   await saveToken(refreshToken, user.id, refreshTokenExpires, tokenTypes.REFRESH);
 
+  console.log('Access Token -->', accessToken, accessTokenExpires);
+  console.log('refresh Token -->', refreshToken);
   return {
     access: {
       token: accessToken,

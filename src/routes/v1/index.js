@@ -9,8 +9,6 @@ const patientRoute = require('./patient.route');
 const campRoute = require('./camp.route');
 const rolePermissionRoute = require('./role-permission.route');
 const config = require('../../config/config');
-const { path } = require('../../app');
-
 const router = express.Router();
 
 const defaultRoutes = [

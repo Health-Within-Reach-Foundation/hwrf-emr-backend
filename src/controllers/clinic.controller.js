@@ -75,6 +75,13 @@ const approveClinic = catchAsync(async (req, res) => {
   const predefinedRole = [
     { roleName: 'admin', roleDescription: 'Has full access to all resources', clinicId: clinicResponse.id },
     { roleName: 'doctor', roleDescription: 'default role doctor', clinicId: clinicResponse.id },
+    { roleName: 'dentist', roleDescription: 'default role dentist', clinicId: clinic.id },
+    { roleName: 'nurse', roleDescription: 'default role nurse', clinicId: clinic.id },
+    { roleName: 'outreach coordinator', roleDescription: 'default role outreach coordinator', clinicId: clinic.id },
+    { roleName: 'finance', roleDescription: 'default role finance', clinicId: clinic.id },
+    { roleName: 'radiologist', roleDescription: 'default role radiologist', clinicId: clinic.id },
+    { roleName: 'radio technician', roleDescription: 'default role radio technician', clinicId: clinic.id },
+    { roleName: 'dental assistant', roleDescription: 'default role dental assistant', clinicId: clinic.id },
     // { roleName: 'assistant', roleDescription: 'default role assistant', clinicId: clinic.id },
   ];
 
@@ -191,7 +198,6 @@ const getFileByKey = catchAsync(async (req, res) => {
 
   await getFile(key, res);
 });
-
 
 module.exports = {
   getClinics,

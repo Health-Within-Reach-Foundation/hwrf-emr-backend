@@ -12,7 +12,6 @@ const createPatient = catchAsync(async (req, res) => {
     throw new ApiError(httpStatus.NOT_FOUND, 'Clinic not found');
   }
 
-  const clinicInitials = clinic.clinicName.substring(0, 2).toUpperCase();
   const lastPatient = await patientService.getLastPatientRegistered(req.user.clinicId);
   const currentCampId = req.user.currentCampId;
 
@@ -426,8 +425,6 @@ const getTreatmentById = catchAsync(async (req, res) => {
 const updateTreatment = catchAsync(async (req, res) => {
   const { files, body } = req;
 
-  // const xrayFilePaths = files?.map((file) => file.path) || [];
-
   const xrayFilePaths = [];
 
   if (files && files.length > 0) {
@@ -457,7 +454,7 @@ const updateTreatment = catchAsync(async (req, res) => {
     }
   }
 
-  const treatmentBody = {};
+  let treatmentBody = {};
   if (xrayFilePaths?.length > 0) {
     treatmentBody = {
       ...body,
@@ -470,7 +467,7 @@ const updateTreatment = catchAsync(async (req, res) => {
   }
 
   const updatedTreatment = await patientService.updateTreatment(req.params.treatmentId, treatmentBody);
-  res.status(httpStatus.OK).json({ success: true, data: updatedTreatment });
+  res.status(httpStatus.OK).json({ success: true, data: updatedTreatment, message: 'Treatment saved successfully!' });
 });
 
 const deleteTreatment = catchAsync(async (req, res) => {

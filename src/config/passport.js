@@ -103,17 +103,20 @@ const jwtVerify = async (payload, done) => {
             },
           ],
           attributes: { exclude: ['createdAt', 'updatedAt', 'userId', 'clinicId'] },
+          required: false,
         },
         {
           model: Clinic,
           as: 'clinic', // Clinic relationship
           attributes: ['id', 'clinicName', 'status'],
+          required:false,
         },
         {
           model: Specialty,
           as: 'specialties', // Specialty relationship
           through: { attributes: [] },
           attributes: ['id', 'name', 'departmentName'],
+          required: false,
         },
         {
           model: Camp,

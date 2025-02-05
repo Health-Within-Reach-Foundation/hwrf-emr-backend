@@ -1,9 +1,4 @@
-const { DataTypes, Model, Op } = require('sequelize');
-const bcrypt = require('bcryptjs');
-const { roles, ermRoles } = require('../config/roles');
-const { Clinic } = require('./clinic.model');
-const { User } = require('./user.model');
-
+const { DataTypes, Model } = require('sequelize');
 class Role extends Model {
   static associate(models) {
     // Many-to-Many: Roles and Users

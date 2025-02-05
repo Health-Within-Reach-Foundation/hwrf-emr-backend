@@ -49,6 +49,10 @@ const initModel = (sequelize) => {
         type: DataTypes.ENUM('in queue', 'in', 'out', 'cancelled'),
         defaultValue: 'in queue',
       },
+      statusUpdatedAt: {
+        type: DataTypes.DATE,
+        defaultValue: DataTypes.NOW,
+      },
       clinicId: {
         type: DataTypes.UUID,
         allowNull: false,

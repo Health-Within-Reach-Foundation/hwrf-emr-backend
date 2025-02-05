@@ -82,7 +82,7 @@ const getAllPermissions = async () => {
  * @returns {Promise<Object>}
  */
 const updateRoleWithPermissions = async (roleId, roleBody) => {
-  const { name, roleDescription, permissions } = roleBody;
+  const { roleName, roleDescription, permissions } = roleBody;
 
   // Start a transaction to ensure atomicity
 
@@ -96,7 +96,7 @@ const updateRoleWithPermissions = async (roleId, roleBody) => {
 
     // Update role name and description
     await role.update({
-      name,
+      roleName,
       roleDescription,
     });
 
@@ -105,21 +105,35 @@ const updateRoleWithPermissions = async (roleId, roleBody) => {
       where: { id: { [Op.in]: permissions } }, // Use Op.in for array filtering
     });
 
+    console.log('Valid permissions is matching to upcoming permissions', validPermissions.length);
     if (validPermissions.length !== permissions.length) {
       throw new Error('Some permissions are invalid or not found.');
     }
 
     // Get existing permissions for the role
     const existingPermissions = await role.getPermissions();
+    console.log('Existing permissions', existingPermissions);
     const existingPermissionIds = existingPermissions.map((p) => p.id);
+    console.log('Existing permission IDs', existingPermissionIds);
 
     // Find permissions to add (exclude already associated permissions)
-    const newPermissionIds = validPermissions.filter((p) => !existingPermissionIds.includes(p.id)).map((p) => p.id);
+    const newPermissionIds = validPermissions
+      .map((p) => p.id)
+      .filter((id) => !existingPermissionIds.includes(id));
 
+    console.log('New permissions', newPermissionIds);
     // Add only new permissions
     if (newPermissionIds.length > 0) {
       const newPermissions = validPermissions.filter((p) => newPermissionIds.includes(p.id));
+      console.log('New permissions to add', newPermissions);
       await role.addPermissions(newPermissions);
+    }
+
+    // Remove permissions that are no longer associated with the role
+    const permissionsToRemove = existingPermissions.filter((p) => !permissions.includes(p.id));
+    if (permissionsToRemove.length > 0) {
+      console.log('Permissions to remove', permissionsToRemove);
+      await role.removePermissions(permissionsToRemove);
     }
 
     return {

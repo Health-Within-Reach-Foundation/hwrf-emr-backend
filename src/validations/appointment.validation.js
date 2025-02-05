@@ -40,6 +40,15 @@ const markAppointment = {
   }),
   body: Joi.object().keys({
     status: Joi.string().valid('in queue', 'in', 'out', 'cancelled').required(),
+    statusUpdatedAt: Joi.date().optional()
+  }),
+};
+
+const updateAppointmentStatus = {
+  body: Joi.object().keys({
+    appointmentId: Joi.string().required(),
+    status: Joi.string().valid('in queue', 'in', 'out', 'cancelled').required(),
+    // statusUpdatedAt: Joi.date().optional(), // This field is managed by the server
   }),
 };
 
@@ -48,4 +57,5 @@ module.exports = {
   updateAppointment,
   getAppointments,
   markAppointment,
+  updateAppointmentStatus,
 };

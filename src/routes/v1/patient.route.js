@@ -5,7 +5,6 @@ const roleAuthorization = require('../../middlewares/role-authorise');
 const { patientValidation, appointmentValidation } = require('../../validations');
 const { patientController } = require('../../controllers');
 const multer = require('multer');
-const path = require('path');
 const parseArrayFields = require('../../middlewares/parser');
 const { storage } = require('../../utils/file-upload-to-storage');
 // Define custom multer instance in the route
@@ -105,7 +104,7 @@ router
   .post(
     auth(),
     upload.array('xrayFiles'),
-    parseArrayFields(['treatmentStatus']),
+    parseArrayFields(['treatmentStatus', 'treatingDoctor', 'treatmentDate', 'nextDate']),
     (req, res, next) => {
       console.log('req body --------', req.body, req.files);
       next();
@@ -125,7 +124,7 @@ router
       console.log('req body --------', req.body, req.files);
       next();
     },
-    parseArrayFields(['treatmentStatus']),
+    parseArrayFields(['treatmentStatus', 'treatingDoctor', 'nextDate']),
     validate(patientValidation.updateTreatment),
     patientController.updateTreatment
   )
@@ -140,7 +139,15 @@ router
       console.log('req body --------', req.body, req.files);
       next();
     },
-    parseArrayFields(['smokingDetails', 'imagingStudies', 'obstetricHistory']),
+    parseArrayFields([
+      'smokingDetails',
+      'imagingStudies',
+      'obstetricHistory',
+      'misheriTobaccoDetails',
+      'alcoholDetails',
+      'numberOfPregnancies',
+      'previousTreatmentDetails',
+    ]),
     validate(patientValidation.createMammography),
     patientController.createMammography
   )
@@ -151,7 +158,14 @@ router
       console.log('req body --------', req.body, req.files);
       next();
     },
-    parseArrayFields(['smokingDetails', 'imagingStudies', 'obstetricHistory']),
+    parseArrayFields([
+      'smokingDetails',
+      'imagingStudies',
+      'obstetricHistory',
+      'misheriTobaccoDetails',
+      'alcoholDetails',
+      'previousTreatmentDetails',
+    ]),
     validate(patientValidation.updateMammography),
     patientController.updateMammography
   )

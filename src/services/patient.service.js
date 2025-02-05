@@ -1,8 +1,6 @@
 const { Op } = require('sequelize');
 const { Patient } = require('../models/patient.model');
 const { Appointment } = require('../models/appointment.model');
-const { PatientRecord } = require('../models/patient-record.model');
-const { DentistPatientRecord } = require('../models/dentist-patient-record');
 const { Queue } = require('../models/queue.model');
 const { Camp } = require('../models/camp.model');
 const ApiError = require('../utils/ApiError');
@@ -69,17 +67,22 @@ const getPatientById = async (patientId) => {
 const getPatientsByClinic = async (clinicId) => {
   const whereClause = { clinicId };
 
-  // Include conditionally based on currentCampId
-  const includeCamps = {
-    model: Camp,
-    as: 'camps',
-    attributes: [], // Exclude Camp fields if not needed
-    through: { attributes: [] }, // Exclude junction table fields
-  };
-
   const { rows: patients, count: total } = await Patient.findAndCountAll({
     where: whereClause,
-    include: [includeCamps],
+    include: [
+      {
+        model: Appointment,
+        as: 'appointments',
+        attributes: { exclude: ['createdAt', 'updatedAt'] },
+        required: false, // Use LEFT JOIN to ensure patient is returned even if no appointments exist
+      },
+      {
+        model: Queue,
+        as: 'queues',
+        attributes: { exclude: ['createdAt', 'updatedAt'] },
+        required: false, // Use LEFT JOIN to ensure patient is returned even if no queues exist
+      },
+    ],
     order: [['createdAt', 'DESC']],
   });
 
@@ -87,9 +90,14 @@ const getPatientsByClinic = async (clinicId) => {
     throw new ApiError(httpStatus.NOT_FOUND, 'No patients found for this clinic or camp.');
   }
 
+  const newPatients = patients.map((patient) => {
+    const serviceTaken = patient.queues.map((queue) => queue.queueType);
+    return { ...patient.dataValues, serviceTaken };
+  });
+
   return {
     success: true,
-    data: patients,
+    data: newPatients,
     meta: {
       total,
     },
@@ -258,6 +266,7 @@ const createDiagnosis = async (diagnosisBody) => {
     notes,
     patientId,
     xray,
+    estimatedCost,
   } = diagnosisBody;
 
   // Ensure the patient exists
@@ -266,57 +275,49 @@ const createDiagnosis = async (diagnosisBody) => {
     throw new ApiError(httpStatus.NOT_FOUND, 'Patient not found');
   }
 
-  // Ensure the appointment exists if appointmentId is provided
-  // if (appointmentId) {
-  //   const appointment = await Appointment.findByPk(appointmentId);
-  //   if (!appointment) {
-  //     throw new ApiError(httpStatus.NOT_FOUND, 'Appointment not found');
-  //   }
-  // }
-
-  // Create the diagnosis
-  let diagnosis;
-  if (childSelectedTeeth.length > 0) {
-    childSelectedTeeth.forEach(async (element) => {
-      diagnosis = await Diagnosis.create({
-        complaints,
-        treatmentsSuggested,
-        selectedTeeth: element,
-        dentalQuadrantType: 'child',
-        xrayStatus,
-        notes,
-        xray,
-        patientId,
-      });
-    });
-  }
-  if (adultSelectedTeeth.length > 0) {
-    adultSelectedTeeth.forEach(async (element) => {
-      diagnosis = await Diagnosis.create({
-        complaints,
-        treatmentsSuggested,
-        selectedTeeth: element,
-        dentalQuadrantType: 'adult',
-        xrayStatus,
-        notes,
-        xray,
-        patientId,
-      });
-    });
-  }
-  if (dentalQuadrantType === 'all') {
-    diagnosis = await Diagnosis.create({
+  // Create the diagnosis and treatment instances
+  const createDiagnosisAndTreatment = async (teeth, quadrantType) => {
+    const diagnosis = await Diagnosis.create({
       complaints,
       treatmentsSuggested,
-      dentalQuadrantType,
+      selectedTeeth: teeth,
+      dentalQuadrantType: quadrantType,
       xrayStatus,
       notes,
       xray,
       patientId,
+      estimatedCost,
     });
+
+    await Treatment.create({
+      complaints,
+      treatments: treatmentsSuggested,
+      totalAmount: estimatedCost,
+      remainingAmount: 0,
+      paidAmount: 0,
+      status: 'not started',
+      diagnosisId: diagnosis.id,
+    });
+  };
+
+  // Handle child selected teeth
+  if (childSelectedTeeth.length > 0) {
+    for (const tooth of childSelectedTeeth) {
+      await createDiagnosisAndTreatment(tooth, 'child');
+    }
   }
 
-  // return diagnosis;
+  // Handle adult selected teeth
+  if (adultSelectedTeeth.length > 0) {
+    for (const tooth of adultSelectedTeeth) {
+      await createDiagnosisAndTreatment(tooth, 'adult');
+    }
+  }
+
+  // Handle all dental quadrants
+  if (dentalQuadrantType === 'all') {
+    await createDiagnosisAndTreatment(null, 'all');
+  }
 };
 
 const getDiagnoses = async (queryOptions) => {
@@ -373,19 +374,12 @@ const updateDiagnosis = async (diagnosisId, updateBody) => {
   const diagnosis = await getDiagnosisById(diagnosisId);
   const treatments = await Treatment.findAll({ where: { diagnosisId } });
   // Ensure selectedTeeth is NULL when empty, instead of an empty string
-  const selectedTeeth = 
+  const selectedTeeth =
     Array.isArray(updateBody?.selectedTeeth) && updateBody.selectedTeeth.length > 0
       ? updateBody.selectedTeeth[0] // Take first element if exists
       : null; // Otherwise, set to null
 
-  const {
-    complaints,
-    treatmentsSuggested,
-    dentalQuadrantType,
-    xrayStatus,
-    xray,
-    notes,
-  } = updateBody;
+  const { complaints, treatmentsSuggested, dentalQuadrantType, xrayStatus, xray, notes, estimatedCost } = updateBody;
 
   const updatedDiagnosisBody = {
     complaints,
@@ -395,15 +389,15 @@ const updateDiagnosis = async (diagnosisId, updateBody) => {
     xrayStatus,
     xray,
     notes,
-  }
+    estimatedCost,
+  };
+  const newRemainingAmount = estimatedCost - treatments.paidAmount;
   const updatedTreatmentBody = {
     complaints,
     treatments: treatmentsSuggested,
     dentalQuadrantType,
-    // selectedTeeth,
-    // xrayStatus,
-    // xray,
-    // notes,
+    totalAmount: estimatedCost,
+    remainingAmount: newRemainingAmount,
   };
 
   if (treatments.length > 0) {
@@ -464,12 +458,15 @@ const createTreatment = async (treatmentBody) => {
     treatmentStatus,
     notes,
     totalAmount,
-    // paidAmount,
-    // remainingAmount,
     xrayStatus,
+    crownStatus,
     xray,
     paymentStatus,
-    settingPaidAmount,
+    onlineAmount,
+    offlineAmount,
+    paymentMode,
+    treatingDoctor,
+    nextDate,
   } = treatmentBody;
 
   try {
@@ -489,20 +486,20 @@ const createTreatment = async (treatmentBody) => {
       treatment = await Treatment.create({
         complaints: diagnosis.complaints,
         treatments: diagnosis.treatmentsSuggested,
-        xrayStatus: diagnosis.xrayStatus,
-        xray: diagnosis.xray,
-        treatmentStatus,
-        // notes,
-        totalAmount,
-        paidAmount: settingPaidAmount,
-        remainingAmount: totalAmount - settingPaidAmount,
+        totalAmount: diagnosis.estimatedCost,
+        paidAmount: Number(onlineAmount) + Number(offlineAmount),
+        remainingAmount: totalAmount - (Number(onlineAmount) + Number(offlineAmount)),
         paymentStatus,
         diagnosisId,
       });
     } else {
-      treatment.paidAmount = Number(treatment.paidAmount) + Number(settingPaidAmount);
-      treatment.remainingAmount = Number(treatment.totalAmount) - Number(treatment.paidAmount + settingPaidAmount);
-
+      let oldPaidAmount = treatment.paidAmount;
+      treatment.paidAmount = Number(oldPaidAmount) + (Number(onlineAmount) + Number(offlineAmount));
+      console.log('treatment.paidAmount -->', treatment.paidAmount, Number(treatment.paidAmount)+ Number(onlineAmount) + Number(offlineAmount), oldPaidAmount);
+      treatment.remainingAmount =
+        Number(treatment.totalAmount) - (Number(oldPaidAmount) + (Number(onlineAmount) + Number(offlineAmount)));
+      console.log('treatment.remainingAmount -->', treatment.remainingAmount, (Number(treatment.totalAmount) - (Number(oldPaidAmount) + (Number(onlineAmount) + Number(offlineAmount)))));
+      treatment.status = 'started';
       await treatment.save();
     }
 
@@ -511,9 +508,14 @@ const createTreatment = async (treatmentBody) => {
       treatmentDate,
       treatmentStatus,
       notes,
-      settingPaidAmount,
       xrayStatus,
+      crownStatus,
       xray,
+      treatingDoctor,
+      paymentMode,
+      onlineAmount,
+      offlineAmount,
+      nextDate,
       additionalDetails: treatmentBody.additionalDetails || {},
       treatmentId: treatment.id, // Associate with the found/created Treatment
     });
@@ -578,21 +580,41 @@ const updateTreatment = async (treatmentId, updateBody) => {
     settingTreatmentDate,
     settingNotes,
     settingAdditionalDetails,
-    xray, 
+    xray,
     xrayStatus,
-    settingPaidAmount = 0, // Default to 0 if not provided
+    crownStatus,
+    treatingDoctor,
+    paymentMode,
+    onlineAmount,
+    offlineAmount,
+    nextDate,
+    treatmentStatus,
     ...treatmentFields // Extract Treatment fields separately
   } = updateBody;
+
+  let newSettingPaidAmount = 0;
 
   // Fetch Treatment by ID
   const treatment = await getTreatmentById(treatmentId);
   if (!treatment) {
     throw new ApiError(httpStatus.NOT_FOUND, 'Treatment not found');
   }
-
+  console.group('updateTreatment logs');
+  console.log('treatmentFields -->', treatmentFields);
   // ✅ Update Treatment only if there are fields to update
   if (Object.keys(treatmentFields).length > 0) {
-    Object.assign(treatment, treatmentFields);
+    // Ensure numeric fields are properly handled
+    const validTreatmentFields = { ...treatmentFields };
+    ['totalAmount', 'paidAmount', 'remainingAmount'].forEach((field) => {
+      if (validTreatmentFields[field] !== undefined) {
+        validTreatmentFields[field] = Number(validTreatmentFields[field]) || 0;
+      }
+    });
+
+    console.info("validTreatmentFields['totalAmount'] -->", validTreatmentFields['totalAmount']);
+    console.info("validTreatmentFields['paidAmount'] -->", validTreatmentFields['paidAmount']);
+    console.info("validTreatmentFields['remainingAmount'] -->", validTreatmentFields['remainingAmount']);
+    Object.assign(treatment, validTreatmentFields);
     await treatment.save();
   }
 
@@ -604,47 +626,49 @@ const updateTreatment = async (treatmentId, updateBody) => {
       throw new ApiError(httpStatus.NOT_FOUND, 'Treatment setting not found');
     }
 
+    // update treatment paid amount and remianing amount if the online amoutn or offline amount is updated by checking its previous valuees
+    if (Number(onlineAmount) !== Number(updatedTreatmentSetting.onlineAmount)) {
+      console.log('first if', onlineAmount, typeof offlineAmount);
+      newSettingPaidAmount += Number(onlineAmount) - Number(updatedTreatmentSetting.onlineAmount);
+    }
+    if (Number(offlineAmount) !== Number(updatedTreatmentSetting.offlineAmount)) {
+      console.log('second if', offlineAmount, typeof offlineAmount);
+      newSettingPaidAmount += Number(offlineAmount) - Number(updatedTreatmentSetting.offlineAmount);
+    }
+
     Object.assign(updatedTreatmentSetting, {
+      treatmentStatus,
       treatmentDate: settingTreatmentDate,
       notes: settingNotes,
       additionalDetails: settingAdditionalDetails,
-      paidAmount: settingPaidAmount, // Storing paid amount at setting level
+      onlineAmount,
+      offlineAmount,
+      paymentMode,
+      nextDate,
       xrayStatus,
+      crownStatus,
       xray,
+      treatingDoctor,
     });
     await updatedTreatmentSetting.save();
+
+    console.log('newSettingPaidAmount -->', newSettingPaidAmount);
+    // ✅ Recalculate Paid & Remaining Amounts for Treatment
+    const totalPaidAmount = Number(treatment.paidAmount) + newSettingPaidAmount;
+    const remainingAmount = Number(treatment.totalAmount) - totalPaidAmount;
+
+    console.info('totalPaidAmount -->', totalPaidAmount);
+    console.info('remainingAmount -->', remainingAmount);
+    console.groupEnd();
+    // ✅ Update Treatment's financial details
+    treatment.paidAmount = totalPaidAmount;
+    treatment.remainingAmount = remainingAmount <= 0 ? 0 : remainingAmount;
+
+    // Ensure paymentStatus updates correctly
+    treatment.paymentStatus = remainingAmount <= 0 ? 'paid' : 'pending';
+
+    await treatment.save();
   }
-  //  else {
-  //   // If no treatmentSettingId, create a new TreatmentSetting under this treatment
-  //   updatedTreatmentSetting = await TreatmentSetting.create({
-  //     treatmentId,
-  //     treatmentDate: settingTreatmentDate || treatment.createdAt,
-  //     notes: settingNotes,
-  //     additionalDetails: settingAdditionalDetails,
-  //     treatmentStatus: treatmentFields.treatmentStatus, // Use from treatment fields
-  //     paidAmount: settingPaidAmount,
-  //   });
-  // }
-
-  // ✅ Recalculate Paid & Remaining Amounts for Treatment
-  const totalPaidAmount = Number(treatment.paidAmount) + Number(settingPaidAmount);
-  const remainingAmount = Number(treatment.totalAmount) - Number(totalPaidAmount);
-
-  // ✅ Update Treatment's financial details
-  treatment.paidAmount = totalPaidAmount;
-  await treatment.save();
-  treatment.remainingAmount = remainingAmount <= 0 ? 0 : remainingAmount;
-  await treatment.save();
-
-  // ✅ Ensure paymentStatus updates correctly
-  if (remainingAmount <= 0) {
-    treatment.paymentStatus = 'paid'; // Mark as paid if no remaining balance
-  } else {
-    treatment.paymentStatus = 'pending'; // Keep it pending if amount is due
-  }
-
-  // ✅ Save the updated Treatment
-  await treatment.save();
 
   // ✅ Return updated treatment with the treatment setting
   return {
@@ -667,10 +691,27 @@ const createMammography = async (patientId, mammographyBody) => {
         patientId,
       });
     }
-    const mammographyCreated = await Mammography.create({
-      ...mammographyBody,
+
+    const {
+      menstrualAge = null,
+      numberOfPregnancies = null,
+      numberOfDeliveries = null,
+      numberOfLivingChildren = null,
+      ...otherMammographyBody
+    } = mammographyBody;
+
+    const newMammographyBody = {
+      menstrualAge: menstrualAge !== 'null' ? Number(menstrualAge) : null,
+      numberOfPregnancies: numberOfPregnancies !== 'null' ? Number(numberOfPregnancies) : null,
+      numberOfDeliveries: numberOfDeliveries !== 'null' ? Number(numberOfDeliveries) : null,
+      numberOfLivingChildren: numberOfLivingChildren !== 'null' ? Number(numberOfLivingChildren) : null,
       patientId,
-    });
+      ...otherMammographyBody,
+    };
+
+    console.log('new mammographyBody -->', newMammographyBody);
+
+    const mammographyCreated = await Mammography.create(newMammographyBody);
     return mammographyCreated;
   } catch (error) {
     console.error(error);
@@ -699,7 +740,24 @@ const updateMammography = async (patientId, updateBody) => {
     if (!mammography) {
       throw new ApiError(httpStatus.NOT_FOUND, 'Mammography record not found');
     }
-    Object.assign(mammography, updateBody);
+
+    const {
+      menstrualAge = null,
+      numberOfPregnancies = null,
+      numberOfDeliveries = null,
+      numberOfLivingChildren = null,
+      ...otherUpdatedBody
+    } = updateBody;
+
+    const newMammographyBody = {
+      menstrualAge: menstrualAge !== 'null' ? Number(menstrualAge) : null,
+      numberOfPregnancies: numberOfPregnancies !== 'null' ? Number(numberOfPregnancies) : null,
+      numberOfDeliveries: numberOfDeliveries !== 'null' ? Number(numberOfDeliveries) : null,
+      numberOfLivingChildren: numberOfLivingChildren !== 'null' ? Number(numberOfLivingChildren) : null,
+      ...otherUpdatedBody,
+    };
+
+    Object.assign(mammography, newMammographyBody);
     await mammography.save();
     return mammography;
   } catch (error) {
