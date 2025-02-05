@@ -230,6 +230,7 @@ const createTreatment = {
     remainingAmount: Joi.number().required(),
     // settingPaidAmount: Joi.number().optional(),
     xrayStatus: Joi.boolean().optional(),
+    crownStatus: Joi.boolean().optional(),
     paymentStatus: Joi.string().valid('paid', 'pending').default('pending'),
     patientId: Joi.string().uuid().optional(),
     treatingDoctor: Joi.object()
@@ -243,7 +244,7 @@ const createTreatment = {
     offlineAmount: Joi.number().optional(),
     paymentMode: Joi.string().optional(),
     // settingPaidAmount: Joi.number().optional(),
-    nextDate: Joi.date().optional().description('follow up date of treatment'),
+    nextDate: Joi.date().allow(null).optional().description('follow up date of treatment'),
   }),
   files: (files) => {
     if (!files.length) return null; // No files, validation passes
@@ -320,6 +321,7 @@ const updateTreatment = {
       treatmentStatus: Joi.array().items(Joi.string()).optional(),
       settingTreatmentDate: Joi.date().optional(),
       xrayStatus: Joi.boolean().optional(),
+      crownStatus: Joi.boolean().optional(),
       settingNotes: Joi.string().allow('', null).optional(),
       settingAdditionalDetails: Joi.object().optional(),
       treatingDoctor: Joi.object()
@@ -332,7 +334,7 @@ const updateTreatment = {
       onlineAmount: Joi.number().optional(),
       offlineAmount: Joi.number().optional(),
       paymentMode: Joi.string().optional(),
-      nextDate: Joi.date().optional().description('follow up date of treatment'),
+      nextDate: Joi.date().allow(null).optional().description('follow up date of treatment'),
     })
     .min(1),
   files: (files) => {

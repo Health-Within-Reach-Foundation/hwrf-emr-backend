@@ -459,6 +459,7 @@ const createTreatment = async (treatmentBody) => {
     notes,
     totalAmount,
     xrayStatus,
+    crownStatus,
     xray,
     paymentStatus,
     onlineAmount,
@@ -492,9 +493,12 @@ const createTreatment = async (treatmentBody) => {
         diagnosisId,
       });
     } else {
-      treatment.paidAmount = Number(treatment.paidAmount) + (Number(onlineAmount) + Number(offlineAmount));
+      let oldPaidAmount = treatment.paidAmount;
+      treatment.paidAmount = Number(oldPaidAmount) + (Number(onlineAmount) + Number(offlineAmount));
+      console.log('treatment.paidAmount -->', treatment.paidAmount, Number(treatment.paidAmount)+ Number(onlineAmount) + Number(offlineAmount), oldPaidAmount);
       treatment.remainingAmount =
-        Number(treatment.totalAmount) - (Number(treatment.paidAmount) + (Number(onlineAmount) + Number(offlineAmount)));
+        Number(treatment.totalAmount) - (Number(oldPaidAmount) + (Number(onlineAmount) + Number(offlineAmount)));
+      console.log('treatment.remainingAmount -->', treatment.remainingAmount, (Number(treatment.totalAmount) - (Number(oldPaidAmount) + (Number(onlineAmount) + Number(offlineAmount)))));
       treatment.status = 'started';
       await treatment.save();
     }
@@ -505,6 +509,7 @@ const createTreatment = async (treatmentBody) => {
       treatmentStatus,
       notes,
       xrayStatus,
+      crownStatus,
       xray,
       treatingDoctor,
       paymentMode,
@@ -577,6 +582,7 @@ const updateTreatment = async (treatmentId, updateBody) => {
     settingAdditionalDetails,
     xray,
     xrayStatus,
+    crownStatus,
     treatingDoctor,
     paymentMode,
     onlineAmount,
@@ -593,7 +599,8 @@ const updateTreatment = async (treatmentId, updateBody) => {
   if (!treatment) {
     throw new ApiError(httpStatus.NOT_FOUND, 'Treatment not found');
   }
-
+  console.group('updateTreatment logs');
+  console.log('treatmentFields -->', treatmentFields);
   // ✅ Update Treatment only if there are fields to update
   if (Object.keys(treatmentFields).length > 0) {
     // Ensure numeric fields are properly handled
@@ -604,6 +611,9 @@ const updateTreatment = async (treatmentId, updateBody) => {
       }
     });
 
+    console.info("validTreatmentFields['totalAmount'] -->", validTreatmentFields['totalAmount']);
+    console.info("validTreatmentFields['paidAmount'] -->", validTreatmentFields['paidAmount']);
+    console.info("validTreatmentFields['remainingAmount'] -->", validTreatmentFields['remainingAmount']);
     Object.assign(treatment, validTreatmentFields);
     await treatment.save();
   }
@@ -619,11 +629,11 @@ const updateTreatment = async (treatmentId, updateBody) => {
     // update treatment paid amount and remianing amount if the online amoutn or offline amount is updated by checking its previous valuees
     if (Number(onlineAmount) !== Number(updatedTreatmentSetting.onlineAmount)) {
       console.log('first if', onlineAmount, typeof offlineAmount);
-      newSettingPaidAmount = Number(onlineAmount) - Number(updatedTreatmentSetting.onlineAmount);
+      newSettingPaidAmount += Number(onlineAmount) - Number(updatedTreatmentSetting.onlineAmount);
     }
     if (Number(offlineAmount) !== Number(updatedTreatmentSetting.offlineAmount)) {
       console.log('second if', offlineAmount, typeof offlineAmount);
-      newSettingPaidAmount = Number(offlineAmount) - Number(updatedTreatmentSetting.offlineAmount);
+      newSettingPaidAmount += Number(offlineAmount) - Number(updatedTreatmentSetting.offlineAmount);
     }
 
     Object.assign(updatedTreatmentSetting, {
@@ -636,15 +646,20 @@ const updateTreatment = async (treatmentId, updateBody) => {
       paymentMode,
       nextDate,
       xrayStatus,
+      crownStatus,
       xray,
       treatingDoctor,
     });
     await updatedTreatmentSetting.save();
 
+    console.log('newSettingPaidAmount -->', newSettingPaidAmount);
     // ✅ Recalculate Paid & Remaining Amounts for Treatment
     const totalPaidAmount = Number(treatment.paidAmount) + newSettingPaidAmount;
     const remainingAmount = Number(treatment.totalAmount) - totalPaidAmount;
 
+    console.info('totalPaidAmount -->', totalPaidAmount);
+    console.info('remainingAmount -->', remainingAmount);
+    console.groupEnd();
     // ✅ Update Treatment's financial details
     treatment.paidAmount = totalPaidAmount;
     treatment.remainingAmount = remainingAmount <= 0 ? 0 : remainingAmount;
@@ -741,7 +756,6 @@ const updateMammography = async (patientId, updateBody) => {
       numberOfLivingChildren: numberOfLivingChildren !== 'null' ? Number(numberOfLivingChildren) : null,
       ...otherUpdatedBody,
     };
-
 
     Object.assign(mammography, newMammographyBody);
     await mammography.save();

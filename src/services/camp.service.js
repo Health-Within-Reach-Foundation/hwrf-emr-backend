@@ -15,6 +15,7 @@ const { Mammography } = require('../models/mammography.model');
 const { Treatment } = require('../models/treatment.model');
 const { Diagnosis } = require('../models/diagnosis.model');
 const { TreatmentSetting } = require('../models/treatment-setting.model');
+const { calculateCampAnalytics, calculateDentistryAnalytics } = require('../utils/camp-utility');
 
 // function to create camp
 const createCamp = async (campData) => {
@@ -290,12 +291,13 @@ const getCampDetails = async (campId) => {
               {
                 model: Treatment,
                 as: 'treatment',
-                attributes: ['id', 'paidAmount'],
+                attributes: ['id', 'paidAmount', 'status'],
+                required: false,
                 include: [
                   {
                     model: TreatmentSetting,
                     as: 'treatmentSettings',
-                    attributes: ['id', 'treatingDoctor'],
+                    attributes: ['id', 'treatingDoctor', 'onlineAmount', 'offlineAmount', 'crownStatus', 'paymentMode', 'nextDate'],
                     required: false,
                   },
                 ],
@@ -323,33 +325,60 @@ const getCampDetails = async (campId) => {
     throw new ApiError(httpStatus.NOT_FOUND, 'Camp not found');
   }
 
+  console.log('Total registered patients:', camp.patients.length);
+
+  // **Step 1: Flat patients for UI display (Can contain duplicates for multiple services)**
   const flatPatients = camp.patients.flatMap((patient) => {
-    return patient.appointments.map((appointment) => {
-      const queue = patient.queues.find((q) => q.specialtyId === appointment.specialtyId);
+    const appointments = patient.appointments.length > 0 ? patient.appointments : [null];
+
+    return appointments.map((appointment) => {
+      const queue = appointment ? patient.queues.find((q) => q.specialtyId === appointment.specialtyId) : null;
       const totalPaidAmount = patient.diagnoses.reduce((sum, diagnosis) => {
         return sum + (diagnosis.treatment ? Number(diagnosis.treatment.paidAmount) : 0);
       }, 0);
 
-      const treatingDoctors = Array.from(new Set(patient.diagnoses.flatMap((diagnosis) => {
-        return diagnosis.treatment ? diagnosis.treatment.treatmentSettings.map((ts) => ts.treatingDoctor) : [];
-      })));
-      // const treatingDoctors = treatment ? treatment.treatmentSettings.map((ts) => ts.doctorName) : [];
+      const treatingDoctors = Array.from(
+        new Set(
+          patient.diagnoses.flatMap((diagnosis) => {
+            return diagnosis.treatment ? diagnosis.treatment.treatmentSettings.map((ts) => ts.treatingDoctor) : [];
+          })
+        )
+      );
 
       return {
         ...patient.toJSON(),
+        treatmentDate: appointment ? appointment.appointmentDate : null,
         tokenNumber: queue ? queue.tokenNumber : null,
         serviceTaken: queue ? queue.queueType : null,
-        paidAmount: queue ? (queue.queueType === "Mammography" ? null : (queue.queueType === "Dentistry" ? totalPaidAmount : null)) : null,
-        treatingDoctors: queue ? (queue.queueType === "Dentistry" ? treatingDoctors : null) : null,
+        paidAmount: queue && queue.queueType === 'Dentistry' ? totalPaidAmount : null,
+        treatingDoctors: queue && queue.queueType === 'Dentistry' ? treatingDoctors : null,
       };
     });
   });
 
+  console.log('Flattened patients for UI:', flatPatients.length);
+
+  // **Step 2: Unique patients for analytics (Each patient appears only once)**
+  const uniquePatients = camp.patients.map((patient) => ({
+    ...patient.toJSON(),
+    hasAppointments: patient.appointments.length > 0,
+    hasQueues: patient.queues.length > 0,
+    servicesTaken: Array.from(new Set(patient.queues.map((q) => q.queueType))),
+  }));
+
+  console.log('Unique patients for analytics:', uniquePatients.length);
+
+  // **Step 3: Calculate analytics using unique patients**
+  const campAnalytics = calculateCampAnalytics(uniquePatients);
+  campAnalytics.dentistryAnalytics = calculateDentistryAnalytics(uniquePatients);
+
   return {
     ...camp.toJSON(),
-    patients: flatPatients,
+    patients: flatPatients, // Use `flatPatients` for UI
+    analytics: campAnalytics, // Use `uniquePatients` for analytics
   };
 };
+
 module.exports = {
   createCamp,
   getCamps,

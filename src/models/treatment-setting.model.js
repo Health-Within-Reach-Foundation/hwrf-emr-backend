@@ -50,6 +50,10 @@ const initModel = (sequelize) => {
         type: DataTypes.BOOLEAN,
         defaultValue: false,
       },
+      crownStatus: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false,
+      },
       xray: {
         type: DataTypes.JSONB,
         allowNull: true, // URLs for X-rays
