@@ -1,5 +1,7 @@
 const Joi = require('joi');
 
+/* ***************************** Patient CRUD Validation *************************** */
+
 /**
  * Validation for adding a new patient
  */
@@ -40,18 +42,28 @@ const updatePatient = {
   }),
 };
 
-/**
- * Validation for fetching patients
- */
-// const getPatients = {
-//   query: Joi.object().keys({
-//     name: Joi.string().optional(),
-//     mobile: Joi.string().optional(),
-//     registrationDate: Joi.date().optional(),
-//     page: Joi.number().integer().min(1).default(1),
-//     limit: Joi.number().integer().min(1).default(10),
-//   }),
-// };
+const getPatientsByClinic = {
+  query: Joi.object().keys({
+    clinicId: Joi.string().uuid().required(), // Clinic ID is required
+    // page: Joi.number().integer().min(1).default(1),
+    // limit: Joi.number().integer().min(1).default(10),
+  }),
+};
+
+const getPatientById = {
+  params: Joi.object().keys({
+    patientId: Joi.string().uuid().required(), // patientId must be a valid UUID and is required
+  }),
+  query: Joi.object().keys({
+    specialtyId: Joi.alternatives()
+      .try(Joi.string().uuid(), Joi.allow(null)) // Allow either a UUID or null
+      .optional(),
+  }),
+};
+
+/* ***************************** Patient CRUD Validation *************************** */
+
+/* ***************************** Patient Dental CRUD Validation *************************** */
 
 const addDentalPatientRecord = {
   body: Joi.object().keys({
@@ -77,43 +89,6 @@ const addDentalPatientRecord = {
     }),
   }),
 };
-
-const getPatientsByClinic = {
-  query: Joi.object().keys({
-    clinicId: Joi.string().uuid().required(), // Clinic ID is required
-    // page: Joi.number().integer().min(1).default(1),
-    // limit: Joi.number().integer().min(1).default(10),
-  }),
-};
-
-const getPatientById = {
-  params: Joi.object().keys({
-    patientId: Joi.string().uuid().required(), // patientId must be a valid UUID and is required
-  }),
-  query: Joi.object().keys({
-    specialtyId: Joi.alternatives()
-      .try(Joi.string().uuid(), Joi.allow(null)) // Allow either a UUID or null
-      .optional(),
-  }),
-};
-
-// const createDiagnosis = {
-//   body: Joi.object().keys({
-//     complaints: Joi.array().items(Joi.string()).optional(),
-//     treatment: Joi.array().items(Joi.string()).optional(),
-//     currentStatus: Joi.array().items(Joi.string()).optional(),
-//     // dentalQuadrant: Joi.object().pattern(Joi.string(), Joi.array().items(Joi.number())).optional(),
-//     dentalQuadrant: Joi.array().items(Joi.string()).optional(),
-//     xrayStatus: Joi.boolean().optional(),
-//     // xray: Joi.array().items(Joi.string().uri()).optional(),
-//     notes: Joi.string().optional(),
-//     additionalDetails: Joi.object().optional(),
-//     // appointmentId: Joi.string().uuid().optional(),
-//     patientId: Joi.string().uuid().required(),
-//   }),
-// };
-
-//
 
 const createDiagnosis = {
   body: Joi.object().keys({
@@ -204,20 +179,6 @@ const deleteDiagnosis = {
   }),
 };
 
-// const createTreatment = {
-//   body: Joi.object().keys({
-//     diagnosisId: Joi.string().uuid().required().description('Diagnosis ID'),
-//     treatmentDate: Joi.date().required().description('Date of treatment'),
-//     treatmentStatus: Joi.array().items(Joi.string()).optional(),
-//     notes: Joi.string().allow('', null).optional(),
-//     additionalDetails: Joi.object().optional(),
-//     totalAmount: Joi.number().required(),
-//     paidAmount: Joi.number().default(0),
-//     remainingAmount: Joi.number().required(),
-//     paymentStatus: Joi.string().valid('paid', 'pending').default('pending'),
-//   }),
-// };
-
 const createTreatment = {
   body: Joi.object().keys({
     diagnosisId: Joi.string().uuid().required().description('Diagnosis ID'),
@@ -276,29 +237,6 @@ const getTreatmentById = {
     treatmentId: Joi.string().uuid().required().description('Treatment ID'),
   }),
 };
-
-// const updateTreatment = {
-//   params: Joi.object().keys({
-//     treatmentId: Joi.string().uuid().required().description('Treatment ID'),
-//   }),
-//   body: Joi.object()
-//     .keys({
-//       treatmentDate: Joi.date().optional(),
-//       // complaints: Joi.array().items(Joi.string()).optional(),
-//       // treatments: Joi.array().items(Joi.string()).optional(),
-//       // dentalQuadrant: Joi.object().pattern(Joi.string(), Joi.array().items(Joi.number())).optional(),
-//       // xrayStatus: Joi.boolean().optional(),
-//       // xray: Joi.array().items(Joi.string().uri()).optional(),
-//       treatmentStatus: Joi.array().items(Joi.string()).optional(),
-//       notes: Joi.string().allow('', null).optional(),
-//       additionalDetails: Joi.object().optional(),
-//       totalAmount: Joi.number().optional(),
-//       paidAmount: Joi.number().optional(),
-//       remainingAmount: Joi.number().optional(),
-//       paymentStatus: Joi.string().valid('paid', 'pending').optional(),
-//     })
-//     .min(1),
-// };
 
 const updateTreatment = {
   params: Joi.object().keys({
@@ -359,6 +297,10 @@ const deleteTreatment = {
     treatmentId: Joi.string().uuid().required().description('Treatment ID'),
   }),
 };
+
+/* ***************************** Patient Dental CRUD Validation *************************** */
+
+/* ***************************** Patient Mammography CRUD Validation *************************** */
 
 const createMammography = {
   params: Joi.object().keys({
@@ -461,11 +403,13 @@ const createMammography = {
     return null; // No errors
   },
 };
+
 const getMammography = {
   params: Joi.object().keys({
     patientId: Joi.string().uuid().required().description('Patient ID'),
   }),
 };
+
 const updateMammography = {
   body: Joi.object().keys({
     menstrualAge: Joi.number().integer().min(0).allow('null', null).optional(),
@@ -558,11 +502,69 @@ const updateMammography = {
   },
 };
 
+/* ***************************** Patient Mammography CRUD Validation *************************** */
+
+/* ***************************** Patient GP CRUD Validation *************************** */
+
+const createGPRecord = {
+  body: Joi.object().keys({
+    patientId: Joi.string().uuid().required(),
+    weight: Joi.number().required(),
+    height: Joi.number().required(),
+    complaints: Joi.string().allow(null, ''),
+    sugar: Joi.number().allow(null),
+    bp: Joi.string().allow(null, ''),
+    hb: Joi.number().allow(null),
+    findings: Joi.array().items(Joi.string()).allow(null),
+    medicine: Joi.string().allow(null, ''),
+    advice: Joi.string().allow(null, ''),
+    followUpDate: Joi.date().allow(null),
+  }),
+};
+
+const getGPRecordsByPatient = {
+  query: Joi.object().keys({
+    patientId: Joi.string().uuid().required(),
+  }),
+};
+
+const getGPRecord = {
+  params: Joi.object().keys({
+    gpRecordId: Joi.string().uuid().required(),
+  }),
+};
+
+const updateGPRecord = {
+  params: Joi.object().keys({
+    gpRecordId: Joi.string().uuid().required(),
+  }),
+  body: Joi.object().keys({
+    // patientId: Joi.string().uuid().required(),
+    weight: Joi.number().optional(),
+    height: Joi.number().optional(),
+    complaints: Joi.string().allow(null, '').optional(),
+    sugar: Joi.number().allow(null).optional(),
+    bp: Joi.string().allow(null, '').optional(),
+    hb: Joi.number().allow(null).optional(),
+    findings: Joi.array().items(Joi.string()).allow(null).optional(),
+    medicine: Joi.string().allow(null, '').optional(),
+    advice: Joi.string().allow(null, '').optional(),
+    followUpDate: Joi.date().allow(null).optional(),
+  }),
+};
+
+// const deleteGPRecord = {
+//   params: Joi.object().keys({
+//     gpRecordId: Joi.string().uuid().required(),
+//   }),
+// };
+
+/* ***************************** Patient GP CRUD Validation *************************** */
+
 module.exports = {
   createPatient,
   updateMammography,
   updatePatient,
-  // getPatients,
   addDentalPatientRecord,
   getPatientsByClinic,
   getPatientById,
@@ -578,4 +580,9 @@ module.exports = {
   deleteTreatment,
   getMammography,
   createMammography,
+  createGPRecord,
+  getGPRecordsByPatient,
+  getGPRecord,
+  updateGPRecord,
+  // deleteGPRecord,
 };

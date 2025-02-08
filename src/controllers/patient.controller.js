@@ -355,8 +355,6 @@ const deleteDiagnosis = catchAsync(async (req, res) => {
 const createTreatment = catchAsync(async (req, res) => {
   const { files, body } = req;
 
-  // const xrayFilePaths = files?.map((file) => file.path) || [];
-
   const xrayFilePaths = [];
 
   if (files && files.length > 0) {
@@ -475,6 +473,53 @@ const deleteTreatment = catchAsync(async (req, res) => {
   res.status(httpStatus.NO_CONTENT).send();
 });
 
+/* ********************* GP Patient controller ************************* */
+
+const createGPRecord = catchAsync(async (req, res) => {
+  const record = await patientService.createGPRecord(req.body);
+  res.status(httpStatus.CREATED).json({
+    data: record,
+    message: 'GP Record created successfully',
+    success: true,
+  });
+});
+
+const getGPRecordsByPatient = catchAsync(async (req, res) => {
+  const records = await patientService.getGPRecordsByPatient(req.query.patientId);
+  res.status(httpStatus.OK).json({
+    data: records,
+    success: true,
+    message: 'GP Records fetched successfully',
+  });
+});
+
+const getGPRecordById = catchAsync(async (req, res) => {
+  const record = await patientService.getGPRecordById(req.params.gpRecordId);
+  res.status(httpStatus.OK).send({
+    data: record,
+    success: true,
+    message: 'GP Record fetched successfully',
+  });
+});
+
+const updateGPRecord = catchAsync(async (req, res) => {
+  const record = await patientService.updateGPRecord(req.params.gpRecordId, req.body);
+  res.status(httpStatus.OK).json({
+    data: record,
+    message: 'Record updated',
+    success: true,
+  });
+});
+
+const deleteGPRecord = catchAsync(async (req, res) => {
+  await patientService.deleteGPRecord(req.params.gpRecordId);
+  res.status(httpStatus.OK).json({
+    message: 'Record deleted',
+    success: true,
+    data: null,
+  });
+});
+
 module.exports = {
   createPatient,
   addDentalPatientRecord,
@@ -494,4 +539,9 @@ module.exports = {
   updateTreatment,
   updateMammography,
   deleteTreatment,
+  createGPRecord,
+  getGPRecordsByPatient,
+  getGPRecordById,
+  updateGPRecord,
+  deleteGPRecord,
 };

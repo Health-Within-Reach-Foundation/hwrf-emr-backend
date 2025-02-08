@@ -9,6 +9,7 @@ const { Diagnosis } = require('../models/diagnosis.model');
 const { Treatment } = require('../models/treatment.model');
 const { Mammography } = require('../models/mammography.model');
 const { TreatmentSetting } = require('../models/treatment-setting.model');
+const { GeneralPhysicianRecord } = require('../models/gp-record.model');
 
 /**
  *
@@ -222,6 +223,12 @@ const getPatientDetailsById = async (patientId, specialtyId) => {
         model: Mammography,
         as: 'mammography',
         required: false, // Ensure patient is returned even if no records exist
+      },
+      {
+        model: GeneralPhysicianRecord,
+        as: 'gpRecords',
+        required: false,
+        order: [['createdAt', 'DESC']],
       },
       // {
       //   model: PatientRecord,
@@ -495,10 +502,19 @@ const createTreatment = async (treatmentBody) => {
     } else {
       let oldPaidAmount = treatment.paidAmount;
       treatment.paidAmount = Number(oldPaidAmount) + (Number(onlineAmount) + Number(offlineAmount));
-      console.log('treatment.paidAmount -->', treatment.paidAmount, Number(treatment.paidAmount)+ Number(onlineAmount) + Number(offlineAmount), oldPaidAmount);
+      console.log(
+        'treatment.paidAmount -->',
+        treatment.paidAmount,
+        Number(treatment.paidAmount) + Number(onlineAmount) + Number(offlineAmount),
+        oldPaidAmount
+      );
       treatment.remainingAmount =
         Number(treatment.totalAmount) - (Number(oldPaidAmount) + (Number(onlineAmount) + Number(offlineAmount)));
-      console.log('treatment.remainingAmount -->', treatment.remainingAmount, (Number(treatment.totalAmount) - (Number(oldPaidAmount) + (Number(onlineAmount) + Number(offlineAmount)))));
+      console.log(
+        'treatment.remainingAmount -->',
+        treatment.remainingAmount,
+        Number(treatment.totalAmount) - (Number(oldPaidAmount) + (Number(onlineAmount) + Number(offlineAmount)))
+      );
       treatment.status = 'started';
       await treatment.save();
     }
@@ -780,6 +796,51 @@ const deleteMammography = async (patientId) => {
   }
 };
 
+/**
+ * Create a new GP record
+ */
+const createGPRecord = async (data) => {
+  // const bmi = data.weight && data.height ? (data.weight / (data.height * data.height)).toFixed(2) : null;
+  return GeneralPhysicianRecord.create(data);
+};
+
+/**
+ * Get all GP records of a patient
+ */
+const getGPRecordsByPatient = async (patientId) => {
+  return GeneralPhysicianRecord.findAll({ where: { patientId } });
+};
+
+/**
+ * Get a single GP record by ID
+ */
+const getGPRecordById = async (id) => {
+  return GeneralPhysicianRecord.findByPk(id);
+};
+
+/**
+ * Update a GP record
+ */
+const updateGPRecord = async (id, updateData) => {
+  const record = await GeneralPhysicianRecord.findByPk(id);
+  if (!record) {
+    throw new Error('General Physician Record not found');
+  }
+
+  // if (updateData.weight && updateData.height) {
+  //   updateData.bmi = (updateData.weight / (updateData.height * updateData.height)).toFixed(2);
+  // }
+
+  return record.update(updateData);
+};
+
+/**
+ * Delete a GP record
+ */
+const deleteGPRecord = async (id) => {
+  return GeneralPhysicianRecord.destroy({ where: { id } });
+};
+
 module.exports = {
   createPatient,
   searchPatients,
@@ -803,4 +864,9 @@ module.exports = {
   createMammography,
   updateMammography,
   getMammographyById,
+  createGPRecord,
+  getGPRecordsByPatient,
+  getGPRecordById,
+  updateGPRecord,
+  deleteGPRecord,
 };

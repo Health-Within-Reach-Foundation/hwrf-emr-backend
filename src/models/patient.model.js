@@ -26,6 +26,8 @@ class Patient extends Model {
       otherKey: 'campId',
       as: 'camps',
     });
+
+    Patient.hasMany(models.GeneralPhysicianRecord, { foreignKey: 'patientId', as: 'gpRecords' });
   }
 }
 
