@@ -24,6 +24,7 @@ const getFormTemplateById = {
   }),
 };
 
+
 const updateFormTemplate = {
   params: Joi.object().keys({
     formTemplateId: Joi.string().uuid().required().description('Form Template ID'),

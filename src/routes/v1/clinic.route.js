@@ -37,10 +37,7 @@ router
 router
   .route('/form-fields')
   .post(auth(), validate(formFieldsValidation.createFormFields), formFieldsController.createFormFields)
-  .get(
-    // auth(),
-    formFieldsController.getAllFormFields
-  );
+  .get(auth(), formFieldsController.getAllFormFields);
 
 router
   .route('/form-fields/:formFieldId')
