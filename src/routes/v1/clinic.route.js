@@ -2,8 +2,8 @@ const express = require('express');
 const auth = require('../../middlewares/auth');
 const validate = require('../../middlewares/validate');
 const roleAuthorization = require('../../middlewares/role-authorise');
-const { clinicValidation, userValidation, formTemplateValidation } = require('../../validations');
-const { clinicController, userController, formTemplateController } = require('../../controllers');
+const { clinicValidation, userValidation, formTemplateValidation, formFieldsValidation } = require('../../validations');
+const { clinicController, userController, formTemplateController, formFieldsController } = require('../../controllers');
 
 const router = express.Router();
 
@@ -33,6 +33,20 @@ router
     validate(formTemplateValidation.deleteFormTemplate), // Validation for deleting form template
     formTemplateController.deleteFormTemplate // Controller for deleting form template
   );
+
+router
+  .route('/form-fields')
+  .post(auth(), validate(formFieldsValidation.createFormFields), formFieldsController.createFormFields)
+  .get(
+    // auth(),
+    formFieldsController.getAllFormFields
+  );
+
+router
+  .route('/form-fields/:formFieldId')
+  .get(auth(), validate(formFieldsValidation.getFormFieldById), formFieldsController.getFormFieldById)
+  .patch(auth(), validate(formFieldsValidation.updateFormFieldById), formFieldsController.updateFormFieldById)
+  .delete(auth(), validate(formFieldsValidation.deleteFormFieldById), formFieldsController.deleteFormFieldById);
 
 router
   .route('/:clinicId')

@@ -44,11 +44,11 @@ const calculateDentistryAnalytics = (patients) => {
     (p) => p?.diagnoses?.length > 0 && p.diagnoses.some((d) => d.treatment?.treatmentSettings.length > 0)
   ).length;
 
-  // Calculate total earnings
-  const totalEarnings = dentistryPatients.reduce(
-    (sum, p) => sum + p.diagnoses.reduce((dSum, d) => dSum + (d.treatment ? Number(d.treatment.paidAmount) : 0), 0),
-    0
-  );
+  // Calculate total earnings from 
+  // const totalEarnings = dentistryPatients.reduce(
+  //   (sum, p) => sum + p.diagnoses.reduce((dSum, d) => dSum + (d.treatment ? Number(d.treatment.paidAmount) : 0), 0),
+  //   0
+  // );
 
   // Online & Offline earnings
 
@@ -76,6 +76,7 @@ const calculateDentistryAnalytics = (patients) => {
     0
   );
 
+
   // calculate crownEarnings it can be calculated by checking the treatmentSettings.crownStatus is true or not if true then add the onlineAmount and offlineAmount of each treatmentSettings of which crownStatus is true
 const crownEarnings = dentistryPatients.reduce((sum, p) => {
     return sum + p.diagnoses.reduce((dSum, d) => {
@@ -95,6 +96,9 @@ const crownEarnings = dentistryPatients.reduce((sum, p) => {
         return dSum;
     }, 0);
 }, 0);
+
+const totalEarnings = onlineEarnings + offlineEarnings;
+
 
   console.log("crownEarnings", crownEarnings);
 

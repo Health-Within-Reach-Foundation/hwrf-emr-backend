@@ -24,6 +24,8 @@ class Clinic extends Model {
 
     // A Clinic can have many FormTemplates
     Clinic.hasMany(models.FormTemplate, { foreignKey: 'clinicId', as: 'formTemplates' });
+
+    Clinic.hasMany(models.FormFields, { foreignKey: 'clinicId', as: 'formFields' });
   }
 }
 

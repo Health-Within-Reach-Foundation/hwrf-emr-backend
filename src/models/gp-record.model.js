@@ -22,6 +22,14 @@ const initModel = (sequelize) => {
         defaultValue: DataTypes.UUIDV4,
         primaryKey: true,
       },
+      campId: {
+        type: DataTypes.UUID,
+        allowNull: true,
+        references: {
+          model: 'camps',
+          key: 'id',
+        },
+      },
       patientId: {
         type: DataTypes.UUID,
         allowNull: false,
@@ -34,14 +42,10 @@ const initModel = (sequelize) => {
       },
       weight: {
         type: DataTypes.FLOAT,
-        allowNull: false,
+        allowNull: true,
       },
       height: {
         type: DataTypes.FLOAT,
-        allowNull: false,
-      },
-      complaints: {
-        type: DataTypes.TEXT,
         allowNull: true,
       },
       sugar: {
@@ -56,11 +60,23 @@ const initModel = (sequelize) => {
         type: DataTypes.FLOAT,
         allowNull: true,
       },
+      complaints: {
+        type: DataTypes.ARRAY(DataTypes.STRING),
+        allowNull: true,
+      },
+      kco: {
+        type: DataTypes.ARRAY(DataTypes.STRING),
+        allowNull: true,
+      },
       findings: {
         type: DataTypes.ARRAY(DataTypes.STRING),
         allowNull: true,
       },
-      medicine: {
+      systemicExamination: {
+        type: DataTypes.ARRAY(DataTypes.STRING),
+        allowNull: true,
+      },
+      treatment: {
         type: DataTypes.TEXT,
         allowNull: true,
       },
@@ -68,8 +84,32 @@ const initModel = (sequelize) => {
         type: DataTypes.TEXT,
         allowNull: true,
       },
+      medicine: {
+        type: DataTypes.TEXT,
+        allowNull: true,
+      },
       followUpDate: {
         type: DataTypes.DATE,
+        allowNull: true,
+      },
+      onlineAmount: {
+        type: DataTypes.FLOAT,
+        allowNull: true,
+      },
+      offlineAmount: {
+        type: DataTypes.FLOAT,
+        allowNull: true,
+      },
+      findingsOptionsDetails: {
+        type: DataTypes.JSON,
+        allowNull: true,
+      },
+      systemicExaminationOptionsDetails: {
+        type: DataTypes.JSON,
+        allowNull: true,
+      },
+      otherComplaints: {
+        type: DataTypes.TEXT,
         allowNull: true,
       },
     },

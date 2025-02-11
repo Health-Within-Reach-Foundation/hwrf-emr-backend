@@ -68,7 +68,7 @@ const addDentalPatientRecord = catchAsync(async (req, res) => {
 // Controller to add dentist patient mammography
 const createMammography = catchAsync(async (req, res) => {
   const { file, body } = req;
-
+  const campId = req?.user?.currentCampId || null;
   const { patientId } = req.params;
   const screeningImageFilePath = {};
 
@@ -99,6 +99,7 @@ const createMammography = catchAsync(async (req, res) => {
   // Append file paths to the request body
   const mammographyBody = {
     ...body,
+    campId,
     screeningImage: screeningImageFilePath, // Attach uploaded file paths if available
   };
   const record = await patientService.createMammography(patientId, mammographyBody);
@@ -207,7 +208,7 @@ const updatePatientDetails = catchAsync(async (req, res) => {
 
 const createDiagnosis = catchAsync(async (req, res) => {
   const { files, body } = req;
-
+  // const campId = req?.user?.currentCampId || null;
   // Extract file URLs from uploaded files, if any
   // const xrayFilePaths = files?.map((file) => file.path) || [];
   const xrayFilePaths = [];
@@ -244,10 +245,12 @@ const createDiagnosis = catchAsync(async (req, res) => {
   if (xrayFilePaths?.length > 0) {
     diagnosisData = {
       ...body,
+      // campId,
       xray: xrayFilePaths,
     };
   } else {
     diagnosisData = {
+      // campId,
       ...body,
     };
   }
@@ -354,7 +357,7 @@ const deleteDiagnosis = catchAsync(async (req, res) => {
 // });
 const createTreatment = catchAsync(async (req, res) => {
   const { files, body } = req;
-
+  const campId = req?.user?.currentCampId || null;
   const xrayFilePaths = [];
 
   if (files && files.length > 0) {
@@ -390,10 +393,12 @@ const createTreatment = catchAsync(async (req, res) => {
     treatmentBody = {
       ...body,
       xray: xrayFilePaths,
+      campId,
     };
   } else {
     treatmentBody = {
       ...body,
+      campId,
     };
   }
   const treatmentSetting = await patientService.createTreatment(treatmentBody);
@@ -476,7 +481,9 @@ const deleteTreatment = catchAsync(async (req, res) => {
 /* ********************* GP Patient controller ************************* */
 
 const createGPRecord = catchAsync(async (req, res) => {
-  const record = await patientService.createGPRecord(req.body);
+  const campId = req?.user?.currentCampId || null;
+  const gpRecordBody = { ...req?.body, campId };
+  const record = await patientService.createGPRecord(gpRecordBody);
   res.status(httpStatus.CREATED).json({
     data: record,
     message: 'GP Record created successfully',
@@ -520,6 +527,16 @@ const deleteGPRecord = catchAsync(async (req, res) => {
   });
 });
 
+const getPatientFollowUps = catchAsync(async (req, res) => {
+  const clinicId = req?.user?.clinicId || null;
+  const followUps = await patientService.getPatientFollowUps(clinicId);
+  res.status(httpStatus.OK).json({
+    success: true,
+    data: followUps,
+    message: 'Patient follow-ups fetched successfully',
+  });
+});
+
 module.exports = {
   createPatient,
   addDentalPatientRecord,
@@ -544,4 +561,5 @@ module.exports = {
   getGPRecordById,
   updateGPRecord,
   deleteGPRecord,
+  getPatientFollowUps,
 };

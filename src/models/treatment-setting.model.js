@@ -66,10 +66,6 @@ const initModel = (sequelize) => {
         type: DataTypes.DATEONLY,
         allowNull: true,
       },
-      paymentMode: {
-        type: DataTypes.STRING,
-        allowNull: true,
-      },
       onlineAmount: {
         type: DataTypes.DECIMAL,
         defaultValue: 0,
@@ -77,6 +73,16 @@ const initModel = (sequelize) => {
       offlineAmount: {
         type: DataTypes.DECIMAL,
         defaultValue: 0,
+      },
+      campId: {
+        type: DataTypes.UUID,
+        allowNull: true,
+        references: {
+          model: 'camps',
+          key: 'id',
+        },
+        onDelete: 'CASCADE',
+        onUpdate: 'CASCADE',
       },
     },
     {

@@ -243,6 +243,7 @@ const updateCampById = async (campId, campData) => {
 };
 
 const getCampDetails = async (campId) => {
+  console.log('Fetching camp details for campId:', campId);
   const camp = await Camp.findByPk(campId, {
     include: [
       {
@@ -265,6 +266,7 @@ const getCampDetails = async (campId) => {
           {
             model: Appointment,
             as: 'appointments',
+            where: { campId },
             attributes: { exclude: ['createdAt', 'updatedAt'] },
             required: false,
             include: [
@@ -297,7 +299,8 @@ const getCampDetails = async (campId) => {
                   {
                     model: TreatmentSetting,
                     as: 'treatmentSettings',
-                    attributes: ['id', 'treatingDoctor', 'onlineAmount', 'offlineAmount', 'crownStatus', 'paymentMode', 'nextDate'],
+                    attributes: ['id', 'treatingDoctor', 'onlineAmount', 'offlineAmount', 'crownStatus', 'nextDate'],
+                    where: { campId },
                     required: false,
                   },
                 ],

@@ -274,6 +274,7 @@ const createDiagnosis = async (diagnosisBody) => {
     patientId,
     xray,
     estimatedCost,
+    // campId,
   } = diagnosisBody;
 
   // Ensure the patient exists
@@ -294,6 +295,7 @@ const createDiagnosis = async (diagnosisBody) => {
       xray,
       patientId,
       estimatedCost,
+      // campId,
     });
 
     await Treatment.create({
@@ -471,9 +473,9 @@ const createTreatment = async (treatmentBody) => {
     paymentStatus,
     onlineAmount,
     offlineAmount,
-    paymentMode,
     treatingDoctor,
     nextDate,
+    campId,
   } = treatmentBody;
 
   try {
@@ -528,12 +530,12 @@ const createTreatment = async (treatmentBody) => {
       crownStatus,
       xray,
       treatingDoctor,
-      paymentMode,
       onlineAmount,
       offlineAmount,
       nextDate,
       additionalDetails: treatmentBody.additionalDetails || {},
       treatmentId: treatment.id, // Associate with the found/created Treatment
+      campId,
     });
 
     return treatmentSetting;
@@ -600,7 +602,6 @@ const updateTreatment = async (treatmentId, updateBody) => {
     xrayStatus,
     crownStatus,
     treatingDoctor,
-    paymentMode,
     onlineAmount,
     offlineAmount,
     nextDate,
@@ -659,7 +660,6 @@ const updateTreatment = async (treatmentId, updateBody) => {
       additionalDetails: settingAdditionalDetails,
       onlineAmount,
       offlineAmount,
-      paymentMode,
       nextDate,
       xrayStatus,
       crownStatus,
@@ -841,6 +841,77 @@ const deleteGPRecord = async (id) => {
   return GeneralPhysicianRecord.destroy({ where: { id } });
 };
 
+/**
+ * Get all patients with active follow-ups.
+ * Active follow-ups are determined by checking if the follow-up date is in the future.
+ * @returns {Promise<Array>} - List of patients with active follow-ups.
+ */
+const getPatientFollowUps = async (clinicId) => {
+  console.log('clinicId -->', clinicId);
+  const today = new Date();
+
+  // Fetch patients with active follow-ups in TreatmentSetting
+  const patientsWithActiveDentalFollowUps = await Patient.findAll({
+    where: { clinicId },
+    include: [
+      {
+        model: Diagnosis,
+        as: 'diagnoses',
+        include: [
+          {
+            model: Treatment,
+            as: 'treatment',
+            include: [
+              {
+                model: TreatmentSetting,
+                as: 'treatmentSettings',
+                where: {
+                  nextDate: {
+                    [Op.gt]: today, // Follow-up date is in the future
+                  },
+                },
+                required: true,
+              },
+            ],
+            required: true,
+          },
+        ],
+        required: true,
+      },
+    ],
+  });
+
+  // Fetch patients with active follow-ups in GeneralPhysicianRecord
+  const patientsWithActiveGPFollowUps = await Patient.findAll({
+    include: [
+      {
+        model: GeneralPhysicianRecord,
+        as: 'gpRecords',
+        where: {
+          followUpDate: {
+            [Op.gt]: today, // Follow-up date is in the future
+          },
+        },
+        required: true,
+      },
+    ],
+  });
+
+  // Add a service key to each patient indicating the follow-up service
+  const patientsWithServiceKey = [
+    ...patientsWithActiveDentalFollowUps.map((patient) => ({ ...patient.dataValues, service: 'Dentistry' })),
+    ...patientsWithActiveGPFollowUps.map((patient) => ({ ...patient.dataValues, service: 'GP' })),
+  ];
+
+  return patientsWithServiceKey;
+  // Combine the results and remove duplicates
+  // const allPatients = [...patientsWithActiveDentalFollowUps, ...patientsWithActiveGPFollowUps];
+
+  // const uniquePatients = allPatients.filter((patient, index, self) => index === self.findIndex((p) => p.id === patient.id));
+
+  // return uniquePatients;
+};
+
 module.exports = {
   createPatient,
   searchPatients,
@@ -869,4 +940,5 @@ module.exports = {
   getGPRecordById,
   updateGPRecord,
   deleteGPRecord,
+  getPatientFollowUps,
 };

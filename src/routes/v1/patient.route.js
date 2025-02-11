@@ -33,6 +33,11 @@ router
     patientController.getPatientsByClinic // Controller
   );
 
+router.route('/follow-ups').get(
+  auth(),
+  patientController.getPatientFollowUps
+);
+
 /* **************************** Pateint crud route ******************************** */
 
 /* **************************** Pateint dental crud routes ******************************** */
@@ -187,7 +192,7 @@ router
 router
   .route('/gp-records')
   .post(
-    // auth(),
+    auth(),
     (req, res, next) => {
       console.log('req body --------', req.body, req.files);
       next();
@@ -196,25 +201,26 @@ router
     patientController.createGPRecord
   )
   .get(
-    // auth(), 
-    validate(patientValidation.getGPRecordsByPatient), 
+    auth(),
+    validate(patientValidation.getGPRecordsByPatient),
     patientController.getGPRecordsByPatient
-  )
+  );
 
 router
   .route('/gp-records/:gpRecordId')
   .patch(
-    // auth(), 
-    validate(patientValidation.updateGPRecord), 
+    auth(),
+    validate(patientValidation.updateGPRecord),
     patientController.updateGPRecord
   )
   .get(
-    // auth(), 
-    validate(patientValidation.getGPRecord), 
-    patientController.getGPRecordById)
+    auth(),
+    validate(patientValidation.getGPRecord),
+    patientController.getGPRecordById
+  )
   .delete(
-    // auth(), 
-    validate(patientValidation.getGPRecord), 
+    auth(),
+    validate(patientValidation.getGPRecord),
     patientController.deleteGPRecord
   );
 
