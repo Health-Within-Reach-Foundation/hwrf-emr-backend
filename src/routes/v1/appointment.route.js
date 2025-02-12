@@ -20,8 +20,8 @@ router.route('/').get(
 );
 
 router.route('/book').post(
-  (req,res,next)=>{
-    console.log("inside booking route --------------------------------")
+  (req, res, next) => {
+    console.log('inside booking route --------------------------------');
     next();
   },
   auth(), // Authenticate the user
@@ -30,10 +30,8 @@ router.route('/book').post(
   appointmentController.bookAppointment // Controller
 );
 
-router.route('/mark/:appointmentId').patch(
-  auth(),
-  validate(appointmentValidation.markAppointment),
-  appointmentController.markAppointment
-)
+router
+  .route('/mark/:appointmentId')
+  .patch(auth(), validate(appointmentValidation.markAppointment), appointmentController.markAppointment);
 
 module.exports = router;

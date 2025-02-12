@@ -308,8 +308,16 @@ const deleteUserById = async (userId) => {
   if (!user) {
     throw new ApiError(httpStatus.NOT_FOUND, 'User not found');
   }
-  await user.destroy({ force: true });
-  // return user;
+
+  // Remove user from many-to-many relationships
+  await user.setRoles([]);
+  await user.setCamps([]);
+  await user.setSpecialties([]);
+
+  // Soft delete the user
+  await user.destroy({ force: false });
+
+  return user;
 };
 
 module.exports = {
