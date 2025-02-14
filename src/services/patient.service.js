@@ -988,7 +988,7 @@ const getPatientFollowUps = async (clinicId) => {
                 as: 'treatmentSettings',
                 where: {
                   nextDate: {
-                    [Op.gt]: today, // Follow-up date is in the future
+                    [Op.gte]: today, // Follow-up date is today or in the future
                   },
                 },
                 required: true,
@@ -1002,15 +1002,27 @@ const getPatientFollowUps = async (clinicId) => {
     ],
   });
 
+  // Flatten the patient list for dental follow-ups
+  const flattenedDentalFollowUps = patientsWithActiveDentalFollowUps.flatMap((patient) =>
+    patient.diagnoses.flatMap((diagnosis) =>
+      diagnosis.treatment.treatmentSettings.map((setting) => ({
+        ...patient.dataValues,
+        nextDate: setting.nextDate,
+        service: 'Dentistry',
+      }))
+    )
+  );
+
   // Fetch patients with active follow-ups in GeneralPhysicianRecord
   const patientsWithActiveGPFollowUps = await Patient.findAll({
+    where: { clinicId },
     include: [
       {
         model: GeneralPhysicianRecord,
         as: 'gpRecords',
         where: {
           followUpDate: {
-            [Op.gt]: today, // Follow-up date is in the future
+            [Op.gte]: today, // Follow-up date is today or in the future
           },
         },
         required: true,
@@ -1018,19 +1030,19 @@ const getPatientFollowUps = async (clinicId) => {
     ],
   });
 
-  // Add a service key to each patient indicating the follow-up service
-  const patientsWithServiceKey = [
-    ...patientsWithActiveDentalFollowUps.map((patient) => ({ ...patient.dataValues, service: 'Dentistry' })),
-    ...patientsWithActiveGPFollowUps.map((patient) => ({ ...patient.dataValues, service: 'GP' })),
-  ];
+  // Flatten the patient list for GP follow-ups
+  const flattenedGPFollowUps = patientsWithActiveGPFollowUps.flatMap((patient) =>
+    patient.gpRecords.map((record) => ({
+      ...patient.dataValues,
+      nextDate: record.followUpDate,
+      service: 'GP',
+    }))
+  );
+
+  // Combine the results
+  const patientsWithServiceKey = [...flattenedDentalFollowUps, ...flattenedGPFollowUps];
 
   return patientsWithServiceKey;
-  // Combine the results and remove duplicates
-  // const allPatients = [...patientsWithActiveDentalFollowUps, ...patientsWithActiveGPFollowUps];
-
-  // const uniquePatients = allPatients.filter((patient, index, self) => index === self.findIndex((p) => p.id === patient.id));
-
-  // return uniquePatients;
 };
 
 module.exports = {
