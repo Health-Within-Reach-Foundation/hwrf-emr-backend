@@ -1,5 +1,5 @@
 const Joi = require('joi');
-const { password, objectId, role } = require('./custom.validation');
+const { password, role } = require('./custom.validation');
 
 const createUser = {
   body: Joi.object().keys({
@@ -7,9 +7,8 @@ const createUser = {
     password: Joi.string().custom(password).optional(),
     name: Joi.string().required(),
     roles: Joi.array().items(Joi.string()).optional(),
-    // specialist: Joi.string().optional(),
     phoneNumber: Joi.string().optional(),
-    specialities: Joi.array().items(Joi.string()).optional(),
+    specialties: Joi.array().items(Joi.string()).optional().allow(null),
   }),
 };
 
@@ -44,6 +43,7 @@ const updateUser = {
     specialties: Joi.array()
       .items(Joi.string().uuid().required().description('Specialty ID'))
       .optional()
+      .allow(null)
       .description('Updated specialties for the user'),
   }),
 };

@@ -1,12 +1,13 @@
 const Joi = require('joi');
 const { password, role } = require('./custom.validation');
 
+/**
+ * Joi validation schema for register (Superadmin register)
+ */
 const register = {
   body: Joi.object().keys({
     email: Joi.string().required().email(),
-    // password: Joi.string().required().custom(password),
     name: Joi.string().required(),
-    // role: Joi.string().required().custom(role),
     role: Joi.string().required(),
     phoneNumber: Joi.string()
       .pattern(/^[0-9]{10,15}$/)
@@ -15,6 +16,9 @@ const register = {
   }),
 };
 
+/**
+ * Joi validation schema for login
+ */
 const login = {
   body: Joi.object().keys({
     email: Joi.string().required(),
@@ -22,27 +26,37 @@ const login = {
   }),
 };
 
+/**
+ * Joi validation schema for logout
+ */
 const logout = {
   body: Joi.object().keys({
     refreshToken: Joi.string().required(),
   }),
 };
 
+/**
+ * Joi validation schema for refresh tokens
+ */
 const refreshTokens = {
   body: Joi.object().keys({
     refreshToken: Joi.string().required(),
     accessToken: Joi.string().required(),
-
-
   }),
 };
 
+/**
+ * Joi validation schema for forgot password
+ */
 const forgotPassword = {
   body: Joi.object().keys({
     email: Joi.string().email().required(),
   }),
 };
 
+/**
+ * Joi validation schema for reset password
+ */
 const resetPassword = {
   query: Joi.object().keys({
     token: Joi.string().required(),
@@ -52,12 +66,18 @@ const resetPassword = {
   }),
 };
 
+/**
+ * Joi validation schema for verify email
+ */
 const verifyEmail = {
   query: Joi.object().keys({
     token: Joi.string().required(),
   }),
 };
 
+/**
+ * Joi validation schema for getMe
+ */
 const getMe = {
   headers: Joi.object()
     .keys({

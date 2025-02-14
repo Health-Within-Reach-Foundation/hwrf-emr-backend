@@ -1,6 +1,15 @@
 const config = require('../config/config.js');
 const transporter = require('../config/mail.js');
 
+/**
+ * Sends an email using Azure's email service.
+ *
+ * @param {string|string[]} receivers_email - The email address or an array of email addresses of the recipients.
+ * @param {string} subject - The subject of the email.
+ * @param {string} message - The plain text or HTML body of the email.
+ * @param {Object[]} [attachment] - An optional array of attachment objects.
+ * @returns {Promise<boolean>} - Returns a promise that resolves to true if the email was sent successfully, otherwise false.
+ */
 const sendEmailAzure = async (receivers_email, subject, message, attachment) => {
   // Validate the receivers_email to ensure it's not empty
   if (!receivers_email || (Array.isArray(receivers_email) && receivers_email.length === 0)) {

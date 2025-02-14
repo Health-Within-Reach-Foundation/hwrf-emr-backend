@@ -1,6 +1,12 @@
 const ApiError = require('../utils/ApiError');
 const { Specialty } = require('../models/specialty.model');
 
+/**
+ * Fetches all specialties from the database.
+ *
+ * @returns {Promise<Array>} A promise that resolves to an array of specialties.
+ * @throws {ApiError} If no specialties are found.
+ */
 const getAllSpecialties = async () => {
   // Fetch clinic along with associated specialties
   const specialities = await Specialty.findAll();

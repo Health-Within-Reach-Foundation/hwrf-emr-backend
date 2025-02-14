@@ -42,6 +42,9 @@ const updatePatient = {
   }),
 };
 
+/**
+ * Validation for getting a list of patients by clinic
+ */
 const getPatientsByClinic = {
   query: Joi.object().keys({
     clinicId: Joi.string().uuid().required(), // Clinic ID is required
@@ -50,6 +53,9 @@ const getPatientsByClinic = {
   }),
 };
 
+/**
+ * Validation for getting a patient by ID
+ */
 const getPatientById = {
   params: Joi.object().keys({
     patientId: Joi.string().uuid().required(), // patientId must be a valid UUID and is required
@@ -65,6 +71,9 @@ const getPatientById = {
 
 /* ***************************** Patient Dental CRUD Validation *************************** */
 
+/**
+ * Validation schema for adding a new dental patient record
+ */
 const addDentalPatientRecord = {
   body: Joi.object().keys({
     appointmentId: Joi.string().uuid().required(),
@@ -90,6 +99,9 @@ const addDentalPatientRecord = {
   }),
 };
 
+/**
+ * Valdation schema for creating a diagnosis of a patient
+ */
 const createDiagnosis = {
   body: Joi.object().keys({
     complaints: Joi.array().items(Joi.string()).optional(),
@@ -123,6 +135,9 @@ const createDiagnosis = {
   },
 };
 
+/**
+ * Validation schema for getting a list of diagnoses
+ */
 const getDiagnoses = {
   query: Joi.object().keys({
     patientId: Joi.string().uuid().optional(),
@@ -131,12 +146,18 @@ const getDiagnoses = {
   }),
 };
 
+/**
+ * Validation schema for getting a diagnosis by ID
+ */
 const getDiagnosis = {
   params: Joi.object().keys({
     diagnosisId: Joi.string().uuid().required(),
   }),
 };
 
+/**
+ * Validation schema for updating a diagnosis
+ */
 const updateDiagnosis = {
   params: Joi.object().keys({
     diagnosisId: Joi.string().uuid().required(),
@@ -173,12 +194,18 @@ const updateDiagnosis = {
   },
 };
 
+/**
+ * Validation schema for deleting a diagnosis
+ */
 const deleteDiagnosis = {
   params: Joi.object().keys({
     diagnosisId: Joi.string().uuid().required(),
   }),
 };
 
+/**
+ * Validation schema for creating a treatment
+ */
 const createTreatment = {
   body: Joi.object().keys({
     diagnosisId: Joi.string().uuid().required().description('Diagnosis ID'),
@@ -223,6 +250,9 @@ const createTreatment = {
   },
 };
 
+/**
+ * Validation schema for getting a list of treatments
+ */
 const getTreatments = {
   query: Joi.object().keys({
     diagnosisId: Joi.string().uuid().required().description('Diagnosis ID'),
@@ -231,12 +261,18 @@ const getTreatments = {
   }),
 };
 
+/**
+ * Validation schema for getting a treatment by ID
+ */
 const getTreatmentById = {
   params: Joi.object().keys({
     treatmentId: Joi.string().uuid().required().description('Treatment ID'),
   }),
 };
 
+/**
+ * Validation schema for updating a treatment
+ */
 const updateTreatment = {
   params: Joi.object().keys({
     treatmentId: Joi.string().uuid().required().description('Treatment ID'),
@@ -290,6 +326,9 @@ const updateTreatment = {
   },
 };
 
+/**
+ * Validation schema for deleting a treatment
+ */
 const deleteTreatment = {
   params: Joi.object().keys({
     treatmentId: Joi.string().uuid().required().description('Treatment ID'),
@@ -300,6 +339,9 @@ const deleteTreatment = {
 
 /* ***************************** Patient Mammography CRUD Validation *************************** */
 
+/**
+ * Validation schema for creating a mammography record
+ */
 const createMammography = {
   params: Joi.object().keys({
     patientId: Joi.string().uuid().required().description('Patient ID'),
@@ -402,12 +444,18 @@ const createMammography = {
   },
 };
 
+/**
+ * Validation schema for getting a list of mammography records
+ */
 const getMammography = {
   params: Joi.object().keys({
     patientId: Joi.string().uuid().required().description('Patient ID'),
   }),
 };
 
+/**
+ * Validation schema for updating a mammography record by patient ID
+ */
 const updateMammography = {
   body: Joi.object().keys({
     menstrualAge: Joi.number().integer().min(0).allow('null', null).optional(),
@@ -504,6 +552,9 @@ const updateMammography = {
 
 /* ***************************** Patient GP CRUD Validation *************************** */
 
+/**
+ * Validation schema for creating a GP record
+ */
 const createGPRecord = {
   body: Joi.object().keys({
     patientId: Joi.string().uuid().allow('', null).optional(),
@@ -540,18 +591,27 @@ const createGPRecord = {
   }),
 };
 
+/**
+ * Validation schema for getting a list of GP records by patient ID
+ */
 const getGPRecordsByPatient = {
   query: Joi.object().keys({
     patientId: Joi.string().uuid().required(),
   }),
 };
 
+/**
+ * Validation schema for getting a GP record by ID
+ */
 const getGPRecord = {
   params: Joi.object().keys({
     gpRecordId: Joi.string().uuid().required(),
   }),
 };
 
+/**
+ * Validation schema for updating a GP record
+ */
 const updateGPRecord = {
   params: Joi.object().keys({
     gpRecordId: Joi.string().uuid().required(),
@@ -590,12 +650,6 @@ const updateGPRecord = {
   }).min(1),
 };
 
-// const deleteGPRecord = {
-//   params: Joi.object().keys({
-//     gpRecordId: Joi.string().uuid().required(),
-//   }),
-// };
-
 /* ***************************** Patient GP CRUD Validation *************************** */
 
 module.exports = {
@@ -621,5 +675,4 @@ module.exports = {
   getGPRecordsByPatient,
   getGPRecord,
   updateGPRecord,
-  // deleteGPRecord,
 };

@@ -1,3 +1,12 @@
+/**
+ * Middleware to authorize user roles based on required permissions.
+ *
+ * @param {...string} requiredPermissions - The permissions required to access the resource.
+ * @returns {Function} Middleware function to check user roles and permissions.
+ *
+ * @throws {ApiError} If the user is not authenticated.
+ * @throws {ApiError} If the user does not have the required permissions.
+ */
 const roleAuthorization =
   (...requiredPermissions) =>
   (req, res, next) => {

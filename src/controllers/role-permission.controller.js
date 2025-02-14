@@ -2,6 +2,19 @@ const httpStatus = require('http-status');
 const catchAsync = require('../utils/catchAsync');
 const { rolePermissionService } = require('../services');
 
+/**
+ * Create a new role with permissions.
+ *
+ * @param {Object} req - Express request object.
+ * @param {Object} req.body - Request body.
+ * @param {string} req.body.roleName - Name of the role.
+ * @param {Array<string>} req.body.permissions - List of permissions for the role.
+ * @param {string} req.body.roleDescription - Description of the role.
+ * @param {Object} req.user - Authenticated user object.
+ * @param {string} req.user.clinicId - ID of the clinic.
+ * @param {Object} res - Express response object.
+ * @returns {Promise<void>} - Returns a promise that resolves to void.
+ */
 const createRole = catchAsync(async (req, res) => {
   const { roleName, permissions, roleDescription } = req.body;
   const clinicId = req.user.clinicId;
@@ -15,6 +28,19 @@ const createRole = catchAsync(async (req, res) => {
   });
 });
 
+/**
+ * Get roles by clinic.
+ * 
+ * This function retrieves roles associated with a specific clinic based on the clinic ID
+ * obtained from the authenticated user's request object.
+ * 
+ * @param {Object} req - Express request object.
+ * @param {Object} req.user - Authenticated user object.
+ * @param {string} req.user.clinicId - Clinic ID associated with the authenticated user.
+ * @param {Object} res - Express response object.
+ * 
+ * @returns {Promise<void>} - A promise that resolves to sending a JSON response with the roles data.
+ */
 const getRolesByClinic = catchAsync(async (req, res) => {
   console.log(req.user);
   const clinicId = req.user.clinicId;
@@ -28,6 +54,14 @@ const getRolesByClinic = catchAsync(async (req, res) => {
   });
 });
 
+/**
+ * Controller to get all permissions.
+ * 
+ * @param {Object} req - Express request object.
+ * @param {Object} res - Express response object.
+ * @returns {Promise<void>} - Returns a promise that resolves to void.
+ * @throws {Error} - Throws an error if unable to retrieve permissions.
+ */
 const getAllPermissions = catchAsync(async (req, res) => {
   const permissions = await rolePermissionService.getAllPermissions();
 
@@ -38,6 +72,16 @@ const getAllPermissions = catchAsync(async (req, res) => {
   });
 });
 
+/**
+ * Updates a role with the provided data and permissions.
+ *
+ * @param {Object} req - The request object.
+ * @param {Object} req.query - The query parameters.
+ * @param {string} req.query.roleId - The ID of the role to update.
+ * @param {Object} req.body - The body of the request containing role data.
+ * @param {Object} res - The response object.
+ * @returns {Promise<void>} - A promise that resolves when the role is updated.
+ */
 const updateRole = catchAsync(async (req, res) => {
   const roleId = req.query.roleId;
   const roleData = req.body;

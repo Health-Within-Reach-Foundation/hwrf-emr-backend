@@ -18,6 +18,16 @@ const ApiError = require('../utils/ApiError');
 //   return next();
 // };
 
+/**
+ * Middleware to validate request data against a given schema.
+ *
+ * @param {Object} schema - The validation schema.
+ * @param {Object} [schema.params] - Schema for request parameters.
+ * @param {Object} [schema.query] - Schema for request query parameters.
+ * @param {Object} [schema.body] - Schema for request body.
+ * @param {Function} [schema.files] - Function to validate request files.
+ * @returns {Function} Middleware function to validate request data.
+ */
 const validate = (schema) => (req, res, next) => {
   // Validate request body, params, and query
   const validSchema = pick(schema, ['params', 'query', 'body']);

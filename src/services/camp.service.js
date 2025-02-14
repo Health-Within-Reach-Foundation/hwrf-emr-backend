@@ -17,7 +17,23 @@ const { Diagnosis } = require('../models/diagnosis.model');
 const { TreatmentSetting } = require('../models/treatment-setting.model');
 const { calculateCampAnalytics, calculateDentistryAnalytics } = require('../utils/camp-utility');
 
-// function to create camp
+/**
+ * Creates a new camp with the provided data.
+ *
+ * @param {Object} campData - The data for the new camp.
+ * @param {string} campData.name - The name of the camp.
+ * @param {string} campData.location - The location of the camp.
+ * @param {string} campData.city - The city where the camp is located.
+ * @param {Array<number>} campData.vans - The list of van IDs associated with the camp.
+ * @param {Date} campData.startDate - The start date of the camp.
+ * @param {Date} campData.endDate - The end date of the camp.
+ * @param {Array<number>} campData.specialties - The list of specialty IDs associated with the camp.
+ * @param {number} campData.organizerId - The ID of the organizer of the camp.
+ * @param {number} campData.clinicId - The ID of the clinic associated with the camp.
+ * @param {Array<number>} campData.users - The list of user IDs associated with the camp.
+ * @returns {Promise<Object>} The created camp object.
+ * @throws {ApiError} If one or more specialties are not found.
+ */
 const createCamp = async (campData) => {
   const { name, location, city, vans, startDate, endDate, specialties, organizerId, clinicId, users } = campData;
 
@@ -51,6 +67,13 @@ const createCamp = async (campData) => {
   return camp;
 };
 
+/**
+ * Retrieves a list of camps based on the provided clinic ID and optional status.
+ *
+ * @param {number} clinicId - The ID of the clinic to filter camps by.
+ * @param {string|null} [status=null] - The optional status to filter camps by. If not provided, all statuses are included.
+ * @returns {Promise<Array>} A promise that resolves to an array of camp objects.
+ */
 const getCamps = async (clinicId, status = null) => {
   let where = { clinicId };
   if (status) {
@@ -75,7 +98,7 @@ const getCamps = async (clinicId, status = null) => {
 
 /**
  * Fetch camp details by campId.
- * @param {string} campId
+ * @param {uid} campId
  * @returns {Promise<Object>}
  */
 const getCampById = async (campId) => {
@@ -143,6 +166,13 @@ const getCampById = async (campId) => {
   return camp;
 };
 
+/**
+ * Sets the current camp for a user.
+ *
+ * @param {number} campId - The ID of the camp to set as current.
+ * @param {number} userId - The ID of the user whose current camp is being set.
+ * @returns {Promise<Object>} - A promise that resolves to the updated user object.
+ */
 const setCurrentCamp = async (campId, userId) => {
   const user = await User.update({ currentCampId: campId }, { where: { id: userId } });
   return user;
@@ -242,6 +272,22 @@ const updateCampById = async (campId, campData) => {
   return camp.reload(); // Return updated camp with relations
 };
 
+/**
+ * Fetches detailed information about a specific camp, including associated clinics, users, patients, and their related data.
+ * 
+ * @param {number} campId - The ID of the camp to fetch details for.
+ * @returns {Promise<Object>} - A promise that resolves to an object containing camp details, flattened patients for UI display, and analytics data.
+ * @throws {ApiError} - Throws an error if the camp is not found.
+ * 
+ * @example
+ * const campDetails = await getCampDetails(1);
+ * console.log(campDetails);
+ * 
+ * @typedef {Object} CampDetails
+ * @property {Object} camp - The camp details.
+ * @property {Array<Object>} patients - Flattened patients for UI display.
+ * @property {Object} analytics - Analytics data calculated from unique patients.
+ */
 const getCampDetails = async (campId) => {
   console.log('Fetching camp details for campId:', campId);
   const camp = await Camp.findByPk(campId, {

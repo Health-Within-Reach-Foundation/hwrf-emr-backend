@@ -28,6 +28,12 @@ const createRoleWithPermissions = async (roleBody, permissions) => {
   return role;
 };
 
+/**
+ * Bulk creates roles.
+ *
+ * @param {Array<Object>} roles - An array of role objects to be created.
+ * @returns {Promise<Array<Object>>} - A promise that resolves to an array of created role objects.
+ */
 const bulkCreateRole = async (roles) => {
   return Role.bulkCreate(roles);
 };
@@ -77,7 +83,7 @@ const getAllPermissions = async () => {
 
 /**
  * Update role details and associated permissions
- * @param {String} roleId - The ID of the role to update
+ * @param {string} roleId - The ID of the role to update
  * @param {Object} roleBody - The role details and permissions
  * @returns {Promise<Object>}
  */
@@ -151,7 +157,6 @@ const updateRoleWithPermissions = async (roleId, roleBody) => {
   }
 };
 
-// const get
 
 module.exports = {
   createRoleWithPermissions,

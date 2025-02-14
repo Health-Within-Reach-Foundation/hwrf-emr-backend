@@ -3,15 +3,10 @@ const auth = require('../../middlewares/auth');
 const validate = require('../../middlewares/validate');
 const roleAuthorization = require('../../middlewares/role-authorise');
 const { appointmentValidation } = require('../../validations');
-const { patientController, appointmentController } = require('../../controllers');
+const { appointmentController } = require('../../controllers');
 
 const router = express.Router();
 
-/**
- * @route GET /appointments
- * @desc Fetch appointments with filters and sorting
- * @access Private (requires authentication)
- */
 router.route('/').get(
   auth(), // Authenticate the user
   // roleAuthorization('queues:read'),
@@ -31,7 +26,7 @@ router.route('/book').post(
 );
 
 router
-  .route('/mark/:appointmentId')
-  .patch(auth(), validate(appointmentValidation.markAppointment), appointmentController.markAppointment);
+  .route('/:appointmentId')
+  .patch(auth(), validate(appointmentValidation.updateAppointment), appointmentController.updateAppointment);
 
 module.exports = router;

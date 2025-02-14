@@ -170,11 +170,6 @@ const generateVerifyEmailToken = async (user) => {
   return verifyEmailToken;
 };
 
-/**
- * Generate reset password token
- * @param {string} email
- * @returns {Promise<string>}
- */
 
 module.exports = {
   generateToken,

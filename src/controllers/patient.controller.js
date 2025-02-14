@@ -6,6 +6,17 @@ const { uploadFile } = require('../utils/azure-service');
 const fs = require('fs');
 const ApiError = require('../utils/ApiError');
 
+/**
+ * Create a new patient.
+ *
+ * @param {Object} req - Express request object.
+ * @param {Object} req.body - The request body containing patient data.
+ * @param {string} req.user.clinicId - The ID of the clinic to which the patient belongs.
+ * @param {string} [req.user.currentCampId] - The ID of the current camp, if applicable.
+ * @param {Object} res - Express response object.
+ * @returns {Promise<void>} - A promise that resolves when the patient is created.
+ * @throws {ApiError} - Throws an error if the clinic is not found, required fields are missing, or registration number generation fails.
+ */
 const createPatient = catchAsync(async (req, res) => {
   const clinic = await clinicService.getClinicById(req.user.clinicId);
   if (!clinic) {
@@ -54,7 +65,15 @@ const createPatient = catchAsync(async (req, res) => {
   });
 });
 
-// Controller to add dentist patient record
+
+/**
+ * Adds a dental patient record.
+ *
+ * @param {Object} req - The request object.
+ * @param {Object} req.body - The body of the request containing the dental patient record data.
+ * @param {Object} res - The response object.
+ * @returns {Promise<void>} - A promise that resolves when the dental patient record is added.
+ */
 const addDentalPatientRecord = catchAsync(async (req, res) => {
   // const { patientId } = req.params;
   const record = await dentalService.addDentalPatientRecord(req.body);
@@ -65,7 +84,25 @@ const addDentalPatientRecord = catchAsync(async (req, res) => {
     data: record,
   });
 });
-// Controller to add dentist patient mammography
+
+
+/**
+ * Controller to handle the creation of a mammography record.
+ * 
+ * @param {Object} req - Express request object
+ * @param {Object} req.file - Uploaded file object
+ * @param {Object} req.body - Request body
+ * @param {Object} req.user - Authenticated user object
+ * @param {string} req.user.currentCampId - Current camp ID of the user
+ * @param {string} req.user.clinicId - Clinic ID of the user
+ * @param {Object} req.params - Request parameters
+ * @param {string} req.params.patientId - ID of the patient
+ * @param {Object} res - Express response object
+ * 
+ * @returns {Promise<void>} - Returns a promise that resolves to void
+ * 
+ * @throws {ApiError} - Throws an error if file upload or processing fails
+ */
 const createMammography = catchAsync(async (req, res) => {
   const { file, body } = req;
   const campId = req?.user?.currentCampId || null;
@@ -109,6 +146,17 @@ const createMammography = catchAsync(async (req, res) => {
     data: record,
   });
 });
+
+
+/**
+ * Get mammography report for a specific patient.
+ *
+ * @param {Object} req - Express request object.
+ * @param {Object} req.params - Request parameters.
+ * @param {string} req.params.patientId - ID of the patient.
+ * @param {Object} res - Express response object.
+ * @returns {Promise<void>} - Returns a promise that resolves to void.
+ */
 const getMammography = catchAsync(async (req, res) => {
   const { patientId } = req.params;
   const record = await patientService.getMammographyById(patientId);
@@ -118,7 +166,26 @@ const getMammography = catchAsync(async (req, res) => {
     data: record,
   });
 });
-// Controller to add dentist patient mammography
+
+
+/**
+ * Updates mammography details for a patient.
+ *
+ * This function handles the update of mammography details for a patient, including the upload of a screening image file
+ * to a specified storage location. If a file is provided, it generates a unique key for the file, uploads it, and saves
+ * the file metadata. The temporary file is then deleted from local storage. The function then appends the file paths to
+ * the request body and updates the patient's mammography details in the database.
+ *
+ * @param {Object} req - The request object.
+ * @param {Object} req.params - The request parameters.
+ * @param {string} req.params.patientId - The ID of the patient.
+ * @param {Object} req.file - The file object containing the screening image.
+ * @param {Object} req.body - The request body containing mammography details.
+ * @param {Object} req.user - The user object containing user details.
+ * @param {Object} res - The response object.
+ * @returns {Promise<void>} - A promise that resolves when the operation is complete.
+ * @throws {ApiError} - Throws an error if the file upload fails or if there is an error processing the file.
+ */
 const updateMammography = catchAsync(async (req, res) => {
   const { patientId } = req.params;
   const { file, body } = req;
@@ -169,8 +236,18 @@ const updateMammography = catchAsync(async (req, res) => {
   });
 });
 
+
 /**
- * Fetch all patients by clinic ID.
+ * Get patients by clinic.
+ *
+ * This function retrieves a list of patients associated with the clinic
+ * specified by the clinicId in the request user's data.
+ *
+ * @param {Object} req - The request object.
+ * @param {Object} req.user - The user object attached to the request.
+ * @param {string} req.user.clinicId - The ID of the clinic to retrieve patients for.
+ * @param {Object} res - The response object.
+ * @returns {Promise<void>} - A promise that resolves when the response is sent.
  */
 const getPatientsByClinic = catchAsync(async (req, res) => {
   // const currentCampId = req.user.currentCampId;
@@ -180,6 +257,18 @@ const getPatientsByClinic = catchAsync(async (req, res) => {
   res.status(httpStatus.OK).json(patients);
 });
 
+
+/**
+ * Get patient details by ID.
+ * 
+ * @param {Object} req - Express request object.
+ * @param {Object} req.params - Request parameters.
+ * @param {string} req.params.patientId - ID of the patient.
+ * @param {Object} req.query - Request query parameters.
+ * @param {string} [req.query.specialtyId=null] - ID of the specialty (optional).
+ * @param {Object} res - Express response object.
+ * @returns {Promise<void>} - Returns a promise that resolves to void.
+ */
 const getPatientDetailsById = catchAsync(async (req, res) => {
   // console.log('user speciality ->', req.user.specialties[0]);
   const patientId = req.params.patientId;
@@ -193,6 +282,17 @@ const getPatientDetailsById = catchAsync(async (req, res) => {
   });
 });
 
+
+/**
+ * Updates the details of a patient.
+ *
+ * @param {Object} req - The request object.
+ * @param {Object} req.params - The request parameters.
+ * @param {string} req.params.patientId - The ID of the patient to update.
+ * @param {Object} req.body - The request body containing patient data.
+ * @param {Object} res - The response object.
+ * @returns {Promise<void>} - A promise that resolves when the patient details are updated.
+ */
 const updatePatientDetails = catchAsync(async (req, res) => {
   const patientId = req.params.patientId;
   const patientData = req.body;
@@ -206,6 +306,26 @@ const updatePatientDetails = catchAsync(async (req, res) => {
   });
 });
 
+
+/**
+ * Creates a new diagnosis for a patient.
+ * 
+ * This function handles the creation of a new diagnosis, including the processing
+ * and uploading of any attached x-ray files. It extracts file URLs from the uploaded
+ * files, uploads them to a specified location, and appends the file paths to the
+ * request body before passing the data to the patient service for diagnosis creation.
+ * 
+ * @param {Object} req - The request object.
+ * @param {Object} req.files - The uploaded files.
+ * @param {Object} req.body - The request body containing diagnosis data.
+ * @param {Object} req.user - The user object.
+ * @param {string} req.user.clinicId - The ID of the clinic.
+ * @param {Object} res - The response object.
+ * 
+ * @returns {Promise<void>} - A promise that resolves when the diagnosis is created.
+ * 
+ * @throws {ApiError} - Throws an error if file upload fails.
+ */
 const createDiagnosis = catchAsync(async (req, res) => {
   const { files, body } = req;
   // const campId = req?.user?.currentCampId || null;
@@ -265,6 +385,15 @@ const createDiagnosis = catchAsync(async (req, res) => {
   });
 });
 
+
+/**
+ * Get diagnoses based on query parameters.
+ * 
+ * @param {Object} req - Express request object.
+ * @param {Object} req.query - Query parameters for fetching diagnoses.
+ * @param {Object} res - Express response object.
+ * @returns {Promise<void>} - Returns a promise that resolves to void.
+ */
 const getDiagnoses = catchAsync(async (req, res) => {
   console.log('getting diagnoses ');
   const diagnoses = await patientService.getDiagnoses(req.query);
@@ -276,6 +405,19 @@ const getDiagnoses = catchAsync(async (req, res) => {
   });
 });
 
+
+/**
+ * Get diagnosis by ID.
+ * 
+ * @param {Object} req - Express request object.
+ * @param {Object} req.params - Request parameters.
+ * @param {string} req.params.diagnosisId - ID of the diagnosis to retrieve.
+ * @param {Object} req.files - Uploaded files (if any).
+ * @param {Object} req.body - Request body.
+ * @param {Object} res - Express response object.
+ * 
+ * @returns {Promise<void>} - Returns a promise that resolves to void.
+ */
 const getDiagnosis = catchAsync(async (req, res) => {
   const { files, body } = req;
 
@@ -287,6 +429,23 @@ const getDiagnosis = catchAsync(async (req, res) => {
   });
 });
 
+
+/**
+ * Updates the diagnosis for a patient, including handling file uploads for x-ray images.
+ * 
+ * @param {Object} req - The request object.
+ * @param {Object} req.files - The files uploaded in the request.
+ * @param {Object} req.body - The body of the request.
+ * @param {Object} req.user - The user making the request.
+ * @param {string} req.user.clinicId - The clinic ID of the user.
+ * @param {Object} req.params - The route parameters.
+ * @param {string} req.params.diagnosisId - The ID of the diagnosis to update.
+ * @param {Object} res - The response object.
+ * 
+ * @returns {Promise<void>} - A promise that resolves to void.
+ * 
+ * @throws {ApiError} - Throws an error if file upload fails.
+ */
 const updateDiagnosis = catchAsync(async (req, res) => {
   const { files, body } = req;
 
@@ -343,6 +502,16 @@ const updateDiagnosis = catchAsync(async (req, res) => {
   });
 });
 
+
+/**
+ * Deletes a diagnosis by its ID.
+ *
+ * @param {Object} req - The request object.
+ * @param {Object} req.params - The request parameters.
+ * @param {string} req.params.diagnosisId - The ID of the diagnosis to delete.
+ * @param {Object} res - The response object.
+ * @returns {Promise<void>} - A promise that resolves when the diagnosis is deleted.
+ */
 const deleteDiagnosis = catchAsync(async (req, res) => {
   await patientService.deleteDiagnosis(req.params.diagnosisId);
   res.status(httpStatus.OK).json({
@@ -351,10 +520,26 @@ const deleteDiagnosis = catchAsync(async (req, res) => {
   });
 });
 
-// const createTreatment = catchAsync(async (req, res) => {
-//   const treatment = await patientService.createTreatment(req.body);
-//   res.status(httpStatus.CREATED).json({ success: true, data: treatment });
-// });
+
+/**
+ * Creates a new treatment for a patient.
+ * 
+ * This function handles the creation of a new treatment record. It processes any uploaded files,
+ * uploads them to a specified storage location, and includes their metadata in the treatment record.
+ * 
+ * @function
+ * @async
+ * @param {Object} req - The request object.
+ * @param {Object} req.files - The files uploaded in the request.
+ * @param {Object} req.body - The body of the request containing treatment details.
+ * @param {Object} req.user - The user object containing user details.
+ * @param {string} req.user.clinicId - The ID of the clinic the user belongs to.
+ * @param {string} req.user.currentCampId - The ID of the current camp the user is associated with.
+ * @param {Object} res - The response object.
+ * @returns {Promise<void>} - A promise that resolves when the treatment is created.
+ * 
+ * @throws {ApiError} - Throws an error if file upload fails.
+ */
 const createTreatment = catchAsync(async (req, res) => {
   const { files, body } = req;
   const campId = req?.user?.currentCampId || null;
@@ -410,21 +595,52 @@ const createTreatment = catchAsync(async (req, res) => {
   });
 });
 
+
+/**
+ * Get treatments based on query parameters.
+ * 
+ * @param {Object} req - Express request object.
+ * @param {Object} req.query - Query parameters for fetching treatments.
+ * @param {Object} res - Express response object.
+ * @returns {Promise<void>} - Returns a promise that resolves to void.
+ */
 const getTreatments = catchAsync(async (req, res) => {
   const treatments = await patientService.getTreatments(req.query);
   res.status(httpStatus.OK).json({ success: true, data: treatments });
 });
 
+
+/**
+ * Get treatment details by ID.
+ *
+ * @param {Object} req - Express request object
+ * @param {Object} req.params - Request parameters
+ * @param {string} req.params.treatmentId - ID of the treatment to retrieve
+ * @param {Object} res - Express response object
+ * @returns {Promise<void>} - Returns a promise that resolves to void
+ */
 const getTreatmentById = catchAsync(async (req, res) => {
   const treatment = await patientService.getTreatmentById(req.params.treatmentId);
   res.status(httpStatus.OK).json({ success: true, data: treatment });
 });
 
-// const updateTreatment = catchAsync(async (req, res) => {
-//   const updatedTreatment = await patientService.updateTreatment(req.params.treatmentId, req.body);
-//   res.status(httpStatus.OK).json({ success: true, data: updatedTreatment });
-// });
 
+/**
+ * Update treatment information for a patient, including uploading x-ray files.
+ *
+ * @param {Object} req - Express request object.
+ * @param {Object} req.files - Array of files uploaded in the request.
+ * @param {Object} req.body - Request body containing treatment details.
+ * @param {Object} req.user - User object containing user details.
+ * @param {string} req.user.clinicId - Clinic ID of the user.
+ * @param {Object} req.params - Request parameters.
+ * @param {string} req.params.treatmentId - ID of the treatment to be updated.
+ * @param {Object} res - Express response object.
+ *
+ * @returns {Promise<void>} - Returns a promise that resolves to void.
+ *
+ * @throws {ApiError} - Throws an error if file upload fails.
+ */
 const updateTreatment = catchAsync(async (req, res) => {
   const { files, body } = req;
 
@@ -473,6 +689,16 @@ const updateTreatment = catchAsync(async (req, res) => {
   res.status(httpStatus.OK).json({ success: true, data: updatedTreatment, message: 'Treatment saved successfully!' });
 });
 
+
+/**
+ * Delete a treatment by ID
+ * 
+ * @param {Object} req - Express request object
+ * @param {Object} req.params - Request parameters
+ * @param {string} req.params.treatmentId - ID of the treatment to delete
+ * @param {Object} res - Express response object
+ * @returns {Promise<void>}
+ */
 const deleteTreatment = catchAsync(async (req, res) => {
   await patientService.deleteTreatment(req.params.treatmentId);
   res.status(httpStatus.NO_CONTENT).send();
@@ -480,6 +706,19 @@ const deleteTreatment = catchAsync(async (req, res) => {
 
 /* ********************* GP Patient controller ************************* */
 
+/**
+ * Creates a new GP record.
+ *
+ * This function is an asynchronous handler that creates a new GP record using the data provided in the request body.
+ * It also includes the current camp ID from the authenticated user, if available.
+ *
+ * @param {Object} req - The request object.
+ * @param {Object} req.body - The body of the request containing the GP record data.
+ * @param {Object} req.user - The authenticated user object.
+ * @param {string} [req.user.currentCampId] - The current camp ID of the authenticated user.
+ * @param {Object} res - The response object.
+ * @returns {Promise<void>} - A promise that resolves when the GP record is created and the response is sent.
+ */
 const createGPRecord = catchAsync(async (req, res) => {
   const campId = req?.user?.currentCampId || null;
   const gpRecordBody = { ...req?.body, campId };
@@ -491,6 +730,18 @@ const createGPRecord = catchAsync(async (req, res) => {
   });
 });
 
+
+/**
+ * Get GP records by patient ID.
+ *
+ * This function fetches the GP records for a specific patient based on the patient ID provided in the query parameters.
+ *
+ * @param {Object} req - The request object.
+ * @param {Object} req.query - The query parameters.
+ * @param {string} req.query.patientId - The ID of the patient whose GP records are to be fetched.
+ * @param {Object} res - The response object.
+ * @returns {Promise<void>} - A promise that resolves to void.
+ */
 const getGPRecordsByPatient = catchAsync(async (req, res) => {
   const records = await patientService.getGPRecordsByPatient(req.query.patientId);
   res.status(httpStatus.OK).json({
@@ -500,6 +751,19 @@ const getGPRecordsByPatient = catchAsync(async (req, res) => {
   });
 });
 
+
+/**
+ * Get GP Record by ID
+ * 
+ * @param {Object} req - Express request object
+ * @param {Object} req.params - Request parameters
+ * @param {string} req.params.gpRecordId - ID of the GP record to fetch
+ * @param {Object} res - Express response object
+ * @returns {Promise<void>} - Returns a promise that resolves to void
+ * 
+ * @description This function fetches a GP record by its ID and sends it in the response.
+ * It uses the patientService to retrieve the record and sends a success message along with the data.
+ */
 const getGPRecordById = catchAsync(async (req, res) => {
   const record = await patientService.getGPRecordById(req.params.gpRecordId);
   res.status(httpStatus.OK).send({
@@ -509,6 +773,17 @@ const getGPRecordById = catchAsync(async (req, res) => {
   });
 });
 
+
+/**
+ * Updates a GP record.
+ *
+ * @param {Object} req - The request object.
+ * @param {Object} req.params - The request parameters.
+ * @param {string} req.params.gpRecordId - The ID of the GP record to update.
+ * @param {Object} req.body - The request body containing the update data.
+ * @param {Object} res - The response object.
+ * @returns {Promise<void>} - A promise that resolves when the record is updated.
+ */
 const updateGPRecord = catchAsync(async (req, res) => {
   const record = await patientService.updateGPRecord(req.params.gpRecordId, req.body);
   res.status(httpStatus.OK).json({
@@ -518,6 +793,16 @@ const updateGPRecord = catchAsync(async (req, res) => {
   });
 });
 
+
+/**
+ * Deletes a GP record by its ID.
+ *
+ * @param {Object} req - The request object.
+ * @param {Object} req.params - The request parameters.
+ * @param {string} req.params.gpRecordId - The ID of the GP record to delete.
+ * @param {Object} res - The response object.
+ * @returns {Promise<void>} - A promise that resolves when the GP record is deleted.
+ */
 const deleteGPRecord = catchAsync(async (req, res) => {
   await patientService.deleteGPRecord(req.params.gpRecordId);
   res.status(httpStatus.OK).json({
@@ -527,6 +812,18 @@ const deleteGPRecord = catchAsync(async (req, res) => {
   });
 });
 
+
+/**
+ * Get patient follow-ups.
+ *
+ * This function fetches the follow-up appointments for patients associated with the clinic of the logged-in user.
+ *
+ * @param {Object} req - Express request object.
+ * @param {Object} req.user - User object attached to the request.
+ * @param {string} req.user.clinicId - ID of the clinic associated with the user.
+ * @param {Object} res - Express response object.
+ * @returns {Promise<void>} - Returns a promise that resolves to void.
+ */
 const getPatientFollowUps = catchAsync(async (req, res) => {
   const clinicId = req?.user?.clinicId || null;
   const followUps = await patientService.getPatientFollowUps(clinicId);

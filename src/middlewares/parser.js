@@ -1,3 +1,18 @@
+/**
+ * Middleware to parse specified fields in the request body as JSON arrays.
+ *
+ * @param {string[]} fields - An array of field names to be parsed.
+ * @returns {function} Middleware function to parse specified fields.
+ *
+ * @example
+ * // Usage in an Express app
+ * const parseArrayFields = require('./middlewares/parser');
+ * app.use(parseArrayFields(['field1', 'field2']));
+ *
+ * @param {Object} req - Express request object.
+ * @param {Object} res - Express response object.
+ * @param {function} next - Express next middleware function.
+ */
 const parseArrayFields = (fields) => (req, res, next) => {
   try {
     fields.forEach((field) => {

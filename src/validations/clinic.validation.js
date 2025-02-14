@@ -1,6 +1,9 @@
 const Joi = require('joi');
 const { password, clinicStatusValidation } = require('./custom.validation');
 
+/**
+ * Validation schema for onboarding a clinic.
+ */
 const onboardClinic = {
   body: Joi.object().keys({
     clinicName: Joi.string().required(),
@@ -19,10 +22,12 @@ const onboardClinic = {
     adminPhoneNumber: Joi.string()
       .required()
       .pattern(/^[0-9]{10,15}$/),
-    // password: Joi.string().required().custom(password),
   }),
 };
 
+/**
+ * Validation schema for querying clinics.
+ */
 const queryOptionsValidation = {
   query: Joi.object().keys({
     status: Joi.string()
@@ -50,18 +55,27 @@ const queryOptionsValidation = {
   }),
 };
 
+/**
+ * Validation schema for getting a clinic by ID.
+ */
 const getClinic = {
   params: Joi.object().keys({
     clinicId: Joi.string().uuid(),
   }),
 };
 
+/**
+ * Validation schema for getting a file by key.
+ */
 const getFileByKey = {
   query: Joi.object().keys({
     key: Joi.string(),
   }),
 };
 
+/**
+ * Validation schema for approving a clinic.
+ */
 const approveClinic = {
   params: Joi.object().keys({
     clinicId: Joi.string(),
@@ -71,6 +85,9 @@ const approveClinic = {
   }),
 };
 
+/**
+ * Validation schema for creating a role.
+ */
 const createRole = {
   body: Joi.object().keys({
     roleName: Joi.string().required(),
@@ -78,6 +95,9 @@ const createRole = {
   }),
 };
 
+/**
+ * Validation schema for updating a clinic by ID.
+ */
 const updateClinicById = {
   params: Joi.object().keys({
     clinicId: Joi.string().uuid().required(), // Clinic ID must be a valid UUID

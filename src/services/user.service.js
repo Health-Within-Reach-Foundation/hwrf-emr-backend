@@ -21,7 +21,7 @@ const createUser = async (userBody) => {
 
 /**
  * Get user by id
- * @param {ObjectId} id
+ * @param {string} id
  * @returns {Promise<User>}
  */
 const getUserById = async (id) => {
@@ -116,6 +116,13 @@ const getUserByEmail = async (email) => {
   });
 };
 
+/**
+ * Retrieves a user associated with a clinic based on the provided email.
+ *
+ * @param {string} userEmail - The email of the user to retrieve.
+ * @returns {Promise<{user: Object, isSuperAdmin: boolean}>} - A promise that resolves to an object containing the user and a boolean indicating if the user is a superadmin.
+ * @throws {ApiError} - Throws an error if the user is not found or if the user has no associated clinic and is not a superadmin.
+ */
 const getUserAssociatedToClinic = async (userEmail) => {
   console.log('userid -->', userEmail);
   const user = await User.findOne({
@@ -166,7 +173,7 @@ const getUsersByClinic = async (clinicId) => {
   // Query users associated with the given clinicId
   const users = await User.findAll({
     where: { clinicId }, // Filter by clinicId
-    attributes: ['id', 'name', 'email', 'phoneNumber', 'specialist', 'createdAt', 'updatedAt'], // Select required fields
+    attributes: ['id', 'name', 'email', 'phoneNumber', 'specialist', 'status', 'createdAt', 'updatedAt'], // Select required fields
     include: [
       {
         model: Role, // Include roles associated with the user
@@ -197,7 +204,7 @@ const getUsersByClinic = async (clinicId) => {
 
 /**
  * Update user by id
- * @param {ObjectId} userId
+ * @param {string} userId
  * @param {Object} updateBody
  * @returns {Promise<User>}
  */
@@ -213,6 +220,7 @@ const updateUserById = async (userId, updateBody) => {
   return user;
 };
 
+// TODO: Go through this function and refactor it
 /**
  * Update user details
  * @param {String} userId - ID of the user
@@ -260,6 +268,9 @@ const updateUser = async (userId, updateBody) => {
     }
   }
 
+  if (specialties === null) {
+    await user.setSpecialties([]);
+  }
   // Update specialties
   if (specialties) {
     // Fetch existing specialty IDs
@@ -300,7 +311,7 @@ const updateUser = async (userId, updateBody) => {
 
 /**
  * Delete user by id
- * @param {ObjectId} userId
+ * @param {string} userId
  * @returns {Promise<User>}
  */
 const deleteUserById = async (userId) => {

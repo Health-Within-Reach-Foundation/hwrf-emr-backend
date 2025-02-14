@@ -11,7 +11,6 @@ const createFormFields = async (clinicId, formFieldsData) => {
   return FormFields.create({ clinicId, ...formFieldsData });
 };
 
-// write the function to fetch the all the form fields by clinc Id here you will get clincId as a parameter and you have to return the form fields data
 
 /**
  * Get form fields by clinic id

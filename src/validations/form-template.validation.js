@@ -1,5 +1,8 @@
 const Joi = require('joi');
 
+/**
+ * Validation schema for creating a form template.
+ */
 const createFormTemplate = {
   body: Joi.object().keys({
     name: Joi.string().required().description('Name of the form template'),
@@ -18,13 +21,18 @@ const createFormTemplate = {
   }),
 };
 
+/**
+ * Validation schema for getting a form template by ID.
+ */
 const getFormTemplateById = {
   params: Joi.object().keys({
     formTemplateId: Joi.string().uuid().required().description('Form Template ID'),
   }),
 };
 
-
+/**
+ * Validation schema for updating a form template by ID.
+ */
 const updateFormTemplate = {
   params: Joi.object().keys({
     formTemplateId: Joi.string().uuid().required().description('Form Template ID'),
@@ -50,6 +58,9 @@ const updateFormTemplate = {
   }),
 };
 
+/**
+ * Validation schema for deleting a form template by ID.
+ */
 const deleteFormTemplate = {
   params: Joi.object().keys({
     formTemplateId: Joi.string().uuid().required().description('Form Template ID'),

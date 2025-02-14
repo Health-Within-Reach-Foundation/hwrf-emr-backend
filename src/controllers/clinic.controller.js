@@ -166,19 +166,6 @@ const getSpecialtyDepartmentsByClinic = catchAsync(async (req, res) => {
   });
 });
 
-// const createRole = catchAsync(async (req, res) => {
-//   const roleBody = {
-//     ...req.body,
-//     clinicId: req.user.clinicId,
-//   };
-//   const role = await clinicService.createRoleUnderClinc(roleBody);
-
-//   res.status(httpStatus.CREATED).json({
-//     success: true,
-//     data: role,
-//     message: 'Role created successfully.',
-//   });
-// });
 
 const updateClinicById = catchAsync(async (req, res) => {
   const { clinicId } = req.params;
