@@ -134,3 +134,180 @@ VALUES
         NOW (),
         NOW ()
     );
+
+-- Inserting for 'GP  Form'
+INSERT INTO
+    public."form_fields" (
+        "id",
+        "form_name",
+        "form_field_data",
+        "created_at",
+        "updated_at"
+    )
+VALUES
+    (
+        uuid_generate_v4 (),
+        'GP Form',
+        '[
+            { 
+                "fieldName": "complaints", 
+                "type": "select", 
+                "options": [
+                    {"label" : "Fever", "value": "Fever", "lock": true},
+                    {"label" : "Cough", "value": "Cough", "lock": true},
+                    {"label" : "Cold", "value": "Cold", "lock": true},
+                    {"label" : "Loose motion", "value": "Loose motion", "lock": true},
+                    {"label" : "Constipation", "value": "Constipation", "lock": true},
+                    {"label" : "Vomiting", "value": "Vomiting", "lock": true},
+                    {"label" : "Abdominal pain", "value": "Abdominal pain", "lock": true},
+                    {"label" : "Knee/Joint pain", "value": "Knee/Joint pain", "lock": true},
+                    {"label" : "Headache", "value": "Headache", "lock": true}
+                ]
+            },
+            {
+                "fieldName": "kco",
+                "type": "checkbox",
+                "options": [
+                    {"label" : "Hypothyroidism", "value": "Hypothyroidism", "lock": true},
+                    {"label" : "Hyperthyroidism", "value": "Hyperthyroidism", "lock": true},
+                    {"label" : "Asthma", "value": "Asthma", "lock": true},
+                    {"label" : "Epilepsy", "value": "Epilepsy", "lock": true}
+                ]
+            },
+            {
+                "fieldName": "findings",
+                "type" : "checkbox",
+                "options" : [
+                    { "label" : "Temperature" , "value": "Temperature", "lock": true},
+                    { "label" : "BP" , "value": "BP", "lock": true},
+                    { "label" : "Pulse rate" , "value": "Pulse rate", "lock": true},
+                    { "label" : "Respiratory rate" , "value": "Respiratory rate", "lock": true},
+                    { "label" : "General examination" , "value": "General examination", "lock": true},
+                    { "label" : "Skin lesion" , "value": "Skin lesion", "lock": true}   
+                ]
+            },
+            {   
+                "fieldName": "systemicExamination",
+                "type": "checkbox",
+                "options" : [
+                    { "label" : "CNS" , "value": "CNS", "lock": true},
+                    { "label" : "Respiratory" , "value": "Respiratory", "lock": true},
+                    { "label" : "Cardio vascular" , "value": "Cardio vascular", "lock": true},
+                    { "label" : "Per abdominal examination" , "value": "Per abdominal examination", "lock": true}
+                ]
+            },
+            {
+                "fieldName": "medicineType",
+                "type": "select",
+                "options": [
+                    { "label": "Tablet", "value": "Tablet", "lock": true },
+                    { "label": "Capsule", "value": "Capsule", "lock": true },
+                    { "label": "Syrup", "value": "Syrup", "lock": true },
+                    { "label": "Injection", "value": "Injection", "lock": true },
+                    { "label": "Ointment", "value": "Ointment", "lock": true },
+                    { "label": "Drops", "value": "Drops", "lock": true },
+                    { "label": "Cream", "value": "Cream", "lock": true },
+                    { "label": "Gel", "value": "Gel", "lock": true },
+                    { "label": "Powder", "value": "Powder", "lock": true },
+                    { "label": "Lotion", "value": "Lotion", "lock": true },
+                    { "label": "Mouthwash", "value": "Mouthwash", "lock": true },
+                    { "label": "Inhaler", "value": "Inhaler", "lock": true },
+                    { "label": "Spray", "value": "Spray", "lock": true },
+                    { "label": "Lozenges", "value": "Lozenges", "lock": true },
+                    { "label": "Sachet", "value": "Sachet", "lock": true },
+                    { "label": "Kit", "value": "Kit", "lock": true },
+                    { "label": "Aerosol", "value": "Aerosol", "lock": true },
+                    { "label": "Paste", "value": "Paste", "lock": true },
+                    { "label": "Solution", "value": "Solution", "lock": true }
+                ]
+            },
+            { 
+                "fieldName": "medicine", 
+                "type": "select", 
+                "options": [
+                    { "label": "Paracetamol", "value": "Paracetamol", "lock": true },
+                    { "label": "Ibuprofen", "value": "Ibuprofen", "lock": true },
+                    { "label": "Amoxicillin", "value": "Amoxicillin", "lock": true },
+                    { "label": "Ciprofloxacin", "value": "Ciprofloxacin", "lock": true },
+                    { "label": "Metronidazole", "value": "Metronidazole", "lock": true },
+                    { "label": "Chlorhexidine", "value": "Chlorhexidine", "lock": true },
+                    { "label": "Lignocaine", "value": "Lignocaine", "lock": true },
+                    { "label": "Doxycycline", "value": "Doxycycline", "lock": true },
+                    { "label": "Clindamycin", "value": "Clindamycin", "lock": true },
+                    { "label": "Diclofenac", "value": "Diclofenac", "lock": true },
+                    { "label": "Tramadol", "value": "Tramadol", "lock": true },
+                    { "label": "Ketorolac", "value": "Ketorolac", "lock": true },
+                    { "label": "Dexamethasone", "value": "Dexamethasone", "lock": true },
+                    { "label": "Prednisolone", "value": "Prednisolone", "lock": true },
+                    { "label": "Naproxen", "value": "Naproxen", "lock": true },
+                    { "label": "Aspirin", "value": "Aspirin", "lock": true },
+                    { "label": "Piroxicam", "value": "Piroxicam", "lock": true },
+                    { "label": "Mefenamic acid", "value": "Mefenamic acid", "lock": true },
+                    { "label": "Paracetamol + Ibuprofen", "value": "Paracetamol + Ibuprofen", "lock": true }
+                ]
+            },
+            {
+                "fieldName": "medicineDose",
+                "type": "select",
+                "options": [
+                    { "label": "1 —— 0 —— 1", "value": "1 —— 0 —— 1", "lock": true },
+                    { "label": "1 —— 1 —— 1", "value": "1 —— 1 —— 1", "lock": true },
+                    { "label": "1 —— 1 —— 0", "value": "1 —— 1 —— 0", "lock": true },
+                    { "label": "1 —— 0 —— 0", "value": "1 —— 0 —— 0", "lock": true },
+                    { "label": "0 —— 1 —— 1", "value": "0 —— 1 —— 1", "lock": true },
+                    { "label": "1 —— 1 —— 0 —— 1", "value": "1 —— 1 —— 0 —— 1", "lock": true },
+                    { "label": "0 —— 1 —— 0", "value": "0 —— 1 —— 0", "lock": true },
+                    { "label": "1 —— 0 —— 1 —— 0", "value": "1 —— 0 —— 1 —— 0", "lock": true },
+                    { "label": "0 —— 0 —— 1 —— 0", "value": "0 —— 0 —— 1 —— 0", "lock": true },
+                    { "label": "1 —— 1 —— 1 —— 1", "value": "1 —— 1 —— 1 —— 1", "lock": true },
+                    { "label": "0 —— 0 —— 0 —— 1", "value": "0 —— 0 —— 0 —— 1", "lock": true },
+                    { "label": "1 —— 2 —— 1", "value": "1 —— 2 —— 1", "lock": true },
+                    { "label": "2 —— 0 —— 2", "value": "2 —— 0 —— 2", "lock": true },
+                    { "label": "0 —— 1 —— 2", "value": "0 —— 1 —— 2", "lock": true }
+                ]
+            },
+            {
+                "fieldName": "medicineWhen",
+                "type": "select",
+                "options": [
+                    { "label": "Before food", "value": "Before food", "lock": true },
+                    { "label": "After food", "value": "After food", "lock": true },
+                    { "label": "With food", "value": "With food", "lock": true },
+                    { "label": "Empty stomach", "value": "Empty stomach", "lock": true },
+                    { "label": "Before Bed", "value": "Before Bed", "lock": true },
+                    { "label": "Anytime", "value": "Anytime", "lock": true }
+                ]
+            },
+            {
+                "fieldName": "medicineFrequency",
+                "type": "select",
+                "options": [
+                    { "label": "Once a Day", "value": "Once a Day", "lock": true },
+                    { "label": "Twice a Day", "value": "Twice a Day", "lock": true },
+                    { "label": "Thrice a Day", "value": "Thrice a Day", "lock": true },
+                    { "label": "Four Times a Day", "value": "Four Times a Day", "lock": true },
+                    { "label": "Once a Week", "value": "Once a Week", "lock": true },
+                    { "label": "Twice a Week", "value": "Twice a Week", "lock": true },
+                    { "label": "Thrice a Week", "value": "Thrice a Week", "lock": true },
+                    { "label": "Once a Month", "value": "Once a Month", "lock": true }
+                ]
+            },
+            {
+                "fieldName": "medicineDuration",
+                "type": "select",
+                "options": [
+                    { "label": "3 Days", "value": "3 Days", "lock": true },
+                    { "label": "5 Days", "value": "5 Days", "lock": true },
+                    { "label": "7 Days", "value": "7 Days", "lock": true },
+                    { "label": "10 Days", "value": "10 Days", "lock": true },
+                    { "label": "15 Days", "value": "15 Days", "lock": true },
+                    { "label": "1 Month", "value": "1 Month", "lock": true },
+                    { "label": "2 Months", "value": "2 Months", "lock": true },
+                    { "label": "3 Months", "value": "3 Months", "lock": true },
+                    { "label": "6 Months", "value": "6 Months", "lock": true }
+                ]
+            }
+        ]',
+        CURRENT_TIMESTAMP,
+        CURRENT_TIMESTAMP
+    );

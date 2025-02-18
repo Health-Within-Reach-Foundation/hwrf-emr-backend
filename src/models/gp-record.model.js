@@ -85,7 +85,9 @@ const initModel = (sequelize) => {
         allowNull: true,
       },
       medicine: {
-        type: DataTypes.TEXT,
+        // type: DataTypes.TEXT,
+        // type: DataTypes.ARRAY(DataTypes.STRING),
+        type: DataTypes.JSONB,
         allowNull: true,
       },
       followUpDate: {

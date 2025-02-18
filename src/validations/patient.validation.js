@@ -557,37 +557,58 @@ const updateMammography = {
  */
 const createGPRecord = {
   body: Joi.object().keys({
-    patientId: Joi.string().uuid().allow('', null).optional(),
-    weight: Joi.number().allow('', null).optional(),
-    height: Joi.number().allow('', null).optional(),
-    sugar: Joi.number().allow('', null).optional(),
-    bp: Joi.string().allow('', null).optional(),
-    hb: Joi.number().allow('', null).optional(),
-    complaints: Joi.array().items(Joi.string().allow('', null)).allow('', null).optional(),
-    kco: Joi.array().items(Joi.string().allow('', null)).allow('', null).optional(),
-    findings: Joi.array().items(Joi.string().allow('', null)).allow('', null).optional(),
-    systemicExamination: Joi.array().items(Joi.string().allow('', null)).allow('', null).optional(),
-    treatment: Joi.string().allow('', null).optional(),
-    advice: Joi.string().allow('', null).optional(),
-    medicine: Joi.string().allow('', null).optional(),
-    followUpDate: Joi.date().allow('', null).optional(),
-    onlineAmount: Joi.number().allow('', null).optional(),
-    offlineAmount: Joi.number().allow('', null).optional(),
-    findingsOptionsDetails: Joi.object().keys({
-      temperatureDetails: Joi.string().allow('', null).optional(),
-      bpDetails: Joi.string().allow('', null).optional(),
-      pulseRateDetails: Joi.string().allow('', null).optional(),
-      respiratoryRateDetails: Joi.string().allow('', null).optional(),
-      generalExaminationDetails: Joi.string().allow('', null).optional(),
-      skinLesionDetails: Joi.string().allow('', null).optional(),
-    }).allow('', null).optional(),
-    systemicExaminationOptionsDetails: Joi.object().keys({
-      respiratoryDetails: Joi.string().allow('', null).optional(),
-      cardioVascularDetails: Joi.string().allow('', null).optional(),
-      cnsDetails: Joi.string().allow('', null).optional(),
-      perAbdominalExaminationDetails: Joi.string().allow('', null).optional(),
-    }).allow('', null).optional(),
-    otherComplaints: Joi.string().allow('', null).optional(),
+    patientId: Joi.string().uuid().allow('', null).optional().default(null),
+    weight: Joi.number().allow('', null).optional().default(null),
+    height: Joi.number().allow('', null).optional().default(null),
+    sugar: Joi.number().allow('', null).optional().default(null),
+    bp: Joi.string().allow('', null).optional().default(null),
+    hb: Joi.number().allow('', null).optional().default(null),
+    complaints: Joi.array().items(Joi.string().allow('', null)).allow('', null).optional().default(null),
+    kco: Joi.array().items(Joi.string().allow('', null)).allow('', null).optional().default(null),
+    findings: Joi.array().items(Joi.string().allow('', null)).allow('', null).optional().default(null),
+    systemicExamination: Joi.array().items(Joi.string().allow('', null)).allow('', null).optional().default(null),
+    treatment: Joi.string().allow('', null).optional().default(null),
+    advice: Joi.string().allow('', null).optional().default(null),
+    // medicine: Joi.string().allow('', null).optional().default(null),
+    // medicine: Joi.array().items(Joi.string().allow('', null)).allow('', null).optional().default(null),
+    medicine: Joi.array().items(
+      Joi.object().keys({
+        key: Joi.number().optional(),
+        medicineType: Joi.string().optional(),
+        medicine: Joi.string().optional(),
+        dose: Joi.string().optional(),
+        when: Joi.string().optional(),
+        frequency: Joi.string().optional(),
+        duration: Joi.string().optional(),
+        notes: Joi.string().allow('', null).optional().default(null),
+      })
+    ),
+    followUpDate: Joi.date().allow('', null).optional().default(null),
+    onlineAmount: Joi.number().allow('', null).optional().default(null),
+    offlineAmount: Joi.number().allow('', null).optional().default(null),
+    findingsOptionsDetails: Joi.object()
+      .keys({
+        temperatureDetails: Joi.string().allow('', null).optional().default(null),
+        bpDetails: Joi.string().allow('', null).optional().default(null),
+        pulseRateDetails: Joi.string().allow('', null).optional().default(null),
+        respiratoryRateDetails: Joi.string().allow('', null).optional().default(null),
+        generalExaminationDetails: Joi.string().allow('', null).optional().default(null),
+        skinLesionDetails: Joi.string().allow('', null).optional().default(null),
+      })
+      .allow('', null)
+      .optional()
+      .default(null),
+    systemicExaminationOptionsDetails: Joi.object()
+      .keys({
+        respiratoryDetails: Joi.string().allow('', null).optional().default(null),
+        cardioVascularDetails: Joi.string().allow('', null).optional().default(null),
+        cnsDetails: Joi.string().allow('', null).optional().default(null),
+        perAbdominalExaminationDetails: Joi.string().allow('', null).optional().default(null),
+      })
+      .allow('', null)
+      .optional()
+      .default(null),
+    otherComplaints: Joi.string().allow('', null).optional().default(null),
   }),
 };
 
@@ -616,38 +637,61 @@ const updateGPRecord = {
   params: Joi.object().keys({
     gpRecordId: Joi.string().uuid().required(),
   }),
-  body: Joi.object().keys({
-    weight: Joi.number().allow('', null).optional(),
-    height: Joi.number().allow('', null).optional(),
-    sugar: Joi.number().allow('', null).optional(),
-    bp: Joi.string().allow('', null).optional(),
-    hb: Joi.number().allow('', null).optional(),
-    complaints: Joi.array().items(Joi.string().allow('', null)).allow('', null).optional(),
-    kco: Joi.array().items(Joi.string().allow('', null)).allow('', null).optional(),
-    findings: Joi.array().items(Joi.string().allow('', null)).allow('', null).optional(),
-    systemicExamination: Joi.array().items(Joi.string().allow('', null)).allow('', null).optional(),
-    treatment: Joi.string().allow('', null).optional(),
-    advice: Joi.string().allow('', null).optional(),
-    medicine: Joi.string().allow('', null).optional(),
-    followUpDate: Joi.date().allow('', null).optional(),
-    onlineAmount: Joi.number().allow('', null).optional(),
-    offlineAmount: Joi.number().allow('', null).optional(),
-    findingsOptionsDetails: Joi.object().keys({
-      temperatureDetails: Joi.string().allow('', null).optional(),
-      bpDetails: Joi.string().allow('', null).optional(),
-      pulseRateDetails: Joi.string().allow('', null).optional(),
-      respiratoryRateDetails: Joi.string().allow('', null).optional(),
-      generalExaminationDetails: Joi.string().allow('', null).optional(),
-      skinLesionDetails: Joi.string().allow('', null).optional(),
-    }).allow('', null).optional(),
-    systemicExaminationOptionsDetails: Joi.object().keys({
-      respiratoryDetails: Joi.string().allow('', null).optional(),
-      cardioVascularDetails: Joi.string().allow('', null).optional(),
-      cnsDetails: Joi.string().allow('', null).optional(),
-      perAbdominalExaminationDetails: Joi.string().allow('', null).optional(),
-    }).allow('', null).optional(),
-    otherComplaints: Joi.string().allow('', null).optional(),
-  }).min(1),
+  body: Joi.object()
+    .keys({
+      weight: Joi.number().allow('', null).optional().default(null),
+      height: Joi.number().allow('', null).optional().default(null),
+      sugar: Joi.number().allow('', null).optional().default(null),
+      bp: Joi.string().allow('', null).optional().default(null),
+      hb: Joi.number().allow('', null).optional().default(null),
+      complaints: Joi.array().items(Joi.string().allow('', null)).allow('', null).optional().default(null),
+      kco: Joi.array().items(Joi.string().allow('', null)).allow('', null).optional().default(null),
+      findings: Joi.array().items(Joi.string().allow('', null)).allow('', null).optional().default(null),
+      systemicExamination: Joi.array().items(Joi.string().allow('', null)).allow('', null).optional().default(null),
+      treatment: Joi.string().allow('', null).optional().default(null),
+      advice: Joi.string().allow('', null).optional().default(null),
+      // medicine: Joi.string().allow('', null).optional().default(null),
+      // medicine: Joi.array().items(Joi.string().allow('', null)).allow('', null).optional().default(null),
+      medicine: Joi.array().items(
+        Joi.object().keys({
+          key: Joi.number().optional(),
+          medicineType: Joi.string().optional(),
+          medicine: Joi.string().optional(),
+          dose: Joi.string().optional(),
+          when: Joi.string().optional(),
+          frequency: Joi.string().optional(),
+          duration: Joi.string().optional(),
+          notes: Joi.string().allow('', null).optional().default(null),
+        })
+      ),
+      followUpDate: Joi.date().allow('', null).optional().default(null),
+      onlineAmount: Joi.number().allow('', null).optional().default(null),
+      offlineAmount: Joi.number().allow('', null).optional().default(null),
+      findingsOptionsDetails: Joi.object()
+        .keys({
+          temperatureDetails: Joi.string().allow('', null).optional().default(null),
+          bpDetails: Joi.string().allow('', null).optional().default(null),
+          pulseRateDetails: Joi.string().allow('', null).optional().default(null),
+          respiratoryRateDetails: Joi.string().allow('', null).optional().default(null),
+          generalExaminationDetails: Joi.string().allow('', null).optional().default(null),
+          skinLesionDetails: Joi.string().allow('', null).optional().default(null),
+        })
+        .allow('', null)
+        .optional()
+        .default(null),
+      systemicExaminationOptionsDetails: Joi.object()
+        .keys({
+          respiratoryDetails: Joi.string().allow('', null).optional().default(null),
+          cardioVascularDetails: Joi.string().allow('', null).optional().default(null),
+          cnsDetails: Joi.string().allow('', null).optional().default(null),
+          perAbdominalExaminationDetails: Joi.string().allow('', null).optional().default(null),
+        })
+        .allow('', null)
+        .optional()
+        .default(null),
+      otherComplaints: Joi.string().allow('', null).optional().default(null),
+    })
+    .min(1),
 };
 
 /* ***************************** Patient GP CRUD Validation *************************** */

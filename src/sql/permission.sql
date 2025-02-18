@@ -18,6 +18,7 @@ INSERT INTO public."permissions" ("id", "action", "created_at", "updated_at") VA
 INSERT INTO public."permissions" ("id", "action", "created_at", "updated_at") VALUES (uuid_generate_v4(), 'camps:read', NOW(), NOW());
 INSERT INTO public."permissions" ("id", "action", "created_at", "updated_at") VALUES (uuid_generate_v4(), 'camps:write', NOW(), NOW());
 INSERT INTO public."permissions" ("id", "action", "created_at", "updated_at") VALUES (uuid_generate_v4(), 'camps:no access', NOW(), NOW());
+INSERT INTO public."permissions" ("id", "action", "created_at", "updated_at") VALUES (uuid_generate_v4(), 'camps:finance', NOW(), NOW());
 
 INSERT INTO public."permissions" ("id", "action", "created_at", "updated_at") VALUES (uuid_generate_v4(), 'patients:read', NOW(), NOW());
 INSERT INTO public."permissions" ("id", "action", "created_at", "updated_at") VALUES (uuid_generate_v4(), 'patients:write', NOW(), NOW());

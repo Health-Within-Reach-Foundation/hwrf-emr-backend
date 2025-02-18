@@ -35,6 +35,23 @@ const getAllFormFields = catchAsync(async (req, res) => {
 });
 
 /**
+ * Get form fields options
+ * @param {Object} req
+ * @param {Object} res
+ * @returns {Object}
+ * @throws {Error}
+ */
+const getFormFieldsOptions = catchAsync(async (req, res) => {
+  const clinicId = req?.user?.clinicId || null;
+  const formFieldsOptions = await formFieldsService.getFormFieldsOptions(clinicId);
+  res.status(httpStatus.OK).json({
+    data: formFieldsOptions,
+    message: 'All form fields fetched successfully',
+    success: true,
+  });
+});
+
+/**
  * Get form field by id
  * @param {Object} req
  * @param {Object} res
@@ -66,6 +83,22 @@ const updateFormFieldById = catchAsync(async (req, res) => {
 });
 
 /**
+ * Update form field options
+ * @param {Object} req
+ * @param {Object} res
+ */
+const updateFormFieldOptions = catchAsync(async (req, res) => {
+  const clinicId = req?.user?.clinicId || null;
+  const { formId, fieldName, options } = req.body;
+  const formFieldOptions = await formFieldsService.updateFormFieldOptions(clinicId, formId, fieldName, options);
+  res.status(httpStatus.OK).json({
+    data: formFieldOptions,
+    message: 'Form field options updated successfully',
+    success: true,
+  });
+});
+
+/**
  * Delete form field by id
  * @param {Object} req
  * @param {Object} res
@@ -81,7 +114,9 @@ const deleteFormFieldById = catchAsync(async (req, res) => {
 module.exports = {
   createFormFields,
   getAllFormFields,
+  getFormFieldsOptions,
   getFormFieldById,
   updateFormFieldById,
+  updateFormFieldOptions,
   deleteFormFieldById,
 };

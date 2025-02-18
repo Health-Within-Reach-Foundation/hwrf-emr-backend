@@ -33,6 +33,17 @@ const updateFormFieldById = {
 };
 
 /**
+ * Validation schema for updating form field options.
+ */
+const updateFormFieldOptions = {
+  body: Joi.object().keys({
+    formId: Joi.string().uuid().required().description('Form ID'),
+    fieldName: Joi.string().required().description('Name of the field'),
+    options: Joi.array().items(Joi.object()).optional().description('Array of field options'),
+  }),
+};
+
+/**
  * Validation schema for deleting a form field by ID.
  */
 const deleteFormFieldById = {
@@ -41,10 +52,10 @@ const deleteFormFieldById = {
   }),
 };
 
-
 module.exports = {
   createFormFields,
   getFormFieldById,
   updateFormFieldById,
+  updateFormFieldOptions,
   deleteFormFieldById,
 };

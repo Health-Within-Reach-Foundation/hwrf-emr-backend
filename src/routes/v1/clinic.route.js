@@ -40,6 +40,11 @@ router
   .get(auth(), formFieldsController.getAllFormFields);
 
 router
+  .route('/form-fields/options')
+  .get(auth(), formFieldsController.getFormFieldsOptions)
+  .patch(auth(), validate(formFieldsValidation.updateFormFieldOptions), formFieldsController.updateFormFieldOptions);
+
+router
   .route('/form-fields/:formFieldId')
   .get(auth(), validate(formFieldsValidation.getFormFieldById), formFieldsController.getFormFieldById)
   .patch(auth(), validate(formFieldsValidation.updateFormFieldById), formFieldsController.updateFormFieldById)
