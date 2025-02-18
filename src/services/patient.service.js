@@ -191,12 +191,14 @@ const getPatientDetailsById = async (patientId, specialtyId) => {
         model: Mammography,
         as: 'mammography',
         required: false, // Ensure patient is returned even if no records exist
+        separate: true,
       },
       {
         model: GeneralPhysicianRecord,
         as: 'gpRecords',
         required: false,
         order: [['createdAt', 'DESC']],
+        separate: true,
       },
       // {
       //   model: PatientRecord,
