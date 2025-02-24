@@ -6,6 +6,7 @@ const { userService, tokenService, emailService, rolePermissionService } = requi
 const { tokenTypes } = require('../config/tokens');
 const { createRole } = require('../services/role.service');
 const { Specialty } = require('../models/specialty.model');
+const db = require('../models');
 
 /**
  * Create a new user.
@@ -39,32 +40,39 @@ const createUser = catchAsync(async (req, res) => {
  */
 const createClinicUser = catchAsync(async (req, res) => {
   // Destructure 'role' and exclude it from userPayload, but keep it in req.body
-  const { roles, specialties, ...userPayload } = {
-    ...req.body, // Spread existing req.body
-    clinicId: req.user.clinicId, // Attach clinicId
-    password: 'TzR6!wS@7bH9',
-  };
+  const transaction = await db.sequelize.transaction();
+  try {
+    const { roles, specialties, ...userPayload } = {
+      ...req.body, // Spread existing req.body
+      clinicId: req.user.clinicId, // Attach clinicId
+      password: 'TzR6!wS@7bH9',
+    };
 
-  const user = await userService.createUser(userPayload);
+    const user = await userService.createUser(userPayload, transaction);
 
-  if (specialties !== null && specialties.length > 0) {
-    // 'addSpecialties' automatically inserts entries in 'user_specialties'
-    await user.addSpecialties(specialties); // Pass array of specialty IDs
+    if (specialties !== null && specialties.length > 0) {
+      // 'addSpecialties' automatically inserts entries in 'user_specialties'
+      await user.addSpecialties(specialties, { transaction }); // Pass array of specialty IDs
+    }
+
+    user.addRoles(roles, { transaction });
+
+    // await createRole({ roleName: role, userId: user.id, clinicId: req.user.clinicId }, user);
+
+    // Generate the set-password token
+    const setPasswordToken = await tokenService.generatePasswordToken(user, tokenTypes.SET_PASSWORD, transaction);
+
+    console.log('set password token generated -->', setPasswordToken);
+    // Send the set-password email
+    await emailService.sendPasswordEmail(user.email, setPasswordToken, tokenTypes.SET_PASSWORD);
+    await transaction.commit();
+    // Respond with no content (204 status code)
+    return res.status(httpStatus.NO_CONTENT).send();
+  } catch (error) {
+    console.log('error in createClinicUser', error);
+    await transaction.rollback(); // ❌ Rollback if there's an error
+    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, 'Error creating clinic user');
   }
-
-  user.addRoles(roles);
-
-  // await createRole({ roleName: role, userId: user.id, clinicId: req.user.clinicId }, user);
-
-  // Generate the set-password token
-  const setPasswordToken = await tokenService.generatePasswordToken(user.email, tokenTypes.SET_PASSWORD);
-
-  console.log('set password token generated -->', setPasswordToken);
-  // Send the set-password email
-  await emailService.sendPasswordEmail(user.email, setPasswordToken, tokenTypes.SET_PASSWORD);
-
-  // Respond with no content (204 status code)
-  return res.status(httpStatus.NO_CONTENT).send();
 });
 
 /**
@@ -99,16 +107,23 @@ const getUserById = catchAsync(async (req, res) => {
  * @returns {Promise<void>} - Returns a promise that resolves to void.
  */
 const updateUser = catchAsync(async (req, res) => {
-  const { userId } = req.params;
-  const updateBody = req.body;
+  const transaction = await db.sequelize.transaction();
+  try {
+    const { userId } = req.params;
+    const updateBody = req.body;
 
-  const updatedUser = await userService.updateUser(userId, updateBody);
-
-  res.status(httpStatus.OK).json({
-    success: true,
-    message: 'User updated successfully',
-    data: updatedUser,
-  });
+    const updatedUser = await userService.updateUser(userId, updateBody);
+    await transaction.commit();
+    res.status(httpStatus.OK).json({
+      success: true,
+      message: 'User updated successfully',
+      data: updatedUser,
+    });
+  } catch (error) {
+    console.log('error in updateUser', error);
+    await transaction.rollback();
+    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, 'Error updating user');
+  }
 });
 
 /**

@@ -34,14 +34,17 @@ const generateToken = (userId, expires, type, secret = config.jwt.secret) => {
  * @param {boolean} [blacklisted]
  * @returns {Promise<Token>}
  */
-const saveToken = async (token, userId, expires, type, blacklisted = false) => {
-  const tokenDoc = await Token.create({
-    token,
-    userId,
-    type,
-    expires: expires.toDate(),
-    blacklisted,
-  });
+const saveToken = async (token, userId, expires, type, blacklisted = false, transaction=null) => {
+  const tokenDoc = await Token.create(
+    {
+      token,
+      userId,
+      type,
+      expires: expires.toDate(),
+      blacklisted,
+    },
+    { transaction }
+  );
   return tokenDoc;
 };
 
@@ -146,15 +149,20 @@ const generateAccessTokenOnly = async (user) => {
  * @param {string} email
  * @returns {Promise<string>}
  */
-const generatePasswordToken = async (email, type) => {
-  const user = await userService.getUserByEmail(email);
-  if (!user) {
+const generatePasswordToken = async (user, type, transaction = null) => {
+  console.log('User and typeof user-->', user.id, typeof user);
+  if (typeof user === 'string') {
+    // user param act as email
+    user = await userService.getUserByEmail(user);
+  }
+  // const user = await userService.getUserByEmail(email);
+  if (!user && typeof user !== 'string') {
     throw new ApiError(httpStatus.NOT_FOUND, 'No users found with this email');
   }
   const expires = moment().add(config.jwt.accessExpirationMinutes, 'days');
   console.log('Expired in -->', expires);
   const passwordToken = generateToken(user.id, expires, type);
-  await saveToken(passwordToken, user.id, expires, type);
+  await saveToken(passwordToken, user.id, expires, type, false, transaction);
   return passwordToken;
 };
 
@@ -169,7 +177,6 @@ const generateVerifyEmailToken = async (user) => {
   await saveToken(verifyEmailToken, user.id, expires, tokenTypes.VERIFY_EMAIL);
   return verifyEmailToken;
 };
-
 
 module.exports = {
   generateToken,

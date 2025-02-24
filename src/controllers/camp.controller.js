@@ -1,6 +1,8 @@
 const httpStatus = require('http-status');
 const catchAsync = require('../utils/catchAsync');
 const { campService } = require('../services');
+const db = require('../models');
+const ApiError = require('../utils/ApiError');
 
 /**
  * Get a list of camps for the clinic associated with the authenticated user.
@@ -29,18 +31,24 @@ const getCamps = catchAsync(async (req, res) => {
  * @returns {Promise<void>} - A promise that resolves when the camp is created and the response is sent.
  */
 const createCamp = catchAsync(async (req, res) => {
-  const campData = {
-    ...req.body,
-    organizerId: req.user.id,
-    clinicId: req.user.clinicId,
-  };
-  const camp = await campService.createCamp(campData);
-
-  res.status(201).json({
-    message: 'Camp created successfully',
-    data: camp,
-    success: true,
-  });
+  const transaction = await db.sequelize.transaction();
+  try {
+    const campData = {
+      ...req.body,
+      organizerId: req.user.id,
+      clinicId: req.user.clinicId,
+    };
+    const camp = await campService.createCamp(campData, transaction);
+    await transaction.commit();
+    res.status(201).json({
+      message: 'Camp created successfully',
+      data: camp,
+      success: true,
+    });
+  } catch (error) {
+    await transaction.rollback();
+    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, 'Error creating camp');
+  }
 });
 
 /**
@@ -98,14 +106,20 @@ const setCurrentCamp = catchAsync(async (req, res) => {
  * @returns {Promise<void>} - A promise that resolves when the camp is updated.
  */
 const updateCampById = catchAsync(async (req, res) => {
-  const { campId } = req.params;
-  const updatedCamp = await campService.updateCampById(campId, req.body);
-
-  res.status(httpStatus.OK).json({
-    success: true,
-    message: 'Camp updated successfully',
-    data: updatedCamp,
-  });
+  const transaction = await db.sequelize.transaction();
+  try {
+    const { campId } = req.params;
+    const updatedCamp = await campService.updateCampById(campId, req.body, transaction);
+    await transaction.commit();
+    res.status(httpStatus.OK).json({
+      success: true,
+      message: 'Camp updated successfully',
+      data: updatedCamp,
+    });
+  } catch (error) {
+    await transaction.rollback();
+    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, 'Error updating camp');
+  }
 });
 
 module.exports = {

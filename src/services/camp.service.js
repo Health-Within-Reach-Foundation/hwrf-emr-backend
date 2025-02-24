@@ -34,19 +34,22 @@ const { calculateCampAnalytics, calculateDentistryAnalytics } = require('../util
  * @returns {Promise<Object>} The created camp object.
  * @throws {ApiError} If one or more specialties are not found.
  */
-const createCamp = async (campData) => {
+const createCamp = async (campData, transaction = null) => {
   const { name, location, city, vans, startDate, endDate, specialties, organizerId, clinicId, users } = campData;
 
-  const camp = await Camp.create({
-    name,
-    location,
-    city,
-    startDate,
-    endDate,
-    organizerId,
-    clinicId,
-    vans,
-  });
+  const camp = await Camp.create(
+    {
+      name,
+      location,
+      city,
+      startDate,
+      endDate,
+      organizerId,
+      clinicId,
+      vans,
+    },
+    { transaction }
+  );
 
   const specialtiesDoc = await Specialty.findAll({
     where: {
@@ -60,9 +63,9 @@ const createCamp = async (campData) => {
     throw new ApiError(httpStatus.BAD_REQUEST, 'One or more specialties not found');
   }
 
-  await camp.addSpecialties(specialtiesDoc);
+  await camp.addSpecialties(specialtiesDoc, { transaction });
 
-  await camp.addUsers(users);
+  await camp.addUsers(users, { transaction });
 
   return camp;
 };
@@ -184,7 +187,7 @@ const setCurrentCamp = async (campId, userId) => {
  * @param {Object} campData - Data to update the camp
  * @returns {Promise<Camp>}
  */
-const updateCampById = async (campId, campData) => {
+const updateCampById = async (campId, campData, transaction = null) => {
   const { name, location, city, startDate, endDate, specialties, vans, users } = campData;
 
   console.log('campData -->', campData, new Date());
@@ -200,7 +203,7 @@ const updateCampById = async (campId, campData) => {
   // Update basic camp details
   Object.assign(camp, updatedCampBody);
 
-  await camp.save();
+  await camp.save({ transaction });
   const originalEndDate = camp.endDate;
 
   // // Check if endDate is today or in the future, and update status to "active"
@@ -241,7 +244,7 @@ const updateCampById = async (campId, campData) => {
     }
   }
 
-  await camp.save();
+  await camp.save({ transaction });
 
   // Handle Specialties (Many-to-Many)
   if (specialties) {
@@ -253,7 +256,7 @@ const updateCampById = async (campId, campData) => {
       throw new ApiError(httpStatus.BAD_REQUEST, 'One or more specialties not found');
     }
 
-    await camp.setSpecialties(specialtyRecords); // Updates specialties
+    await camp.setSpecialties(specialtyRecords, { transaction }); // Updates specialties
   }
 
   // Handle Users (Many-to-Many)
@@ -266,23 +269,23 @@ const updateCampById = async (campId, campData) => {
       throw new ApiError(httpStatus.BAD_REQUEST, 'One or more users not found');
     }
 
-    await camp.setUsers(userRecords); // Updates users
+    await camp.setUsers(userRecords, { transaction }); // Updates users
   }
 
-  return camp.reload(); // Return updated camp with relations
+  return camp.reload({ transaction }); // Return updated camp with relations
 };
 
 /**
  * Fetches detailed information about a specific camp, including associated clinics, users, patients, and their related data.
- * 
+ *
  * @param {number} campId - The ID of the camp to fetch details for.
  * @returns {Promise<Object>} - A promise that resolves to an object containing camp details, flattened patients for UI display, and analytics data.
  * @throws {ApiError} - Throws an error if the camp is not found.
- * 
+ *
  * @example
  * const campDetails = await getCampDetails(1);
  * console.log(campDetails);
- * 
+ *
  * @typedef {Object} CampDetails
  * @property {Object} camp - The camp details.
  * @property {Array<Object>} patients - Flattened patients for UI display.

@@ -1,7 +1,4 @@
 -- Insert permissions into the "permissions" table
-INSERT INTO public."permissions" ("id", "action", "created_at", "updated_at") VALUES (uuid_generate_v4(), 'roles:write', NOW(), NOW());
-INSERT INTO public."permissions" ("id", "action", "created_at", "updated_at") VALUES (uuid_generate_v4(), 'roles:read', NOW(), NOW());
-INSERT INTO public."permissions" ("id", "action", "created_at", "updated_at") VALUES (uuid_generate_v4(), 'roles:no access', NOW(), NOW());
 
 INSERT INTO public."permissions" ("id", "action", "created_at", "updated_at") VALUES (uuid_generate_v4(), 'administration:write', NOW(), NOW());
 INSERT INTO public."permissions" ("id", "action", "created_at", "updated_at") VALUES (uuid_generate_v4(), 'administration:read', NOW(), NOW());

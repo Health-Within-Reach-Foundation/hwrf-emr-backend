@@ -8,6 +8,7 @@ const { Clinic } = require('../models/clinic.model');
 const { Specialty } = require('../models/specialty.model');
 const { Camp } = require('../models/camp.model');
 
+
 const jwtOptions = {
   secretOrKey: config.jwt.secret,
   jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
@@ -41,7 +42,7 @@ const jwtVerify = async (payload, done) => {
           model: Clinic,
           as: 'clinic', // Clinic relationship
           attributes: ['id', 'clinicName', 'status'],
-          required:false,
+          required: false,
         },
         {
           model: Specialty,
@@ -64,7 +65,6 @@ const jwtVerify = async (payload, done) => {
     if (!user) {
       return done(null, false);
     }
-
     // Extract permissions and attach to user object
     const permissions = user.roles.flatMap((role) => role.permissions.map((perm) => perm.action));
     user.permissions = Array.from(new Set(permissions)); // Avoid duplicate permissions

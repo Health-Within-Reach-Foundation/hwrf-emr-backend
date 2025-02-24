@@ -12,11 +12,13 @@ const { Permission } = require('../models/permission.model');
  * @param {Object} userBody
  * @returns {Promise<User>}
  */
-const createUser = async (userBody) => {
+const createUser = async (userBody, transaction = null) => {
   if (await User.isEmailTaken(userBody.email)) {
     throw new ApiError(httpStatus.BAD_REQUEST, 'Email already taken');
   }
-  return User.create(userBody);
+
+  return User.create(userBody, { transaction });
+  // return User.create(userBody);
 };
 
 /**
@@ -25,7 +27,6 @@ const createUser = async (userBody) => {
  * @returns {Promise<User>}
  */
 const getUserById = async (id) => {
-  console.log('hello getting user from auth/me');
   return User.findByPk(id, {
     include: [
       {
@@ -227,7 +228,7 @@ const updateUserById = async (userId, updateBody) => {
  * @param {Object} updateBody - Updated data
  * @returns {Promise<User>}
  */
-const updateUser = async (userId, updateBody) => {
+const updateUser = async (userId, updateBody, transaction = null) => {
   const { roles, specialties, ...userDetails } = updateBody;
 
   // Fetch the user
@@ -238,7 +239,7 @@ const updateUser = async (userId, updateBody) => {
 
   // Update user basic details
   if (Object.keys(userDetails).length > 0) {
-    await user.update(userDetails);
+    await user.update(userDetails, { transaction });
   }
 
   // Update roles
@@ -256,7 +257,7 @@ const updateUser = async (userId, updateBody) => {
       const rolesToAddInstances = await Role.findAll({
         where: { id: rolesToAdd },
       });
-      await user.addRoles(rolesToAddInstances);
+      await user.addRoles(rolesToAddInstances, { transaction });
     }
 
     // Remove old roles
@@ -264,12 +265,12 @@ const updateUser = async (userId, updateBody) => {
       const rolesToRemoveInstances = await Role.findAll({
         where: { id: rolesToRemove },
       });
-      await user.removeRoles(rolesToRemoveInstances);
+      await user.removeRoles(rolesToRemoveInstances, { transaction });
     }
   }
 
   if (specialties === null) {
-    await user.setSpecialties([]);
+    await user.setSpecialties([], { transaction });
   }
   // Update specialties
   if (specialties) {
@@ -286,7 +287,7 @@ const updateUser = async (userId, updateBody) => {
       const specialtiesToAddInstances = await Specialty.findAll({
         where: { id: specialtiesToAdd },
       });
-      await user.addSpecialties(specialtiesToAddInstances);
+      await user.addSpecialties(specialtiesToAddInstances, { transaction });
     }
 
     // Remove old specialties
@@ -294,7 +295,7 @@ const updateUser = async (userId, updateBody) => {
       const specialtiesToRemoveInstances = await Specialty.findAll({
         where: { id: specialtiesToRemove },
       });
-      await user.removeSpecialties(specialtiesToRemoveInstances);
+      await user.removeSpecialties(specialtiesToRemoveInstances, { transaction });
     }
   }
 

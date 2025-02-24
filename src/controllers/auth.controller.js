@@ -4,6 +4,7 @@ const { authService, tokenService, emailService, clinicService, userService } = 
 const { tokenTypes } = require('../config/tokens');
 const { sendEmail } = require('../services/email.service');
 const sendEmailAzure = require('../services/email.azure.service');
+const db = require('../models');
 
 /**
  * Registers a new user and sends a password setup email.
@@ -19,17 +20,23 @@ const sendEmailAzure = require('../services/email.azure.service');
  */
 const register = catchAsync(async (req, res) => {
   const { name, email, role, phoneNumber } = req.body;
-  const user = await authService.register({ name, email, phoneNumber, password: 'TzR6!wS@7bH9', role });
+  const transaction = await db.sequelize.transaction();
+  try {
+    const user = await authService.register({ name, email, phoneNumber, password: 'TzR6!wS@7bH9', role }, transaction);
 
-  const setPasswordToken = await tokenService.generatePasswordToken(user.email, tokenTypes.SET_PASSWORD);
+    const setPasswordToken = await tokenService.generatePasswordToken(user.email, tokenTypes.SET_PASSWORD, transaction);
 
-  await emailService.sendPasswordEmail(user.email, setPasswordToken, tokenTypes.SET_PASSWORD);
-
-  res.status(httpStatus.NO_CONTENT).json({
-    success: true,
-    message: `Hi ! ${user.name}, A link to set your password has been sent to your email. Please check your inbox and follow the instructions`,
-    data: null,
-  });
+    await emailService.sendPasswordEmail(user.email, setPasswordToken, tokenTypes.SET_PASSWORD);
+    await transaction.commit();
+    res.status(httpStatus.NO_CONTENT).json({
+      success: true,
+      message: `Hi ! ${user.name}, A link to set your password has been sent to your email. Please check your inbox and follow the instructions`,
+      data: null,
+    });
+  } catch (error) {
+    await transaction.rollback();
+    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, 'Error creating user');
+  }
 });
 
 /**
@@ -44,10 +51,12 @@ const register = catchAsync(async (req, res) => {
  * @throws {Error} - Throws an error if the onboarding process fails.
  */
 const onboardClinic = catchAsync(async (req, res) => {
-  const { clinic, admin } = await clinicService.onboardClinic(req.body);
+  const transaction = await db.sequelize.transaction();
+  try {
+    const { clinic, admin } = await clinicService.onboardClinic(req.body, transaction);
 
-  const subject = 'Thank You for Onboarding with HWRF!';
-  const text = `Thank you for filling out the onboarding form and expressing interest in joining HWRF. We are thrilled to have you onboard!
+    const subject = 'Thank You for Onboarding with HWRF!';
+    const text = `Thank you for filling out the onboarding form and expressing interest in joining HWRF. We are thrilled to have you onboard!
   
 We wanted to let you know that your submission is currently under review. Once the review process is complete, your request will be approved, and you'll receive an email with the next steps.
 
@@ -56,16 +65,21 @@ Thank you!
 Best regards,
 The HWRF Team`;
 
-  await sendEmailAzure(admin.email, subject, text);
-  // Send response
-  res.status(httpStatus.CREATED).json({
-    success: true,
-    message: "Request sent. Awaiting superadmin approval. You'll receive an email reply soon",
-    data: {
-      clinic_id: clinic.id,
-      admin_id: admin.id,
-    },
-  });
+    await sendEmailAzure(admin.email, subject, text);
+    await transaction.commit();
+    // Send response
+    res.status(httpStatus.CREATED).json({
+      success: true,
+      message: "Request sent. Awaiting superadmin approval. You'll receive an email reply soon",
+      data: {
+        clinic_id: clinic.id,
+        admin_id: admin.id,
+      },
+    });
+  } catch (error) {
+    await transaction.rollback();
+    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, 'Error onboarding clinic');
+  }
 });
 
 /**
@@ -178,7 +192,7 @@ const sendVerificationEmail = catchAsync(async (req, res) => {
 
 /**
  * Verifies the user's email using the token provided in the query parameters.
- * 
+ *
  * @param {Object} req - Express request object.
  * @param {Object} req.query - Query parameters of the request.
  * @param {string} req.query.token - Token for email verification.
@@ -213,10 +227,9 @@ const getMe = catchAsync(async (req, res) => {
   });
 });
 
-
 /**
  * Verifies the provided token and returns user details if the token is valid.
- * 
+ *
  * @param {Object} req - The request object.
  * @param {Object} req.query - The query parameters of the request.
  * @param {string} req.query.token - The token to be verified.

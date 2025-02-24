@@ -6,17 +6,14 @@ const { Specialty } = require('../models/specialty.model');
 const { Op } = require('sequelize');
 const { User } = require('../models/user.model');
 const { Role } = require('../models/role.model');
-const { bulkCreateRole } = require('./role-permission.service');
-const { getAllFormTemplates, createFormTemplate } = require('./form-template.service');
-const { Permission } = require('../models/permission.model');
 
 /**
  *
  * @param {Object} clinicBody
  * @returns {Promise<Clinic>}
  */
-const createClinic = async (clinicBody) => {
-  return Clinic.create(clinicBody);
+const createClinic = async (clinicBody, transaction) => {
+  return Clinic.create(clinicBody, { transaction });
 };
 
 /**
@@ -132,7 +129,7 @@ const getClinics = async (queryOptions) => {
  * @param {Object} clinicBody
  * @return {Promise<Clinic>}
  */
-const updateClinicById = async (clinicId, clinicBody) => {
+const updateClinicById = async (clinicId, clinicBody, transaction = null) => {
   const clinic = await getClinicById(clinicId);
 
   if (!clinic) {
@@ -141,9 +138,9 @@ const updateClinicById = async (clinicId, clinicBody) => {
 
   Object.assign(clinic, clinicBody);
 
-  await clinic.save();
+  await clinic.save({ transaction });
 
-  return clinic.reload();
+  return clinic.reload({ transaction });
 };
 
 /**
@@ -251,14 +248,13 @@ const getSpecialtyDepartmentsByClinic = async (clinicId) => {
   return clinic.specialties; // Return the associated specialties
 };
 
-
 /**
  * Update a clinic by ID
  * @param {string} clinicId - ID of the clinic to update
  * @param {Object} clinicData - Data to update the clinic
  * @returns {Promise<Clinic>}
  */
-const updateClinic = async (clinicId, clinicData) => {
+const updateClinic = async (clinicId, clinicData, transaction = null) => {
   const { clinicName, address, city, state, phoneNumber, contactEmail, status, specialties } = clinicData;
 
   // Find existing clinic
@@ -268,15 +264,19 @@ const updateClinic = async (clinicId, clinicData) => {
   }
 
   // Update basic clinic details
-  await updateClinicById(clinicId, {
-    clinicName,
-    address,
-    city,
-    state,
-    phoneNumber,
-    contactEmail,
-    status,
-  });
+  await updateClinicById(
+    clinicId,
+    {
+      clinicName,
+      address,
+      city,
+      state,
+      phoneNumber,
+      contactEmail,
+      status,
+    },
+    transaction
+  );
   // await clinic.update();
 
   // Handle Specialties (Many-to-Many)
@@ -289,10 +289,10 @@ const updateClinic = async (clinicId, clinicData) => {
       throw new ApiError(httpStatus.BAD_REQUEST, 'One or more specialties not found');
     }
 
-    await clinic.setSpecialties(specialtyRecords); // Updates clinic specialties
+    await clinic.setSpecialties(specialtyRecords, { transaction }); // Updates clinic specialties
   }
 
-  return clinic.reload(); // Return updated clinic with relations
+  return clinic.reload({ transaction }); // Return updated clinic with relations
 };
 
 /**
@@ -315,7 +315,7 @@ const updateClinic = async (clinicId, clinicData) => {
  * @throws {ApiError} If the clinic or admin email already exists.
  */
 
-const onboardClinic = async (clinicData) => {
+const onboardClinic = async (clinicData, transaction = null) => {
   const {
     clinicName,
     address = '',
@@ -342,14 +342,17 @@ const onboardClinic = async (clinicData) => {
     throw new ApiError(httpStatus.BAD_REQUEST, 'Admin email is already in use.');
   }
 
-  const clinic = await createClinic({
-    clinicName,
-    address,
-    city,
-    state,
-    phoneNumber,
-    contactEmail,
-  });
+  const clinic = await createClinic(
+    {
+      clinicName,
+      address,
+      city,
+      state,
+      phoneNumber,
+      contactEmail,
+    },
+    transaction
+  );
 
   const specialtiesDoc = await Specialty.findAll({
     where: {
@@ -359,18 +362,21 @@ const onboardClinic = async (clinicData) => {
     },
   });
 
-  await clinic.addSpecialties(specialtiesDoc);
+  await clinic.addSpecialties(specialtiesDoc, { transaction });
 
-  const admin = await userService.createUser({
-    name: adminName,
-    email: adminEmail,
-    password: password,
-    clinicId: clinic.id, // Assign clinicId to user after clinic is created
-    phoneNumber: adminPhoneNumber,
-  });
+  const admin = await userService.createUser(
+    {
+      name: adminName,
+      email: adminEmail,
+      password: password,
+      clinicId: clinic.id, // Assign clinicId to user after clinic is created
+      phoneNumber: adminPhoneNumber,
+    },
+    transaction
+  );
 
   clinic.ownerId = admin.id;
-  await clinic.save();
+  await clinic.save({ transaction });
 
   return { clinic, admin };
 };
@@ -385,5 +391,5 @@ module.exports = {
   getClinic,
   getSpecialtyDepartmentsByClinic,
   updateClinic,
-  onboardClinic
+  onboardClinic,
 };

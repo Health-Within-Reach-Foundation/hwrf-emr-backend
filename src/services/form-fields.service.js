@@ -7,8 +7,8 @@ const ApiError = require('../utils/ApiError');
  * @param {Object} formFieldsData
  * @returns {Promise<FormFields>}
  */
-const createFormFields = async (clinicId, formFieldsData) => {
-  return FormFields.create({ clinicId, ...formFieldsData });
+const createFormFields = async (clinicId, formFieldsData, transaction = null) => {
+  return FormFields.create({ clinicId, ...formFieldsData }, { transaction });
 };
 
 /**
@@ -30,11 +30,11 @@ const getFormFieldsOptions = async (clinicId) => {
 
   const result = formFields.reduce((acc, formField) => {
     const { id, formName, formFieldData } = formField;
-    acc[formName] = formFieldData.map(field => ({
+    acc[formName] = formFieldData.map((field) => ({
       id,
       fieldName: field.fieldName,
       type: field.type,
-      options: field.options
+      options: field.options,
     }));
     return acc;
   }, {});
@@ -81,7 +81,7 @@ const updateFormFieldOptions = async (clinicId, formId, fieldName, options) => {
     throw new ApiError(httpStatus.NOT_FOUND, 'Form field not found');
   }
 
-  const formFieldData = formField.formFieldData.map(field => {
+  const formFieldData = formField.formFieldData.map((field) => {
     if (field.fieldName === fieldName) {
       return { ...field, options };
     }

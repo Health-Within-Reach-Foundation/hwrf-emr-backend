@@ -146,21 +146,30 @@ const verifyEmail = async (verifyEmailToken) => {
  * @returns {Promise<Object>} The created user.
  * @throws {ApiError} If the email is already taken.
  */
-const register = async (userBody) => {
+const register = async (userBody, transaction = null) => {
   const { name, email, password, role, phoneNumber } = userBody;
   if (await User.isEmailTaken(userBody.email)) {
     throw new ApiError(httpStatus.BAD_REQUEST, 'Email already taken');
   }
-  const superadmin = await User.create({
-    name,
-    email,
-    password,
-    phoneNumber,
-  });
-  const superadminRole = await Role.create({ roleName: role, userId: superadmin.id });
+  const superadmin = await User.create(
+    {
+      name,
+      email,
+      password,
+      phoneNumber,
+    },
+    { transaction }
+  );
+  const superadminRole = await Role.create(
+    {
+      roleName: role,
+      userId: superadmin.id,
+    },
+    { transaction }
+  );
 
   // Associate the superadmin with the role using the automatically created junction table
-  await superadmin.addRole(superadminRole);
+  await superadmin.addRole(superadminRole, { transaction });
 
   return superadmin;
 };

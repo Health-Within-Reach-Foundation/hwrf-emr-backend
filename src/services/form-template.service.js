@@ -8,7 +8,7 @@ const httpStatus = require('http-status');
  * @param {Object} formTemplateBody - Form template data
  * @returns {Promise<FormTemplate>}
  */
-const createFormTemplate = async (formTemplateBody) => {
+const createFormTemplate = async (formTemplateBody, transaction = null) => {
   const { name, clinicId } = formTemplateBody;
 
   // Check for duplicate form template name within the same clinic
@@ -21,7 +21,7 @@ const createFormTemplate = async (formTemplateBody) => {
   }
 
   // Create the form template
-  const formTemplate = await FormTemplate.create(formTemplateBody);
+  const formTemplate = await FormTemplate.create(formTemplateBody, { transaction });
   return formTemplate;
 };
 

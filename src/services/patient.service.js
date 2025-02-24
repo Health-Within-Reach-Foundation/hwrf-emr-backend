@@ -15,8 +15,8 @@ const { GeneralPhysicianRecord } = require('../models/gp-record.model');
  * @param {Object} patientBody
  * @returns {Promise<Patient>}
  */
-const createPatient = async (patientBody) => {
-  return Patient.create(patientBody);
+const createPatient = async (patientBody, transaction = null) => {
+  return Patient.create(patientBody, { transaction });
 };
 
 /**
@@ -178,12 +178,14 @@ const getPatientDetailsById = async (patientId, specialtyId) => {
               {
                 model: TreatmentSetting,
                 as: 'treatmentSettings',
+                order: [['treatmentDate', 'DESC']],
+                separate: true,
               },
             ],
           },
         ],
-
-        order: [['createdAt', 'ASC']], // Sort by creation date (latest first)
+        order: [['createdAt', 'DESC']], // Sort by creation date (latest first)
+        separate: true,
         required: false, // Ensure patient is returned even if no records exist
       },
       // Include Mammography Records
@@ -191,7 +193,6 @@ const getPatientDetailsById = async (patientId, specialtyId) => {
         model: Mammography,
         as: 'mammography',
         required: false, // Ensure patient is returned even if no records exist
-        separate: true,
       },
       {
         model: GeneralPhysicianRecord,
@@ -248,7 +249,7 @@ const getPatientDetailsById = async (patientId, specialtyId) => {
  * @param {number} diagnosisBody.estimatedCost - The estimated cost of the treatment.
  * @throws {ApiError} If the patient is not found.
  */
-const createDiagnosis = async (diagnosisBody) => {
+const createDiagnosis = async (diagnosisBody, transaction = null) => {
   const {
     selectedTeeth,
     childSelectedTeeth,
@@ -272,28 +273,34 @@ const createDiagnosis = async (diagnosisBody) => {
 
   // Create the diagnosis and treatment instances
   const createDiagnosisAndTreatment = async (teeth, quadrantType) => {
-    const diagnosis = await Diagnosis.create({
-      complaints,
-      treatmentsSuggested,
-      selectedTeeth: teeth,
-      dentalQuadrantType: quadrantType,
-      xrayStatus,
-      notes,
-      xray,
-      patientId,
-      estimatedCost,
-      // campId,
-    });
+    const diagnosis = await Diagnosis.create(
+      {
+        complaints,
+        treatmentsSuggested,
+        selectedTeeth: teeth,
+        dentalQuadrantType: quadrantType,
+        xrayStatus,
+        notes,
+        xray,
+        patientId,
+        estimatedCost,
+        // campId,
+      },
+      { transaction }
+    );
 
-    await Treatment.create({
-      complaints,
-      treatments: treatmentsSuggested,
-      totalAmount: estimatedCost,
-      remainingAmount: 0,
-      paidAmount: 0,
-      status: 'not started',
-      diagnosisId: diagnosis.id,
-    });
+    await Treatment.create(
+      {
+        complaints,
+        treatments: treatmentsSuggested,
+        totalAmount: estimatedCost,
+        remainingAmount: 0,
+        paidAmount: 0,
+        status: 'not started',
+        diagnosisId: diagnosis.id,
+      },
+      { transaction }
+    );
   };
 
   // Handle child selected teeth
@@ -403,7 +410,7 @@ const getDiagnosisById = async (diagnosisId) => {
  * @param {number} [updateBody.estimatedCost] - The estimated cost of the diagnosis.
  * @returns {Promise<Object>} The updated diagnosis.
  */
-const updateDiagnosis = async (diagnosisId, updateBody) => {
+const updateDiagnosis = async (diagnosisId, updateBody, transaction = null) => {
   const diagnosis = await getDiagnosisById(diagnosisId);
   const treatments = await Treatment.findAll({ where: { diagnosisId } });
   // Ensure selectedTeeth is NULL when empty, instead of an empty string
@@ -436,12 +443,12 @@ const updateDiagnosis = async (diagnosisId, updateBody) => {
   if (treatments.length > 0) {
     treatments.forEach(async (treatment) => {
       Object.assign(treatment, updatedTreatmentBody);
-      await treatment.save();
+      await treatment.save({ transaction });
     });
   }
 
   Object.assign(diagnosis, updatedDiagnosisBody);
-  await diagnosis.save();
+  await diagnosis.save({ transaction });
   return diagnosis;
 };
 
@@ -647,7 +654,7 @@ const getTreatmentById = async (treatmentId) => {
  * @throws {ApiError} If the treatment or treatment setting is not found.
  * @returns {Promise<Object>} The updated treatment and treatment setting.
  */
-const updateTreatment = async (treatmentId, updateBody) => {
+const updateTreatment = async (treatmentId, updateBody, transaction = null) => {
   const {
     treatmentSettingId,
     settingTreatmentDate,
@@ -687,7 +694,7 @@ const updateTreatment = async (treatmentId, updateBody) => {
     console.info("validTreatmentFields['paidAmount'] -->", validTreatmentFields['paidAmount']);
     console.info("validTreatmentFields['remainingAmount'] -->", validTreatmentFields['remainingAmount']);
     Object.assign(treatment, validTreatmentFields);
-    await treatment.save();
+    await treatment.save({ transaction });
   }
 
   let updatedTreatmentSetting = null;
@@ -721,7 +728,7 @@ const updateTreatment = async (treatmentId, updateBody) => {
       xray,
       treatingDoctor,
     });
-    await updatedTreatmentSetting.save();
+    await updatedTreatmentSetting.save({ transaction });
 
     console.log('newSettingPaidAmount -->', newSettingPaidAmount);
     // ✅ Recalculate Paid & Remaining Amounts for Treatment
@@ -738,12 +745,12 @@ const updateTreatment = async (treatmentId, updateBody) => {
     // Ensure paymentStatus updates correctly
     treatment.paymentStatus = remainingAmount <= 0 ? 'paid' : 'pending';
 
-    await treatment.save();
+    await treatment.save({ transaction });
   }
 
   // ✅ Return updated treatment with the treatment setting
   return {
-    treatment: await treatment.reload(),
+    treatment: await treatment.reload({ transaction }),
     treatmentSetting: updatedTreatmentSetting,
   };
 };

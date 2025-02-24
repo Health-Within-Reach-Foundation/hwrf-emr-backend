@@ -22,7 +22,7 @@ const { patientService } = require('.');
  * @returns {Promise<Array<Object>>} - A promise that resolves to an array of created appointment objects.
  * @throws {ApiError} - Throws an error if the patient is not found or if an appointment already exists.
  */
-const bookAppointment = async (appointmentBody) => {
+const bookAppointment = async (appointmentBody, transaction = null) => {
   const { patientId, specialties, appointmentDate, status, clinicId, campId } = appointmentBody;
 
   if (campId) {
@@ -46,7 +46,7 @@ const bookAppointment = async (appointmentBody) => {
       }
 
       // Step 2: Associate the patient with the camp
-      await camp.addPatient(patient);
+      await camp.addPatient(patient, { transaction });
       console.log(`✅ Patient ${patientId} successfully associated with Camp ${campId}`);
     }
   }
@@ -69,14 +69,17 @@ const bookAppointment = async (appointmentBody) => {
     }
 
     // Create a new appointment
-    const appointment = await Appointment.create({
-      patientId,
-      specialtyId: specialty,
-      clinicId,
-      appointmentDate: formattedDate, // Store formatted date
-      status,
-      campId: campId || null, // Handle null campId explicitly
-    });
+    const appointment = await Appointment.create(
+      {
+        patientId,
+        specialtyId: specialty,
+        clinicId,
+        appointmentDate: formattedDate, // Store formatted date
+        status,
+        campId: campId || null, // Handle null campId explicitly
+      },
+      { transaction }
+    );
 
     createdAppointments.push(appointment);
 
@@ -93,7 +96,7 @@ const bookAppointment = async (appointmentBody) => {
     );
     if (formattedDate == today) {
       console.log(`Adding to queue for specialty (${specialty}) and camp (${campId || 'No Camp'})`);
-      await addToQueue(patientId, specialty, formattedDate, clinicId, campId);
+      await addToQueue(patientId, specialty, formattedDate, clinicId, campId, transaction);
     }
   }
 
@@ -113,7 +116,7 @@ const bookAppointment = async (appointmentBody) => {
  * @returns {Promise<Object>} The newly created queue entry.
  * @throws {Error} If any required fields are missing or if the operation fails.
  */
-const addToQueue = async (patientId, specialtyId, queueDate, clinicId, campId) => {
+const addToQueue = async (patientId, specialtyId, queueDate, clinicId, campId, transaction) => {
   try {
     // ✅ Ensure All Required Fields Exist
     if (!patientId || !specialtyId || !queueDate || !clinicId) {
@@ -147,7 +150,7 @@ const addToQueue = async (patientId, specialtyId, queueDate, clinicId, campId) =
         campId,
         queueType: specialty.departmentName,
       },
-      { lock: true } // Helps avoid duplicate token numbers
+      { transaction, lock: true }
     );
 
     return newQueueEntry; // Return the created queue entry

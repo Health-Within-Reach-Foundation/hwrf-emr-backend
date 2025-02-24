@@ -1,6 +1,7 @@
 const httpStatus = require('http-status');
 const catchAsync = require('../utils/catchAsync');
 const { appointmentService } = require('../services');
+const db = require('../models');
 
 /**
  * Books an appointment for a patient.
@@ -14,18 +15,25 @@ const { appointmentService } = require('../services');
  * @returns {Promise<void>} - A promise that resolves when the appointment is booked and the response is sent.
  */
 const bookAppointment = catchAsync(async (req, res) => {
-  const appoinmentData = {
-    ...req.body,
-    clinicId: req.user.clinicId,
-    campId: req.user?.currentCampId,
-  };
-  const appointment = await appointmentService.bookAppointment(appoinmentData);
+  const transaction = await db.sequelize.transaction();
+  try {
+    const appoinmentData = {
+      ...req.body,
+      clinicId: req.user.clinicId,
+      campId: req.user?.currentCampId,
+    };
+    const appointment = await appointmentService.bookAppointment(appoinmentData, transaction);
 
-  res.status(httpStatus.CREATED).json({
-    success: true,
-    message: 'Patient added in queue',
-    data: appointment,
-  });
+    await transaction.commit();
+    res.status(httpStatus.CREATED).json({
+      success: true,
+      message: 'Patient added in queue',
+      data: appointment,
+    });
+  } catch (error) {
+    await transaction.rollback();
+    console.error(error);
+  }
 });
 
 /**
@@ -49,17 +57,16 @@ const updateAppointment = catchAsync(async (req, res) => {
   });
 });
 
-
 /**
  * Get a list of appointments based on query parameters.
- * 
+ *
  * @param {Object} req - Express request object
  * @param {Object} req.query - Query parameters from the request
  * @param {Object} req.user - User object from the request
  * @param {string} req.user.currentCampId - Current camp ID of the user
  * @param {string} req.user.clinicId - Clinic ID of the user
  * @param {Object} res - Express response object
- * 
+ *
  * @returns {Promise<void>} - Returns a promise that resolves to void
  */
 const getAppointments = catchAsync(async (req, res) => {

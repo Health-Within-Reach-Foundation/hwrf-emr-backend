@@ -5,6 +5,7 @@ const generateRegNo = require('../utils/generate-regNo');
 const { uploadFile } = require('../utils/azure-service');
 const fs = require('fs');
 const ApiError = require('../utils/ApiError');
+const db = require('../models');
 
 /**
  * Create a new patient.
@@ -18,53 +19,58 @@ const ApiError = require('../utils/ApiError');
  * @throws {ApiError} - Throws an error if the clinic is not found, required fields are missing, or registration number generation fails.
  */
 const createPatient = catchAsync(async (req, res) => {
-  const clinic = await clinicService.getClinicById(req.user.clinicId);
-  if (!clinic) {
-    throw new ApiError(httpStatus.NOT_FOUND, 'Clinic not found');
-  }
-
-  const lastPatient = await patientService.getLastPatientRegistered(req.user.clinicId);
-  const currentCampId = req.user.currentCampId;
-
-  console.log(lastPatient);
-  const registrationNumber = lastPatient?.regNo ? lastPatient?.regNo + 1 : 1;
-  // const registrationNumber = generateRegNo("HWRF", lastPatient);
-
-  if (!registrationNumber) {
-    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, 'Failed to generate registration number');
-  }
-
-  const patientData = {
-    ...req.body,
-    regNo: registrationNumber,
-    clinicId: req.user.clinicId,
-  };
-
-  // Validate required fields
-  if (!patientData.name || !patientData.age || !patientData.sex || !patientData.mobile || !patientData.clinicId) {
-    throw new ApiError(httpStatus.BAD_REQUEST, 'Missing required fields for patient creation');
-  }
-
-  console.log('--------------------->', patientService, patientData);
-
-  const patient = await patientService.createPatient(patientData);
-
-  // Associate patient with the camp if applicable
-  if (currentCampId) {
-    const camp = await campService.getCampById(currentCampId);
-    if (!camp) {
-      throw new ApiError(httpStatus.BAD_REQUEST, 'Camp not found for the given ID');
+  const transaction = await db.sequelize.transaction();
+  try {
+    const clinic = await clinicService.getClinicById(req.user.clinicId);
+    if (!clinic) {
+      throw new ApiError(httpStatus.NOT_FOUND, 'Clinic not found');
     }
-    await patient.addCamps([camp]);
+
+    const lastPatient = await patientService.getLastPatientRegistered(req.user.clinicId);
+    const currentCampId = req.user.currentCampId;
+
+    console.log(lastPatient);
+    const registrationNumber = lastPatient?.regNo ? lastPatient?.regNo + 1 : 1;
+    // const registrationNumber = generateRegNo("HWRF", lastPatient);
+
+    if (!registrationNumber) {
+      throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, 'Failed to generate registration number');
+    }
+
+    const patientData = {
+      ...req.body,
+      regNo: registrationNumber,
+      clinicId: req.user.clinicId,
+    };
+
+    // Validate required fields
+    if (!patientData.name || !patientData.age || !patientData.sex || !patientData.mobile || !patientData.clinicId) {
+      throw new ApiError(httpStatus.BAD_REQUEST, 'Missing required fields for patient creation');
+    }
+
+    console.log('--------------------->', patientService, patientData);
+
+    const patient = await patientService.createPatient(patientData, transaction);
+
+    // Associate patient with the camp if applicable
+    if (currentCampId) {
+      const camp = await campService.getCampById(currentCampId);
+      if (!camp) {
+        throw new ApiError(httpStatus.BAD_REQUEST, 'Camp not found for the given ID');
+      }
+      await patient.addCamps([camp], { transaction });
+    }
+    await transaction.commit();
+    res.status(httpStatus.CREATED).json({
+      success: true,
+      message: 'Patient added successfully',
+      data: patient,
+    });
+  } catch (error) {
+    await transaction.rollback();
+    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, 'Error creating patient');
   }
-
-  res.status(httpStatus.CREATED).json({
-    success: true,
-    message: 'Patient added successfully',
-    data: patient,
-  });
 });
-
 
 /**
  * Adds a dental patient record.
@@ -85,10 +91,9 @@ const addDentalPatientRecord = catchAsync(async (req, res) => {
   });
 });
 
-
 /**
  * Controller to handle the creation of a mammography record.
- * 
+ *
  * @param {Object} req - Express request object
  * @param {Object} req.file - Uploaded file object
  * @param {Object} req.body - Request body
@@ -98,9 +103,9 @@ const addDentalPatientRecord = catchAsync(async (req, res) => {
  * @param {Object} req.params - Request parameters
  * @param {string} req.params.patientId - ID of the patient
  * @param {Object} res - Express response object
- * 
+ *
  * @returns {Promise<void>} - Returns a promise that resolves to void
- * 
+ *
  * @throws {ApiError} - Throws an error if file upload or processing fails
  */
 const createMammography = catchAsync(async (req, res) => {
@@ -147,7 +152,6 @@ const createMammography = catchAsync(async (req, res) => {
   });
 });
 
-
 /**
  * Get mammography report for a specific patient.
  *
@@ -166,7 +170,6 @@ const getMammography = catchAsync(async (req, res) => {
     data: record,
   });
 });
-
 
 /**
  * Updates mammography details for a patient.
@@ -236,7 +239,6 @@ const updateMammography = catchAsync(async (req, res) => {
   });
 });
 
-
 /**
  * Get patients by clinic.
  *
@@ -257,10 +259,9 @@ const getPatientsByClinic = catchAsync(async (req, res) => {
   res.status(httpStatus.OK).json(patients);
 });
 
-
 /**
  * Get patient details by ID.
- * 
+ *
  * @param {Object} req - Express request object.
  * @param {Object} req.params - Request parameters.
  * @param {string} req.params.patientId - ID of the patient.
@@ -281,7 +282,6 @@ const getPatientDetailsById = catchAsync(async (req, res) => {
     message: 'Patient details fetched successfully',
   });
 });
-
 
 /**
  * Updates the details of a patient.
@@ -306,89 +306,93 @@ const updatePatientDetails = catchAsync(async (req, res) => {
   });
 });
 
-
 /**
  * Creates a new diagnosis for a patient.
- * 
+ *
  * This function handles the creation of a new diagnosis, including the processing
  * and uploading of any attached x-ray files. It extracts file URLs from the uploaded
  * files, uploads them to a specified location, and appends the file paths to the
  * request body before passing the data to the patient service for diagnosis creation.
- * 
+ *
  * @param {Object} req - The request object.
  * @param {Object} req.files - The uploaded files.
  * @param {Object} req.body - The request body containing diagnosis data.
  * @param {Object} req.user - The user object.
  * @param {string} req.user.clinicId - The ID of the clinic.
  * @param {Object} res - The response object.
- * 
+ *
  * @returns {Promise<void>} - A promise that resolves when the diagnosis is created.
- * 
+ *
  * @throws {ApiError} - Throws an error if file upload fails.
  */
 const createDiagnosis = catchAsync(async (req, res) => {
-  const { files, body } = req;
-  // const campId = req?.user?.currentCampId || null;
-  // Extract file URLs from uploaded files, if any
-  // const xrayFilePaths = files?.map((file) => file.path) || [];
-  const xrayFilePaths = [];
+  const transaction = await db.sequelize.transaction();
+  try {
+    const { files, body } = req;
+    // const campId = req?.user?.currentCampId || null;
+    // Extract file URLs from uploaded files, if any
+    // const xrayFilePaths = files?.map((file) => file.path) || [];
+    const xrayFilePaths = [];
 
-  if (files && files.length > 0) {
-    for (const file of files) {
-      try {
-        const fileKey = `clinics/${req?.user?.clinicId}/xray/${body.patientId}/${Date.now()}_${file.originalname}`; // Generate unique key
-        const uploadResult = await uploadFile(file, fileKey);
+    if (files && files.length > 0) {
+      for (const file of files) {
+        try {
+          const fileKey = `clinics/${req?.user?.clinicId}/xray/${body.patientId}/${Date.now()}_${file.originalname}`; // Generate unique key
+          const uploadResult = await uploadFile(file, fileKey);
 
-        if (!uploadResult.success) {
-          throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, `Failed to upload ${file.originalname}`);
+          if (!uploadResult.success) {
+            throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, `Failed to upload ${file.originalname}`);
+          }
+
+          // Push object with required format into xrayFilePaths
+          xrayFilePaths.push({
+            key: fileKey,
+            fileName: file.originalname,
+            uploadedAt: new Date().toISOString(),
+          });
+
+          // Delete the temporary file from local storage
+          fs.unlink(file.path, (err) => {
+            if (err) console.error(`Error deleting temporary file: ${err}`);
+          });
+        } catch (err) {
+          console.error(`Error processing file ${file.originalname}:`, err);
         }
-
-        // Push object with required format into xrayFilePaths
-        xrayFilePaths.push({
-          key: fileKey,
-          fileName: file.originalname,
-          uploadedAt: new Date().toISOString(),
-        });
-
-        // Delete the temporary file from local storage
-        fs.unlink(file.path, (err) => {
-          if (err) console.error(`Error deleting temporary file: ${err}`);
-        });
-      } catch (err) {
-        console.error(`Error processing file ${file.originalname}:`, err);
       }
     }
+
+    // Append file paths to the request body
+    let diagnosisData = {};
+    if (xrayFilePaths?.length > 0) {
+      diagnosisData = {
+        ...body,
+        // campId,
+        xray: xrayFilePaths,
+      };
+    } else {
+      diagnosisData = {
+        // campId,
+        ...body,
+      };
+    }
+    // Attach uploaded file paths if available
+
+    await patientService.createDiagnosis(diagnosisData, transaction);
+    await transaction.commit();
+    res.status(httpStatus.CREATED).json({
+      success: true,
+      message: 'Diagnosis created successfully',
+      // data: diagnosis,
+    });
+  } catch (error) {
+    await transaction.rollback();
+    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, 'Error creating diagnosis');
   }
-
-  // Append file paths to the request body
-  let diagnosisData = {};
-  if (xrayFilePaths?.length > 0) {
-    diagnosisData = {
-      ...body,
-      // campId,
-      xray: xrayFilePaths,
-    };
-  } else {
-    diagnosisData = {
-      // campId,
-      ...body,
-    };
-  }
-  // Attach uploaded file paths if available
-
-  await patientService.createDiagnosis(diagnosisData);
-
-  res.status(httpStatus.CREATED).json({
-    success: true,
-    message: 'Diagnosis created successfully',
-    // data: diagnosis,
-  });
 });
-
 
 /**
  * Get diagnoses based on query parameters.
- * 
+ *
  * @param {Object} req - Express request object.
  * @param {Object} req.query - Query parameters for fetching diagnoses.
  * @param {Object} res - Express response object.
@@ -405,17 +409,16 @@ const getDiagnoses = catchAsync(async (req, res) => {
   });
 });
 
-
 /**
  * Get diagnosis by ID.
- * 
+ *
  * @param {Object} req - Express request object.
  * @param {Object} req.params - Request parameters.
  * @param {string} req.params.diagnosisId - ID of the diagnosis to retrieve.
  * @param {Object} req.files - Uploaded files (if any).
  * @param {Object} req.body - Request body.
  * @param {Object} res - Express response object.
- * 
+ *
  * @returns {Promise<void>} - Returns a promise that resolves to void.
  */
 const getDiagnosis = catchAsync(async (req, res) => {
@@ -429,10 +432,9 @@ const getDiagnosis = catchAsync(async (req, res) => {
   });
 });
 
-
 /**
  * Updates the diagnosis for a patient, including handling file uploads for x-ray images.
- * 
+ *
  * @param {Object} req - The request object.
  * @param {Object} req.files - The files uploaded in the request.
  * @param {Object} req.body - The body of the request.
@@ -441,67 +443,73 @@ const getDiagnosis = catchAsync(async (req, res) => {
  * @param {Object} req.params - The route parameters.
  * @param {string} req.params.diagnosisId - The ID of the diagnosis to update.
  * @param {Object} res - The response object.
- * 
+ *
  * @returns {Promise<void>} - A promise that resolves to void.
- * 
+ *
  * @throws {ApiError} - Throws an error if file upload fails.
  */
 const updateDiagnosis = catchAsync(async (req, res) => {
-  const { files, body } = req;
+  const transaction = await db.sequelize.transaction();
+  try {
+    const { files, body } = req;
 
-  // Extract file URLs from uploaded files, if any
-  // const xrayFilePaths = files?.map((file) => file.path) || [];
+    // Extract file URLs from uploaded files, if any
+    // const xrayFilePaths = files?.map((file) => file.path) || [];
 
-  const xrayFilePaths = [];
+    const xrayFilePaths = [];
 
-  if (files && files.length > 0) {
-    for (const file of files) {
-      try {
-        const fileKey = `clinics/${req?.user?.clinicId}/xray/${body.patientId}/${Date.now()}_${file.originalname}`; // Generate unique key
-        const uploadResult = await uploadFile(file, fileKey);
+    if (files && files.length > 0) {
+      for (const file of files) {
+        try {
+          const fileKey = `clinics/${req?.user?.clinicId}/xray/${body.patientId}/${Date.now()}_${file.originalname}`; // Generate unique key
+          const uploadResult = await uploadFile(file, fileKey);
 
-        if (!uploadResult.success) {
-          throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, `Failed to upload ${file.originalname}`);
+          if (!uploadResult.success) {
+            throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, `Failed to upload ${file.originalname}`);
+          }
+
+          // xrayFilePaths.push(fileKey); // Store only file key (Azure path)
+          // Push object with required format into xrayFilePaths
+          xrayFilePaths.push({
+            key: fileKey,
+            fileName: file.originalname,
+            uploadedAt: new Date().toISOString(),
+          });
+
+          // Delete the temporary file from local storage
+          fs.unlink(file.path, (err) => {
+            if (err) console.error(`Error deleting temporary file: ${err}`);
+          });
+        } catch (err) {
+          console.error(`Error processing file ${file.originalname}:`, err);
         }
-
-        // xrayFilePaths.push(fileKey); // Store only file key (Azure path)
-        // Push object with required format into xrayFilePaths
-        xrayFilePaths.push({
-          key: fileKey,
-          fileName: file.originalname,
-          uploadedAt: new Date().toISOString(),
-        });
-
-        // Delete the temporary file from local storage
-        fs.unlink(file.path, (err) => {
-          if (err) console.error(`Error deleting temporary file: ${err}`);
-        });
-      } catch (err) {
-        console.error(`Error processing file ${file.originalname}:`, err);
       }
     }
-  }
-  // Append file paths to the request body
-  let diagnosisBody = {};
-  if (xrayFilePaths?.length > 0) {
-    diagnosisBody = {
-      ...body,
-      xray: xrayFilePaths,
-    };
-  } else {
-    diagnosisBody = {
-      ...body,
-    };
-  }
+    // Append file paths to the request body
+    let diagnosisBody = {};
+    if (xrayFilePaths?.length > 0) {
+      diagnosisBody = {
+        ...body,
+        xray: xrayFilePaths,
+      };
+    } else {
+      diagnosisBody = {
+        ...body,
+      };
+    }
 
-  const diagnosis = await patientService.updateDiagnosis(req.params.diagnosisId, diagnosisBody);
-  res.status(httpStatus.OK).json({
-    success: true,
-    message: 'Diagnosis updated successfully',
-    data: diagnosis,
-  });
+    const diagnosis = await patientService.updateDiagnosis(req.params.diagnosisId, diagnosisBody, transaction);
+    await transaction.commit();
+    res.status(httpStatus.OK).json({
+      success: true,
+      message: 'Diagnosis updated successfully',
+      data: diagnosis,
+    });
+  } catch (error) {
+    await transaction.rollback();
+    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, 'Error updating diagnosis');
+  }
 });
-
 
 /**
  * Deletes a diagnosis by its ID.
@@ -520,13 +528,12 @@ const deleteDiagnosis = catchAsync(async (req, res) => {
   });
 });
 
-
 /**
  * Creates a new treatment for a patient.
- * 
+ *
  * This function handles the creation of a new treatment record. It processes any uploaded files,
  * uploads them to a specified storage location, and includes their metadata in the treatment record.
- * 
+ *
  * @function
  * @async
  * @param {Object} req - The request object.
@@ -537,7 +544,7 @@ const deleteDiagnosis = catchAsync(async (req, res) => {
  * @param {string} req.user.currentCampId - The ID of the current camp the user is associated with.
  * @param {Object} res - The response object.
  * @returns {Promise<void>} - A promise that resolves when the treatment is created.
- * 
+ *
  * @throws {ApiError} - Throws an error if file upload fails.
  */
 const createTreatment = catchAsync(async (req, res) => {
@@ -595,10 +602,9 @@ const createTreatment = catchAsync(async (req, res) => {
   });
 });
 
-
 /**
  * Get treatments based on query parameters.
- * 
+ *
  * @param {Object} req - Express request object.
  * @param {Object} req.query - Query parameters for fetching treatments.
  * @param {Object} res - Express response object.
@@ -608,7 +614,6 @@ const getTreatments = catchAsync(async (req, res) => {
   const treatments = await patientService.getTreatments(req.query);
   res.status(httpStatus.OK).json({ success: true, data: treatments });
 });
-
 
 /**
  * Get treatment details by ID.
@@ -623,7 +628,6 @@ const getTreatmentById = catchAsync(async (req, res) => {
   const treatment = await patientService.getTreatmentById(req.params.treatmentId);
   res.status(httpStatus.OK).json({ success: true, data: treatment });
 });
-
 
 /**
  * Update treatment information for a patient, including uploading x-ray files.
@@ -642,57 +646,64 @@ const getTreatmentById = catchAsync(async (req, res) => {
  * @throws {ApiError} - Throws an error if file upload fails.
  */
 const updateTreatment = catchAsync(async (req, res) => {
-  const { files, body } = req;
+  const transaction = await db.sequelize.transaction();
+  try {
+    const { files, body } = req;
 
-  const xrayFilePaths = [];
+    const xrayFilePaths = [];
 
-  if (files && files.length > 0) {
-    for (const file of files) {
-      try {
-        const fileKey = `clinics/${req?.user?.clinicId}/xray/${body.patientId}/${Date.now()}_${file.originalname}`; // Generate unique key
-        const uploadResult = await uploadFile(file, fileKey);
+    if (files && files.length > 0) {
+      for (const file of files) {
+        try {
+          const fileKey = `clinics/${req?.user?.clinicId}/xray/${body.patientId}/${Date.now()}_${file.originalname}`; // Generate unique key
+          const uploadResult = await uploadFile(file, fileKey);
 
-        if (!uploadResult.success) {
-          throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, `Failed to upload ${file.originalname}`);
+          if (!uploadResult.success) {
+            throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, `Failed to upload ${file.originalname}`);
+          }
+
+          // xrayFilePaths.push(fileKey); // Store only file key (Azure path)// Push object with required format into xrayFilePaths
+          xrayFilePaths.push({
+            key: fileKey,
+            fileName: file.originalname,
+            uploadedAt: new Date().toISOString(),
+          });
+
+          // Delete the temporary file from local storage
+          fs.unlink(file.path, (err) => {
+            if (err) console.error(`Error deleting temporary file: ${err}`);
+          });
+        } catch (err) {
+          console.error(`Error processing file ${file.originalname}:`, err);
         }
-
-        // xrayFilePaths.push(fileKey); // Store only file key (Azure path)// Push object with required format into xrayFilePaths
-        xrayFilePaths.push({
-          key: fileKey,
-          fileName: file.originalname,
-          uploadedAt: new Date().toISOString(),
-        });
-
-        // Delete the temporary file from local storage
-        fs.unlink(file.path, (err) => {
-          if (err) console.error(`Error deleting temporary file: ${err}`);
-        });
-      } catch (err) {
-        console.error(`Error processing file ${file.originalname}:`, err);
       }
     }
-  }
 
-  let treatmentBody = {};
-  if (xrayFilePaths?.length > 0) {
-    treatmentBody = {
-      ...body,
-      xray: xrayFilePaths,
-    };
-  } else {
-    treatmentBody = {
-      ...body,
-    };
-  }
+    let treatmentBody = {};
+    if (xrayFilePaths?.length > 0) {
+      treatmentBody = {
+        ...body,
+        xray: xrayFilePaths,
+      };
+    } else {
+      treatmentBody = {
+        ...body,
+      };
+    }
 
-  const updatedTreatment = await patientService.updateTreatment(req.params.treatmentId, treatmentBody);
-  res.status(httpStatus.OK).json({ success: true, data: updatedTreatment, message: 'Treatment saved successfully!' });
+    const updatedTreatment = await patientService.updateTreatment(req.params.treatmentId, treatmentBody, transaction);
+    await transaction.commit();
+    res.status(httpStatus.OK).json({ success: true, data: updatedTreatment, message: 'Treatment saved successfully!' });
+  } catch (error) {
+    console.log('Error in updateTreatment -->', error);
+    await transaction.rollback();
+    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, 'Error updating treatment');
+  }
 });
-
 
 /**
  * Delete a treatment by ID
- * 
+ *
  * @param {Object} req - Express request object
  * @param {Object} req.params - Request parameters
  * @param {string} req.params.treatmentId - ID of the treatment to delete
@@ -730,7 +741,6 @@ const createGPRecord = catchAsync(async (req, res) => {
   });
 });
 
-
 /**
  * Get GP records by patient ID.
  *
@@ -751,16 +761,15 @@ const getGPRecordsByPatient = catchAsync(async (req, res) => {
   });
 });
 
-
 /**
  * Get GP Record by ID
- * 
+ *
  * @param {Object} req - Express request object
  * @param {Object} req.params - Request parameters
  * @param {string} req.params.gpRecordId - ID of the GP record to fetch
  * @param {Object} res - Express response object
  * @returns {Promise<void>} - Returns a promise that resolves to void
- * 
+ *
  * @description This function fetches a GP record by its ID and sends it in the response.
  * It uses the patientService to retrieve the record and sends a success message along with the data.
  */
@@ -772,7 +781,6 @@ const getGPRecordById = catchAsync(async (req, res) => {
     message: 'GP Record fetched successfully',
   });
 });
-
 
 /**
  * Updates a GP record.
@@ -793,7 +801,6 @@ const updateGPRecord = catchAsync(async (req, res) => {
   });
 });
 
-
 /**
  * Deletes a GP record by its ID.
  *
@@ -811,7 +818,6 @@ const deleteGPRecord = catchAsync(async (req, res) => {
     data: null,
   });
 });
-
 
 /**
  * Get patient follow-ups.

@@ -10,9 +10,9 @@ const ApiError = require('../utils/ApiError');
  * @param {Array<string>} permissions - Array of permission IDs.
  * @returns {Promise<Role>}
  */
-const createRoleWithPermissions = async (roleBody, permissions) => {
+const createRoleWithPermissions = async (roleBody, permissions, transaction = null) => {
   // Create role
-  const role = await Role.create(roleBody);
+  const role = await Role.create(roleBody, { transaction });
 
   // Associate permissions
   const permissionInstances = await Permission.findAll({
@@ -23,7 +23,7 @@ const createRoleWithPermissions = async (roleBody, permissions) => {
     throw new ApiError(httpStatus.BAD_REQUEST, 'Some permissions not found');
   }
 
-  await role.addPermissions(permissionInstances);
+  await role.addPermissions(permissionInstances, { transaction });
 
   return role;
 };
@@ -34,8 +34,8 @@ const createRoleWithPermissions = async (roleBody, permissions) => {
  * @param {Array<Object>} roles - An array of role objects to be created.
  * @returns {Promise<Array<Object>>} - A promise that resolves to an array of created role objects.
  */
-const bulkCreateRole = async (roles) => {
-  return Role.bulkCreate(roles);
+const bulkCreateRole = async (roles, transaction = null) => {
+  return Role.bulkCreate(roles, { transaction });
 };
 
 /**
@@ -87,76 +87,69 @@ const getAllPermissions = async () => {
  * @param {Object} roleBody - The role details and permissions
  * @returns {Promise<Object>}
  */
-const updateRoleWithPermissions = async (roleId, roleBody) => {
+const updateRoleWithPermissions = async (roleId, roleBody, transaction = null) => {
   const { roleName, roleDescription, permissions } = roleBody;
 
-  // Start a transaction to ensure atomicity
+  // Find the role to update
+  const role = await Role.findByPk(roleId);
 
-  try {
-    // Find the role to update
-    const role = await Role.findByPk(roleId);
+  if (!role) {
+    throw new Error(`Role with ID ${roleId} not found.`);
+  }
 
-    if (!role) {
-      throw new Error(`Role with ID ${roleId} not found.`);
-    }
-
-    // Update role name and description
-    await role.update({
+  // Update role name and description
+  await role.update(
+    {
       roleName,
       roleDescription,
-    });
+    },
+    { transaction } 
+  );
 
-    // Validate provided permissions
-    const validPermissions = await Permission.findAll({
-      where: { id: { [Op.in]: permissions } }, // Use Op.in for array filtering
-    });
+  // Validate provided permissions
+  const validPermissions = await Permission.findAll({
+    where: { id: { [Op.in]: permissions } }, // Use Op.in for array filtering
+  });
 
-    console.log('Valid permissions is matching to upcoming permissions', validPermissions.length);
-    if (validPermissions.length !== permissions.length) {
-      throw new Error('Some permissions are invalid or not found.');
-    }
-
-    // Get existing permissions for the role
-    const existingPermissions = await role.getPermissions();
-    console.log('Existing permissions', existingPermissions);
-    const existingPermissionIds = existingPermissions.map((p) => p.id);
-    console.log('Existing permission IDs', existingPermissionIds);
-
-    // Find permissions to add (exclude already associated permissions)
-    const newPermissionIds = validPermissions
-      .map((p) => p.id)
-      .filter((id) => !existingPermissionIds.includes(id));
-
-    console.log('New permissions', newPermissionIds);
-    // Add only new permissions
-    if (newPermissionIds.length > 0) {
-      const newPermissions = validPermissions.filter((p) => newPermissionIds.includes(p.id));
-      console.log('New permissions to add', newPermissions);
-      await role.addPermissions(newPermissions);
-    }
-
-    // Remove permissions that are no longer associated with the role
-    const permissionsToRemove = existingPermissions.filter((p) => !permissions.includes(p.id));
-    if (permissionsToRemove.length > 0) {
-      console.log('Permissions to remove', permissionsToRemove);
-      await role.removePermissions(permissionsToRemove);
-    }
-
-    return {
-      id: role.id,
-      name: role.name,
-      roleDescription: role.roleDescription,
-      permissions: validPermissions.map((p) => ({
-        id: p.id,
-        name: p.name,
-      })),
-    };
-  } catch (error) {
-    // Rollback transaction in case of any error
-    throw new Error(`Failed to update role: ${error.message}`);
+  console.log('Valid permissions is matching to upcoming permissions', validPermissions.length);
+  if (validPermissions.length !== permissions.length) {
+    throw new ApiError(httpStatus.BAD_REQUEST, 'Some permissions not found');
   }
-};
 
+  // Get existing permissions for the role
+  const existingPermissions = await role.getPermissions();
+  console.log('Existing permissions', existingPermissions);
+  const existingPermissionIds = existingPermissions.map((p) => p.id);
+  console.log('Existing permission IDs', existingPermissionIds);
+
+  // Find permissions to add (exclude already associated permissions)
+  const newPermissionIds = validPermissions.map((p) => p.id).filter((id) => !existingPermissionIds.includes(id));
+
+  console.log('New permissions', newPermissionIds);
+  // Add only new permissions
+  if (newPermissionIds.length > 0) {
+    const newPermissions = validPermissions.filter((p) => newPermissionIds.includes(p.id));
+    console.log('New permissions to add', newPermissions);
+    await role.addPermissions(newPermissions, { transaction });
+  }
+
+  // Remove permissions that are no longer associated with the role
+  const permissionsToRemove = existingPermissions.filter((p) => !permissions.includes(p.id));
+  if (permissionsToRemove.length > 0) {
+    console.log('Permissions to remove', permissionsToRemove);
+    await role.removePermissions(permissionsToRemove, { transaction });
+  }
+
+  return {
+    id: role.id,
+    name: role.name,
+    roleDescription: role.roleDescription,
+    permissions: validPermissions.map((p) => ({
+      id: p.id,
+      name: p.name,
+    })),
+  };
+};
 
 module.exports = {
   createRoleWithPermissions,
