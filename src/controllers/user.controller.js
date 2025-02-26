@@ -1,11 +1,8 @@
 const httpStatus = require('http-status');
-const pick = require('../utils/pick');
 const ApiError = require('../utils/ApiError');
 const catchAsync = require('../utils/catchAsync');
 const { userService, tokenService, emailService, rolePermissionService } = require('../services');
 const { tokenTypes } = require('../config/tokens');
-const { createRole } = require('../services/role.service');
-const { Specialty } = require('../models/specialty.model');
 const db = require('../models');
 
 /**

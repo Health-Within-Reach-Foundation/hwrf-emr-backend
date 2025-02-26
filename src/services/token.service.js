@@ -34,7 +34,7 @@ const generateToken = (userId, expires, type, secret = config.jwt.secret) => {
  * @param {boolean} [blacklisted]
  * @returns {Promise<Token>}
  */
-const saveToken = async (token, userId, expires, type, blacklisted = false, transaction=null) => {
+const saveToken = async (token, userId, expires, type, blacklisted = false, transaction = null) => {
   const tokenDoc = await Token.create(
     {
       token,

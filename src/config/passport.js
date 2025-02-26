@@ -7,6 +7,7 @@ const { Permission } = require('../models/permission.model'); // Import Permissi
 const { Clinic } = require('../models/clinic.model');
 const { Specialty } = require('../models/specialty.model');
 const { Camp } = require('../models/camp.model');
+const { userService } = require('../services');
 
 
 const jwtOptions = {
@@ -21,46 +22,49 @@ const jwtVerify = async (payload, done) => {
     }
 
     // Fetch user with roles and permissions
-    const user = await User.findByPk(payload.sub, {
-      include: [
-        {
-          model: Role,
-          as: 'roles',
-          through: { attributes: [] }, // Exclude junction table fields
-          include: [
-            {
-              model: Permission, // Include permissions for roles
-              as: 'permissions',
-              attributes: ['id', 'action'], // Fetch permission details
-              through: { attributes: [] }, // Exclude intermediate fields
-            },
-          ],
-          attributes: { exclude: ['createdAt', 'updatedAt', 'userId', 'clinicId'] },
-          required: false,
-        },
-        {
-          model: Clinic,
-          as: 'clinic', // Clinic relationship
-          attributes: ['id', 'clinicName', 'status'],
-          required: false,
-        },
-        {
-          model: Specialty,
-          as: 'specialties', // Specialty relationship
-          through: { attributes: [] },
-          attributes: ['id', 'name', 'departmentName'],
-          required: false,
-        },
-        {
-          model: Camp,
-          as: 'camps', // Camp relationship
-          through: { attributes: [] },
-          where: { status: 'active' },
-          required: false,
-          attributes: { exclude: ['clinicId', 'updatedAt'] },
-        },
-      ],
-    });
+    // const user = await User.findByPk(payload.sub, {
+    //   include: [
+    //     {
+    //       model: Role,
+    //       as: 'roles',
+    //       through: { attributes: [] }, // Exclude junction table fields
+    //       include: [
+    //         {
+    //           model: Permission, // Include permissions for roles
+    //           as: 'permissions',
+    //           attributes: ['id', 'action'], // Fetch permission details
+    //           through: { attributes: [] }, // Exclude intermediate fields
+    //         },
+    //       ],
+    //       attributes: { exclude: ['createdAt', 'updatedAt', 'userId', 'clinicId'] },
+    //       required: false,
+    //       separate:true,
+    //     },
+    //     {
+    //       model: Clinic,
+    //       as: 'clinic', // Clinic relationship
+    //       attributes: ['id', 'clinicName', 'status'],
+    //       required: false,
+    //     },
+    //     {
+    //       model: Specialty,
+    //       as: 'specialties', // Specialty relationship
+    //       through: { attributes: [] },
+    //       attributes: ['id', 'name', 'departmentName'],
+    //       required: false,
+    //       separate:true
+    //     },
+    //     {
+    //       model: Camp,
+    //       as: 'camps', // Camp relationship
+    //       through: { attributes: [] },
+    //       where: { status: 'active' },
+    //       required: false,
+    //       attributes: { exclude: ['clinicId', 'updatedAt'] },
+    //     },
+    //   ],
+    // });
+    const user = await userService.getUserById(payload.sub);
 
     if (!user) {
       return done(null, false);

@@ -425,6 +425,8 @@ const createMammography = {
       .default({ timesPerDay: null, yearsUsed: null }),
     previousCancerDetails: Joi.string().allow('', null).optional(),
     lumpDetails: Joi.string().allow('', null).optional(),
+    onlineAmount: Joi.number().allow(null).optional(),
+    offlineAmount: Joi.number().allow(null).optional(),
   }),
   files: (files) => {
     if (!files.length) return null; // No files, validation passes
@@ -529,6 +531,8 @@ const updateMammography = {
       .optional(),
     previousCancerDetails: Joi.string().allow('', null).optional(),
     lumpDetails: Joi.string().allow('', null).optional(),
+    onlineAmount: Joi.number().allow(null).optional(),
+    offlineAmount: Joi.number().allow(null).optional(),
   }),
   files: (files) => {
     if (!files.length) return null; // No files, validation passes

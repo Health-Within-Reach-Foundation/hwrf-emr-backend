@@ -114,13 +114,14 @@ const bookAppointment = async (appointmentBody, transaction = null) => {
  * @param {string} clinicId - The ID of the clinic where the patient is being queued.
  * @param {string} [campId] - The ID of the camp where the patient is being queued (optional).
  * @returns {Promise<Object>} The newly created queue entry.
- * @throws {Error} If any required fields are missing or if the operation fails.
+ * @throws {ApiError} If any required fields are missing or if the operation fails.
  */
 const addToQueue = async (patientId, specialtyId, queueDate, clinicId, campId, transaction) => {
   try {
     // ✅ Ensure All Required Fields Exist
     if (!patientId || !specialtyId || !queueDate || !clinicId) {
-      throw new Error('Missing required fields to add patient to queue');
+      // throw new ApiError(httpStatus. 'Missing required fields to add patient to queue');
+      throw new ApiError(httpStatus.BAD_REQUEST, 'Missing required fields to add patient to queue');
     }
 
     // ✅ Fetch Last Token for the Specialty, Clinic & Camp
@@ -133,7 +134,7 @@ const addToQueue = async (patientId, specialtyId, queueDate, clinicId, campId, t
     // ✅ Get the Department Name for Queue Type
     const specialty = await Specialty.findByPk(specialtyId);
     if (!specialty) {
-      throw new Error(`Specialty with ID ${specialtyId} not found.`);
+      throw new ApiError(httpStatus.BAD_REQUEST, `Service not found.`);
     }
 
     // ✅ Assign New Token Number
@@ -156,7 +157,7 @@ const addToQueue = async (patientId, specialtyId, queueDate, clinicId, campId, t
     return newQueueEntry; // Return the created queue entry
   } catch (error) {
     console.error('[ERROR] Failed to add patient to queue:', error);
-    throw new Error('Failed to add patient to queue. Please try again.');
+    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, 'Failed to add patient to queue');
   }
 };
 

@@ -72,12 +72,12 @@ const getAllPermissions = async () => {
     });
 
     if (!permissions.length) {
-      throw new Error('No permissions found.');
+      throw new ApiError(httpStatus.NOT_FOUND, 'No permissions found.');
     }
 
     return permissions;
   } catch (error) {
-    throw new Error(`Failed to fetch permissions: ${error.message}`);
+    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, `Failed to fetch permissions: ${error.message}`);
   }
 };
 
@@ -94,7 +94,7 @@ const updateRoleWithPermissions = async (roleId, roleBody, transaction = null) =
   const role = await Role.findByPk(roleId);
 
   if (!role) {
-    throw new Error(`Role with ID ${roleId} not found.`);
+    throw new ApiError(httpStatus.BAD_REQUEST, `Role not found.`);
   }
 
   // Update role name and description
@@ -103,7 +103,7 @@ const updateRoleWithPermissions = async (roleId, roleBody, transaction = null) =
       roleName,
       roleDescription,
     },
-    { transaction } 
+    { transaction }
   );
 
   // Validate provided permissions

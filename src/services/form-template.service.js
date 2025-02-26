@@ -1,4 +1,3 @@
-const { where } = require('sequelize');
 const { FormTemplate } = require('../models/form-template.model');
 const ApiError = require('../utils/ApiError');
 const httpStatus = require('http-status');

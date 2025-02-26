@@ -142,7 +142,80 @@ const totalEarnings = onlineEarnings + offlineEarnings;
   };
 };
 
+const calculateGPAnalytics = (patients) => {
+  const gpPatients = patients?.filter((p) => p?.servicesTaken?.includes('GP'));
+  const totalGPPatients = gpPatients?.length;
+
+  const totalAttended = gpPatients?.filter(
+    (p) => p?.hasAppointments && p?.appointments?.some((a) => a?.status === 'in' || a?.status === 'out')
+  )?.length;
+
+  const missed = totalGPPatients - totalAttended;
+
+  const onlineEarnings = gpPatients.reduce((sum, p) => {
+    const patientOnlineEarnings = p?.gpRecords?.reduce((dSum, d) => {
+      console.log(`Patient ID: ${p.id}, GP Record ID: ${d.id}, Online Amount: ${d.onlineAmount}`);
+      return dSum + Number(d?.onlineAmount || 0);
+    }, 0);
+    console.log(`Patient ID: ${p.id}, Total Online Earnings: ${patientOnlineEarnings}`);
+    return sum + patientOnlineEarnings;
+  }, 0);
+
+  const offlineEarnings = gpPatients.reduce((sum, p) => {
+    const patientOfflineEarnings = p?.gpRecords?.reduce((dSum, d) => {
+      console.log(`Patient ID: ${p.id}, GP Record ID: ${d.id}, Offline Amount: ${d.offlineAmount}`);
+      return dSum + Number(d?.offlineAmount || 0);
+    }, 0);
+    console.log(`Patient ID: ${p.id}, Total Offline Earnings: ${patientOfflineEarnings}`);
+    return sum + patientOfflineEarnings;
+  }, 0);
+
+  const totalEarnings = onlineEarnings + offlineEarnings;
+
+  return {
+    totalGPPatients,
+    totalAttended,
+    missed,
+    totalEarnings,
+    onlineEarnings,
+    offlineEarnings,
+  };
+}
+
+const calculateMammographyAnalytics = (patients) => {
+  const mammographyPatients = patients?.filter((p) => p?.servicesTaken?.includes('Mammography'));
+  const totalMammographyPatients = mammographyPatients?.length;
+
+  const totalAttended = mammographyPatients.filter(
+    (p) => p?.hasAppointments && p?.appointments?.some((a) => a?.status === 'in' || a?.status === 'out')
+  )?.length;
+
+  const missed = totalMammographyPatients - totalAttended;
+
+  const onlineEarnings = mammographyPatients?.reduce(
+    (sum, p) => sum + Number(p?.mammography?.onlineAmount || 0),
+    0
+  );
+
+  const offlineEarnings = mammographyPatients?.reduce(
+    (sum, p) => sum + Number(p?.mammography?.offlineAmount || 0),
+    0
+  );
+
+  const totalEarnings = onlineEarnings + offlineEarnings;
+
+  return {
+    totalMammographyPatients,
+    totalAttended,
+    missed,
+    totalEarnings,
+    onlineEarnings,
+    offlineEarnings,
+  };
+}
 module.exports = {
   calculateCampAnalytics,
   calculateDentistryAnalytics,
+  calculateGPAnalytics,
+  calculateMammographyAnalytics,
 };

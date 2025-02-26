@@ -1,8 +1,6 @@
 const httpStatus = require('http-status');
-const { userService, emailService, roleService } = require('.');
 const { Clinic } = require('../models/clinic.model');
 const ApiError = require('../utils/ApiError');
-const { createRole } = require('./role.service');
 const { Specialty } = require('../models/specialty.model');
 const { Op } = require('sequelize');
 const { User } = require('../models/user.model');
@@ -15,7 +13,13 @@ const { Mammography } = require('../models/mammography.model');
 const { Treatment } = require('../models/treatment.model');
 const { Diagnosis } = require('../models/diagnosis.model');
 const { TreatmentSetting } = require('../models/treatment-setting.model');
-const { calculateCampAnalytics, calculateDentistryAnalytics } = require('../utils/camp-utility');
+const {
+  calculateCampAnalytics,
+  calculateDentistryAnalytics,
+  calculateGPAnalytics,
+  calculateMammographyAnalytics,
+} = require('../utils/camp-utility');
+const { GeneralPhysicianRecord } = require('../models/gp-record.model');
 
 /**
  * Creates a new camp with the provided data.
@@ -206,19 +210,6 @@ const updateCampById = async (campId, campData, transaction = null) => {
   await camp.save({ transaction });
   const originalEndDate = camp.endDate;
 
-  // // Check if endDate is today or in the future, and update status to "active"
-  // if (endDate && new Date(endDate) >= new Date()) {
-  //   camp.status = 'active'; // Set camp status to 'active'
-  //   await camp.save(); // Save the updated status
-  // }
-
-  // if (endDate && new Date(endDate) < new Date()) {
-  //   console.log("inside if condition -->", endDate, new Date(endDate), typeof endDate, typeof new Date(endDate))
-
-  //   camp.status = 'inactive'; // Set camp status to 'inactive'
-  //   await camp.save(); // Save the updated status
-  // }
-
   const today = new Date().toISOString().split('T')[0]; // Strip time
   const formattedEndDate = new Date(endDate).toISOString().split('T')[0];
 
@@ -359,8 +350,16 @@ const getCampDetails = async (campId) => {
           {
             model: Mammography,
             as: 'mammography',
-            attributes: ['id'],
+            attributes: ['id', 'createdAt', 'onlineAmount', 'offlineAmount'],
             required: false,
+            where: { campId },
+          },
+          {
+            model: GeneralPhysicianRecord,
+            as: 'gpRecords',
+            attributes: ['id', 'createdAt', 'onlineAmount', 'offlineAmount'],
+            required: false,
+            where: { campId },
           },
         ],
       },
@@ -378,6 +377,7 @@ const getCampDetails = async (campId) => {
   }
 
   console.log('Total registered patients:', camp.patients.length);
+  console.log('Camp patient', camp.patients[0]);
 
   // **Step 1: Flat patients for UI display (Can contain duplicates for multiple services)**
   const flatPatients = camp.patients.flatMap((patient) => {
@@ -388,6 +388,14 @@ const getCampDetails = async (campId) => {
       const totalPaidAmount = patient.diagnoses.reduce((sum, diagnosis) => {
         return sum + (diagnosis.treatment ? Number(diagnosis.treatment.paidAmount) : 0);
       }, 0);
+      const totalGPPaidAmount = patient.gpRecords.reduce((sum, record) => {
+        return sum + (record ? (record.onlineAmount ? Number(record.onlineAmount) : 0) + (record.offlineAmount ? Number(record.offlineAmount) : 0) : 0);
+      }, 0);
+
+      const totalMammoPaidAmount = patient.mammography
+        ? (patient.mammography.onlineAmount ? Number(patient.mammography.onlineAmount) : 0) +
+          (patient.mammography.offlineAmount ? Number(patient.mammography.offlineAmount) : 0)
+        : 0;
 
       const treatingDoctors = Array.from(
         new Set(
@@ -402,7 +410,14 @@ const getCampDetails = async (campId) => {
         treatmentDate: appointment ? appointment.appointmentDate : null,
         tokenNumber: queue ? queue.tokenNumber : null,
         serviceTaken: queue ? queue.queueType : null,
-        paidAmount: queue && queue.queueType === 'Dentistry' ? totalPaidAmount : null,
+        paidAmount:
+          queue && queue.queueType === 'Dentistry'
+            ? totalPaidAmount
+            : queue && queue.queueType === 'GP'
+            ? totalGPPaidAmount
+            : queue && queue.queueType === 'Mammography'
+            ? totalMammoPaidAmount
+            : null,
         treatingDoctors: queue && queue.queueType === 'Dentistry' ? treatingDoctors : null,
       };
     });
@@ -423,6 +438,8 @@ const getCampDetails = async (campId) => {
   // **Step 3: Calculate analytics using unique patients**
   const campAnalytics = calculateCampAnalytics(uniquePatients);
   campAnalytics.dentistryAnalytics = calculateDentistryAnalytics(uniquePatients);
+  campAnalytics.gpAnalytics = calculateGPAnalytics(uniquePatients);
+  campAnalytics.mammoAnalytics = calculateMammographyAnalytics(uniquePatients);
 
   return {
     ...camp.toJSON(),

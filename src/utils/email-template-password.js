@@ -11,18 +11,33 @@ const emailSubjectBodyForPassword = (type, token) => {
   let subject, body;
   const url = `${config.client_domain}/auth/set-password/${token}`;
   if (type === 'resetPassword') {
-    subject = 'Reset password';
-    body = `Dear user,
-To reset your password, click on this link: ${url}
-If you did not request any password resets, then ignore this email.`;
+    subject = 'Password Reset Request';
+    body = `
+      <div style="font-family: Arial, sans-serif; line-height: 1.6;">
+        <h2 style="color: #333;">Password Reset Request</h2>
+        <p>Dear user,</p>
+        <p>We received a request to reset your password. Click the button below to reset it:</p>
+        <p><a href="${url}" style="display: inline-block; padding: 10px 20px; color: #fff; background-color: #0a58b8; text-decoration: none; border-radius: 5px;">Reset Password</a></p>
+        <p>If you did not request a password reset, please ignore this email.</p>
+        <p>Thank you,<br>The Support Team</p>
+      </div>
+    `;
   } else if (type === 'setPassword') {
-    subject = 'Set password';
-    body = `Dear user,
-To set your password, click on this link: ${url}
- If you encounter any issues, please contact the administration.`;
+    subject = 'Set Your Password';
+    body = `
+      <div style="font-family: Arial, sans-serif; line-height: 1.6;">
+        <h2 style="color: #333;">Set Your Password</h2>
+        <p>Dear user,</p>
+        <p>Welcome! Please click the button below to set your password:</p>
+        <p><a href="${url}" style="display: inline-block; padding: 10px 20px; color: #fff; background-color: #0a58b8; text-decoration: none; border-radius: 5px;">Set Password</a></p>
+        <p>If you encounter any issues, please contact our support team.</p>
+        <p>Thank you,<br>The Support Team</p>
+      </div>
+    `;
   }
 
   console.log("returning subject and body", { subject, body });
   return { subject, body };
 };
+
 module.exports = emailSubjectBodyForPassword;

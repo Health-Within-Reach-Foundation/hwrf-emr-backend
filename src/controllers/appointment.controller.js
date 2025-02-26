@@ -2,6 +2,7 @@ const httpStatus = require('http-status');
 const catchAsync = require('../utils/catchAsync');
 const { appointmentService } = require('../services');
 const db = require('../models');
+const ApiError = require('../utils/ApiError');
 
 /**
  * Books an appointment for a patient.
@@ -32,7 +33,8 @@ const bookAppointment = catchAsync(async (req, res) => {
     });
   } catch (error) {
     await transaction.rollback();
-    console.error(error);
+    console.error('/clinics/appointments/book - controller - bookAppointment --> ', error);
+    throw new ApiError(httpStatus.BAD_REQUEST, `Unable to book appointment: ${error?.message}`);
   }
 });
 

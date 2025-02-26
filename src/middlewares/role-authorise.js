@@ -12,7 +12,7 @@ const roleAuthorization =
   (req, res, next) => {
     try {
       if (!req.user) {
-        throw new ApiError(httpStatus.UNAUTHORIZED, 'Please authenticate');
+        return next(new ApiError(httpStatus.UNAUTHORIZED, 'Please authenticate'));
       }
 
       // Check if the user is an admin
@@ -26,12 +26,12 @@ const roleAuthorization =
       );
 
       if (!hasAccess) {
-        throw new ApiError(httpStatus.FORBIDDEN, 'You do not have permission to access this resource');
+        return next(new ApiError(httpStatus.FORBIDDEN, 'You do not have permission to access this resource'));
       }
 
       next();
     } catch (err) {
-      next(err);
+      return next(new ApiError(httpStatus.INTERNAL_SERVER_ERROR, err.message));
     }
   };
 

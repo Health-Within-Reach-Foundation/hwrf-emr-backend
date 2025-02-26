@@ -134,7 +134,7 @@ const getLastPatientRegistered = async (clinicId) => {
     return lastPatient || null; // Return null if no patient is found
   } catch (error) {
     console.error('Error fetching last registered patient:', error);
-    throw new Error('Failed to fetch last registered patient');
+    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, `Internal Server Error: ${error?.message}`);
   }
 };
 
@@ -610,7 +610,7 @@ const getTreatments = async ({ diagnosisId, page = 1, limit = 10 }) => {
  *
  * @param {number} treatmentId - The ID of the treatment to retrieve.
  * @returns {Promise<Object>} A promise that resolves to the treatment object if found.
- * @throws {Error} If the treatment is not found.
+ * @throws {ApiError} If the treatment is not found.
  */
 const getTreatmentById = async (treatmentId) => {
   const treatment = await Treatment.findByPk(treatmentId, {
@@ -626,7 +626,7 @@ const getTreatmentById = async (treatmentId) => {
     ],
   });
 
-  if (!treatment) throw new Error('Treatment not found');
+  if (!treatment) throw new ApiError(httpStatus.NOT_FOUND, 'Treatment not found');
   return treatment;
 };
 
@@ -943,17 +943,13 @@ const getGPRecordById = async (id) => {
  * @param {string} id - The ID of the General Physician Record to update.
  * @param {Object} updateData - The data to update the General Physician Record with. The height of the patient (optional).
  * @returns {Promise<Object>} The updated General Physician Record.
- * @throws {Error} If the General Physician Record is not found.
+ * @throws {ApiError} If the General Physician Record is not found.
  */
 const updateGPRecord = async (id, updateData) => {
   const record = await GeneralPhysicianRecord.findByPk(id);
   if (!record) {
-    throw new Error('General Physician Record not found');
+    throw new ApiError(httpStatus.NOT_FOUND, 'Record not found');
   }
-
-  // if (updateData.weight && updateData.height) {
-  //   updateData.bmi = (updateData.weight / (updateData.height * updateData.height)).toFixed(2);
-  // }
 
   return record.update(updateData);
 };

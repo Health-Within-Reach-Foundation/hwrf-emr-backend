@@ -3,7 +3,6 @@ module.exports.emailService = require('./email.service');
 module.exports.tokenService = require('./token.service');
 module.exports.userService = require('./user.service');
 module.exports.clinicService = require('./clinic.service');
-module.exports.roleService = require('./role.service');
 module.exports.patientService = require('./patient.service');
 module.exports.appointmentService = require('./appoinment.service');
 module.exports.dentalService = require('./dental.service');

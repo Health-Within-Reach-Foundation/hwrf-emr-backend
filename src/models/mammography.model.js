@@ -198,6 +198,14 @@ const initModel = (sequelize) => {
           key: 'id',
         },
       },
+      onlineAmount: {
+        type: DataTypes.FLOAT,
+        allowNull: true,
+      },
+      offlineAmount: {
+        type: DataTypes.FLOAT,
+        allowNull: true,
+      },
     },
     {
       sequelize,

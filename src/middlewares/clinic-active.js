@@ -45,11 +45,8 @@ const isClinicActive = async (req, res, next) => {
       });
     }
   } catch (err) {
-    next(new ApiError(httpStatus.UNAUTHORIZED, 'Internal server error !'));
-    return res.status(httpStatus.INTERNAL_SERVER_ERROR).json({
-      success: false,
-      message: 'Internal server error!',
-    });
+    console.error('/auth/login - middleware - isClinicActive - error: ', err);
+    return next(new ApiError(httpStatus.UNAUTHORIZED, err.message));
   }
 };
 
