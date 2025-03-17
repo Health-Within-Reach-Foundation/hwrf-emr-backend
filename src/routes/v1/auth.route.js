@@ -4,16 +4,13 @@ const authController = require('../../controllers/auth.controller');
 const auth = require('../../middlewares/auth');
 const { clinicValidation, authValidation } = require('../../validations');
 const isClinicActive = require('../../middlewares/clinic-active');
-const { userController } = require('../../controllers');
 
 const router = express.Router();
 
-// Register api for sign up (superadmin)
 router.post('/register', validate(authValidation.register), authController.register);
 
 router.route('/onboard-clinic').post(validate(clinicValidation.onboardClinic), authController.onboardClinic);
 
-// login api for sign up (docter / assistant / receptionits)
 router.post('/login', validate(authValidation.login), isClinicActive, authController.login);
 
 router.post('/logout', auth(), validate(authValidation.logout), authController.logout);
@@ -29,8 +26,6 @@ router.post('/reset-password', validate(authValidation.resetPassword), authContr
 router.post('/send-verification-email', auth(), authController.sendVerificationEmail);
 
 router.post('/verify-email', validate(authValidation.verifyEmail), authController.verifyEmail);
-
-// router.route('/set-password').post(validate(authValidation.resetPassword), authController.resetPassword);
 
 router.get('/verify-token',validate(authValidation.verifyEmail), authController.verifyToken);
 

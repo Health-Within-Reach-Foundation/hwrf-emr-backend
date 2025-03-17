@@ -18,6 +18,7 @@ const upload = multer({
 
 const router = express.Router();
 
+/* **************************** Pateint crud route ******************************** */
 router
   .route('/')
   .post(
@@ -31,6 +32,15 @@ router
     // roleAuthorization('admin', 'receptionist', 'doctor'),
     patientController.getPatientsByClinic // Controller
   );
+
+router.route('/follow-ups').get(
+  auth(),
+  patientController.getPatientFollowUps
+);
+
+/* **************************** Pateint crud route ******************************** */
+
+/* **************************** Pateint dental crud routes ******************************** */
 
 router.route('/dental-records').post(
   auth(),
@@ -130,6 +140,10 @@ router
   )
   .delete(auth(), validate(patientValidation.deleteTreatment), patientController.deleteTreatment);
 
+/* **************************** Pateint dental crud routes ******************************** */
+
+/* **************************** Pateint mammography crud routes ******************************** */
+
 router
   .route('/mammography/:patientId')
   .post(
@@ -170,6 +184,49 @@ router
     patientController.updateMammography
   )
   .get(auth(), validate(patientValidation.getMammography), patientController.getMammography);
+
+/* **************************** Pateint mammography crud routes ******************************** */
+
+/* **************************** Pateint GP crud routes ******************************** */
+
+router
+  .route('/gp-records')
+  .post(
+    auth(),
+    (req, res, next) => {
+      console.log('req body --------', req.body, req.files);
+      next();
+    },
+    validate(patientValidation.createGPRecord),
+    patientController.createGPRecord
+  )
+  .get(
+    auth(),
+    validate(patientValidation.getGPRecordsByPatient),
+    patientController.getGPRecordsByPatient
+  );
+
+router
+  .route('/gp-records/:gpRecordId')
+  .patch(
+    auth(),
+    validate(patientValidation.updateGPRecord),
+    patientController.updateGPRecord
+  )
+  .get(
+    auth(),
+    validate(patientValidation.getGPRecord),
+    patientController.getGPRecordById
+  )
+  .delete(
+    auth(),
+    validate(patientValidation.getGPRecord),
+    patientController.deleteGPRecord
+  );
+
+/* **************************** Pateint GP crud routes ******************************** */
+
+/* **************************** Pateint crud routes ******************************** */
 router
   .route('/:patientId')
   .get(auth(), validate(patientValidation.getPatientById), patientController.getPatientDetailsById)

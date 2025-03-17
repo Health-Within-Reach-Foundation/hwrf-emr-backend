@@ -1,5 +1,8 @@
 const Joi = require('joi');
 
+/**
+ * Validation schema for creating a role.
+ */
 const createRole = {
   body: Joi.object().keys({
     roleName: Joi.string().required().description('Name of the role'),
@@ -11,6 +14,9 @@ const createRole = {
   }),
 };
 
+/**
+ * Validation schema for updating a role by ID.
+ */
 const updateRole = {
   query: Joi.object().keys({
     roleId: Joi.string().uuid().required(), // patientId must be a valid UUID and is required

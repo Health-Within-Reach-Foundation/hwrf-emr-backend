@@ -11,18 +11,18 @@ router
   .route('/')
   .post(
     auth(),
-    // roleAuthorization('roles:write'), // Check if user can manage roles
+    // roleAuthorization('administration:write'), // Check if user can manage roles
     validate(rolePermissionValidation.createRole),
     rolePermissionController.createRole
   )
   .get(
     auth(),
-    // roleAuthorization('roles:read'), // Allow only users with read or write permissions
+    // roleAuthorization('administration:read'), // Allow only users with read or write permissions
     rolePermissionController.getRolesByClinic // Fetch roles and permissions
   )
   .patch(
     auth(),
-    // roleAuthorization('roles:write'),
+    // roleAuthorization('administration:write'),
     (req, res, next) => {
       console.log('req body --------> ', req.body);
       next();
@@ -37,7 +37,7 @@ router
   .route('/all-permissions')
   .get(
     auth(),
-    // roleAuthorization('roles:write'),
+    // roleAuthorization('administration:write'),
     // validate(role)
     rolePermissionController.getAllPermissions
   )

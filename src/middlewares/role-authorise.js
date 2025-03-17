@@ -1,9 +1,18 @@
+/**
+ * Middleware to authorize user roles based on required permissions.
+ *
+ * @param {...string} requiredPermissions - The permissions required to access the resource.
+ * @returns {Function} Middleware function to check user roles and permissions.
+ *
+ * @throws {ApiError} If the user is not authenticated.
+ * @throws {ApiError} If the user does not have the required permissions.
+ */
 const roleAuthorization =
   (...requiredPermissions) =>
   (req, res, next) => {
     try {
       if (!req.user) {
-        throw new ApiError(httpStatus.UNAUTHORIZED, 'Please authenticate');
+        return next(new ApiError(httpStatus.UNAUTHORIZED, 'Please authenticate'));
       }
 
       // Check if the user is an admin
@@ -17,12 +26,12 @@ const roleAuthorization =
       );
 
       if (!hasAccess) {
-        throw new ApiError(httpStatus.FORBIDDEN, 'You do not have permission to access this resource');
+        return next(new ApiError(httpStatus.FORBIDDEN, 'You do not have permission to access this resource'));
       }
 
       next();
     } catch (err) {
-      next(err);
+      return next(new ApiError(httpStatus.INTERNAL_SERVER_ERROR, err.message));
     }
   };
 

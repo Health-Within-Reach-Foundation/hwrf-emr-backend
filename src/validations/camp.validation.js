@@ -1,6 +1,8 @@
 const Joi = require('joi');
-// const { password, clinicStatusValidation } = require('./custom.validation');
 
+/**
+ * Validation schema for creating a camp.
+ */
 const createCamp = {
   body: Joi.object().keys({
     name: Joi.string().required(),
@@ -14,12 +16,18 @@ const createCamp = {
   }),
 };
 
+/**
+ * Validation schema for getting a camp by ID.
+ */
 const getCampById = {
   params: Joi.object().keys({
     campId: Joi.string().uuid().required(),
   }),
 };
 
+/**
+ * Validation schema for updating a camp by ID.
+ */
 const updateCampById = {
   params: Joi.object().keys({
     campId: Joi.string().uuid().required(), // Validate campId as UUID

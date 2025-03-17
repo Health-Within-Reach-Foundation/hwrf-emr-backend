@@ -12,20 +12,21 @@ const { Permission } = require('../models/permission.model');
  * @param {Object} userBody
  * @returns {Promise<User>}
  */
-const createUser = async (userBody) => {
+const createUser = async (userBody, transaction = null) => {
   if (await User.isEmailTaken(userBody.email)) {
     throw new ApiError(httpStatus.BAD_REQUEST, 'Email already taken');
   }
-  return User.create(userBody);
+
+  return User.create(userBody, { transaction });
+  // return User.create(userBody);
 };
 
 /**
  * Get user by id
- * @param {ObjectId} id
+ * @param {string} id
  * @returns {Promise<User>}
  */
 const getUserById = async (id) => {
-  console.log('hello getting user from auth/me');
   return User.findByPk(id, {
     include: [
       {
@@ -116,6 +117,13 @@ const getUserByEmail = async (email) => {
   });
 };
 
+/**
+ * Retrieves a user associated with a clinic based on the provided email.
+ *
+ * @param {string} userEmail - The email of the user to retrieve.
+ * @returns {Promise<{user: Object, isSuperAdmin: boolean}>} - A promise that resolves to an object containing the user and a boolean indicating if the user is a superadmin.
+ * @throws {ApiError} - Throws an error if the user is not found or if the user has no associated clinic and is not a superadmin.
+ */
 const getUserAssociatedToClinic = async (userEmail) => {
   console.log('userid -->', userEmail);
   const user = await User.findOne({
@@ -166,7 +174,7 @@ const getUsersByClinic = async (clinicId) => {
   // Query users associated with the given clinicId
   const users = await User.findAll({
     where: { clinicId }, // Filter by clinicId
-    attributes: ['id', 'name', 'email', 'phoneNumber', 'specialist', 'createdAt', 'updatedAt'], // Select required fields
+    attributes: ['id', 'name', 'email', 'phoneNumber', 'specialist', 'status', 'createdAt', 'updatedAt'], // Select required fields
     include: [
       {
         model: Role, // Include roles associated with the user
@@ -197,7 +205,7 @@ const getUsersByClinic = async (clinicId) => {
 
 /**
  * Update user by id
- * @param {ObjectId} userId
+ * @param {string} userId
  * @param {Object} updateBody
  * @returns {Promise<User>}
  */
@@ -213,13 +221,14 @@ const updateUserById = async (userId, updateBody) => {
   return user;
 };
 
+// TODO: Go through this function and refactor it
 /**
  * Update user details
  * @param {String} userId - ID of the user
  * @param {Object} updateBody - Updated data
  * @returns {Promise<User>}
  */
-const updateUser = async (userId, updateBody) => {
+const updateUser = async (userId, updateBody, transaction = null) => {
   const { roles, specialties, ...userDetails } = updateBody;
 
   // Fetch the user
@@ -230,7 +239,7 @@ const updateUser = async (userId, updateBody) => {
 
   // Update user basic details
   if (Object.keys(userDetails).length > 0) {
-    await user.update(userDetails);
+    await user.update(userDetails, { transaction });
   }
 
   // Update roles
@@ -248,7 +257,7 @@ const updateUser = async (userId, updateBody) => {
       const rolesToAddInstances = await Role.findAll({
         where: { id: rolesToAdd },
       });
-      await user.addRoles(rolesToAddInstances);
+      await user.addRoles(rolesToAddInstances, { transaction });
     }
 
     // Remove old roles
@@ -256,10 +265,13 @@ const updateUser = async (userId, updateBody) => {
       const rolesToRemoveInstances = await Role.findAll({
         where: { id: rolesToRemove },
       });
-      await user.removeRoles(rolesToRemoveInstances);
+      await user.removeRoles(rolesToRemoveInstances, { transaction });
     }
   }
 
+  if (specialties === null) {
+    await user.setSpecialties([], { transaction });
+  }
   // Update specialties
   if (specialties) {
     // Fetch existing specialty IDs
@@ -275,7 +287,7 @@ const updateUser = async (userId, updateBody) => {
       const specialtiesToAddInstances = await Specialty.findAll({
         where: { id: specialtiesToAdd },
       });
-      await user.addSpecialties(specialtiesToAddInstances);
+      await user.addSpecialties(specialtiesToAddInstances, { transaction });
     }
 
     // Remove old specialties
@@ -283,7 +295,7 @@ const updateUser = async (userId, updateBody) => {
       const specialtiesToRemoveInstances = await Specialty.findAll({
         where: { id: specialtiesToRemove },
       });
-      await user.removeSpecialties(specialtiesToRemoveInstances);
+      await user.removeSpecialties(specialtiesToRemoveInstances, { transaction });
     }
   }
 
@@ -300,7 +312,7 @@ const updateUser = async (userId, updateBody) => {
 
 /**
  * Delete user by id
- * @param {ObjectId} userId
+ * @param {string} userId
  * @returns {Promise<User>}
  */
 const deleteUserById = async (userId) => {
@@ -308,8 +320,16 @@ const deleteUserById = async (userId) => {
   if (!user) {
     throw new ApiError(httpStatus.NOT_FOUND, 'User not found');
   }
-  await user.destroy({ force: true });
-  // return user;
+
+  // Remove user from many-to-many relationships
+  await user.setRoles([]);
+  await user.setCamps([]);
+  await user.setSpecialties([]);
+
+  // Soft delete the user
+  await user.destroy({ force: false });
+
+  return user;
 };
 
 module.exports = {

@@ -8,7 +8,7 @@ class Diagnosis extends Model {
     Diagnosis.belongsTo(models.Patient, { foreignKey: 'patientId', as: 'diagnosis' });
 
     // Each Diagnosis can have many Treatments
-    Diagnosis.hasOne(models.Treatment, { foreignKey: 'diagnosisId', as: 'treatment', });
+    Diagnosis.hasOne(models.Treatment, { foreignKey: 'diagnosisId', as: 'treatment' });
   }
 }
 
@@ -38,7 +38,7 @@ const initModel = (sequelize) => {
       },
       selectedTeeth: {
         type: DataTypes.INTEGER,
-        allowNull: true
+        allowNull: true,
       },
       // toothNumber: {
       //   type: DataTypes.ARRAY(DataTypes.INTEGER),
@@ -82,6 +82,14 @@ const initModel = (sequelize) => {
           key: 'id',
         },
       },
+      // campId: {
+      //   type: DataTypes.UUID,
+      //   allowNull: true,
+      //   references: {
+      //     model: 'camps',
+      //     key: 'id',
+      //   },
+      // },
       estimatedCost: {
         type: DataTypes.DECIMAL,
         allowNull: true,

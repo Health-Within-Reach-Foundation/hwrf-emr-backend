@@ -1,5 +1,7 @@
 const Joi = require('joi');
 
+/* ***************************** Patient CRUD Validation *************************** */
+
 /**
  * Validation for adding a new patient
  */
@@ -41,18 +43,37 @@ const updatePatient = {
 };
 
 /**
- * Validation for fetching patients
+ * Validation for getting a list of patients by clinic
  */
-// const getPatients = {
-//   query: Joi.object().keys({
-//     name: Joi.string().optional(),
-//     mobile: Joi.string().optional(),
-//     registrationDate: Joi.date().optional(),
-//     page: Joi.number().integer().min(1).default(1),
-//     limit: Joi.number().integer().min(1).default(10),
-//   }),
-// };
+const getPatientsByClinic = {
+  query: Joi.object().keys({
+    clinicId: Joi.string().uuid().required(), // Clinic ID is required
+    // page: Joi.number().integer().min(1).default(1),
+    // limit: Joi.number().integer().min(1).default(10),
+  }),
+};
 
+/**
+ * Validation for getting a patient by ID
+ */
+const getPatientById = {
+  params: Joi.object().keys({
+    patientId: Joi.string().uuid().required(), // patientId must be a valid UUID and is required
+  }),
+  query: Joi.object().keys({
+    specialtyId: Joi.alternatives()
+      .try(Joi.string().uuid(), Joi.allow(null)) // Allow either a UUID or null
+      .optional(),
+  }),
+};
+
+/* ***************************** Patient CRUD Validation *************************** */
+
+/* ***************************** Patient Dental CRUD Validation *************************** */
+
+/**
+ * Validation schema for adding a new dental patient record
+ */
 const addDentalPatientRecord = {
   body: Joi.object().keys({
     appointmentId: Joi.string().uuid().required(),
@@ -78,43 +99,9 @@ const addDentalPatientRecord = {
   }),
 };
 
-const getPatientsByClinic = {
-  query: Joi.object().keys({
-    clinicId: Joi.string().uuid().required(), // Clinic ID is required
-    // page: Joi.number().integer().min(1).default(1),
-    // limit: Joi.number().integer().min(1).default(10),
-  }),
-};
-
-const getPatientById = {
-  params: Joi.object().keys({
-    patientId: Joi.string().uuid().required(), // patientId must be a valid UUID and is required
-  }),
-  query: Joi.object().keys({
-    specialtyId: Joi.alternatives()
-      .try(Joi.string().uuid(), Joi.allow(null)) // Allow either a UUID or null
-      .optional(),
-  }),
-};
-
-// const createDiagnosis = {
-//   body: Joi.object().keys({
-//     complaints: Joi.array().items(Joi.string()).optional(),
-//     treatment: Joi.array().items(Joi.string()).optional(),
-//     currentStatus: Joi.array().items(Joi.string()).optional(),
-//     // dentalQuadrant: Joi.object().pattern(Joi.string(), Joi.array().items(Joi.number())).optional(),
-//     dentalQuadrant: Joi.array().items(Joi.string()).optional(),
-//     xrayStatus: Joi.boolean().optional(),
-//     // xray: Joi.array().items(Joi.string().uri()).optional(),
-//     notes: Joi.string().optional(),
-//     additionalDetails: Joi.object().optional(),
-//     // appointmentId: Joi.string().uuid().optional(),
-//     patientId: Joi.string().uuid().required(),
-//   }),
-// };
-
-//
-
+/**
+ * Valdation schema for creating a diagnosis of a patient
+ */
 const createDiagnosis = {
   body: Joi.object().keys({
     complaints: Joi.array().items(Joi.string()).optional(),
@@ -148,6 +135,9 @@ const createDiagnosis = {
   },
 };
 
+/**
+ * Validation schema for getting a list of diagnoses
+ */
 const getDiagnoses = {
   query: Joi.object().keys({
     patientId: Joi.string().uuid().optional(),
@@ -156,12 +146,18 @@ const getDiagnoses = {
   }),
 };
 
+/**
+ * Validation schema for getting a diagnosis by ID
+ */
 const getDiagnosis = {
   params: Joi.object().keys({
     diagnosisId: Joi.string().uuid().required(),
   }),
 };
 
+/**
+ * Validation schema for updating a diagnosis
+ */
 const updateDiagnosis = {
   params: Joi.object().keys({
     diagnosisId: Joi.string().uuid().required(),
@@ -198,26 +194,18 @@ const updateDiagnosis = {
   },
 };
 
+/**
+ * Validation schema for deleting a diagnosis
+ */
 const deleteDiagnosis = {
   params: Joi.object().keys({
     diagnosisId: Joi.string().uuid().required(),
   }),
 };
 
-// const createTreatment = {
-//   body: Joi.object().keys({
-//     diagnosisId: Joi.string().uuid().required().description('Diagnosis ID'),
-//     treatmentDate: Joi.date().required().description('Date of treatment'),
-//     treatmentStatus: Joi.array().items(Joi.string()).optional(),
-//     notes: Joi.string().allow('', null).optional(),
-//     additionalDetails: Joi.object().optional(),
-//     totalAmount: Joi.number().required(),
-//     paidAmount: Joi.number().default(0),
-//     remainingAmount: Joi.number().required(),
-//     paymentStatus: Joi.string().valid('paid', 'pending').default('pending'),
-//   }),
-// };
-
+/**
+ * Validation schema for creating a treatment
+ */
 const createTreatment = {
   body: Joi.object().keys({
     diagnosisId: Joi.string().uuid().required().description('Diagnosis ID'),
@@ -242,7 +230,6 @@ const createTreatment = {
       .optional(),
     onlineAmount: Joi.number().optional(),
     offlineAmount: Joi.number().optional(),
-    paymentMode: Joi.string().optional(),
     // settingPaidAmount: Joi.number().optional(),
     nextDate: Joi.date().allow(null).optional().description('follow up date of treatment'),
   }),
@@ -263,6 +250,9 @@ const createTreatment = {
   },
 };
 
+/**
+ * Validation schema for getting a list of treatments
+ */
 const getTreatments = {
   query: Joi.object().keys({
     diagnosisId: Joi.string().uuid().required().description('Diagnosis ID'),
@@ -271,35 +261,18 @@ const getTreatments = {
   }),
 };
 
+/**
+ * Validation schema for getting a treatment by ID
+ */
 const getTreatmentById = {
   params: Joi.object().keys({
     treatmentId: Joi.string().uuid().required().description('Treatment ID'),
   }),
 };
 
-// const updateTreatment = {
-//   params: Joi.object().keys({
-//     treatmentId: Joi.string().uuid().required().description('Treatment ID'),
-//   }),
-//   body: Joi.object()
-//     .keys({
-//       treatmentDate: Joi.date().optional(),
-//       // complaints: Joi.array().items(Joi.string()).optional(),
-//       // treatments: Joi.array().items(Joi.string()).optional(),
-//       // dentalQuadrant: Joi.object().pattern(Joi.string(), Joi.array().items(Joi.number())).optional(),
-//       // xrayStatus: Joi.boolean().optional(),
-//       // xray: Joi.array().items(Joi.string().uri()).optional(),
-//       treatmentStatus: Joi.array().items(Joi.string()).optional(),
-//       notes: Joi.string().allow('', null).optional(),
-//       additionalDetails: Joi.object().optional(),
-//       totalAmount: Joi.number().optional(),
-//       paidAmount: Joi.number().optional(),
-//       remainingAmount: Joi.number().optional(),
-//       paymentStatus: Joi.string().valid('paid', 'pending').optional(),
-//     })
-//     .min(1),
-// };
-
+/**
+ * Validation schema for updating a treatment
+ */
 const updateTreatment = {
   params: Joi.object().keys({
     treatmentId: Joi.string().uuid().required().description('Treatment ID'),
@@ -333,7 +306,6 @@ const updateTreatment = {
         .optional(),
       onlineAmount: Joi.number().optional(),
       offlineAmount: Joi.number().optional(),
-      paymentMode: Joi.string().optional(),
       nextDate: Joi.date().allow(null).optional().description('follow up date of treatment'),
     })
     .min(1),
@@ -354,12 +326,22 @@ const updateTreatment = {
   },
 };
 
+/**
+ * Validation schema for deleting a treatment
+ */
 const deleteTreatment = {
   params: Joi.object().keys({
     treatmentId: Joi.string().uuid().required().description('Treatment ID'),
   }),
 };
 
+/* ***************************** Patient Dental CRUD Validation *************************** */
+
+/* ***************************** Patient Mammography CRUD Validation *************************** */
+
+/**
+ * Validation schema for creating a mammography record
+ */
 const createMammography = {
   params: Joi.object().keys({
     patientId: Joi.string().uuid().required().description('Patient ID'),
@@ -443,6 +425,8 @@ const createMammography = {
       .default({ timesPerDay: null, yearsUsed: null }),
     previousCancerDetails: Joi.string().allow('', null).optional(),
     lumpDetails: Joi.string().allow('', null).optional(),
+    onlineAmount: Joi.number().allow(null).optional(),
+    offlineAmount: Joi.number().allow(null).optional(),
   }),
   files: (files) => {
     if (!files.length) return null; // No files, validation passes
@@ -461,11 +445,19 @@ const createMammography = {
     return null; // No errors
   },
 };
+
+/**
+ * Validation schema for getting a list of mammography records
+ */
 const getMammography = {
   params: Joi.object().keys({
     patientId: Joi.string().uuid().required().description('Patient ID'),
   }),
 };
+
+/**
+ * Validation schema for updating a mammography record by patient ID
+ */
 const updateMammography = {
   body: Joi.object().keys({
     menstrualAge: Joi.number().integer().min(0).allow('null', null).optional(),
@@ -539,6 +531,8 @@ const updateMammography = {
       .optional(),
     previousCancerDetails: Joi.string().allow('', null).optional(),
     lumpDetails: Joi.string().allow('', null).optional(),
+    onlineAmount: Joi.number().allow(null).optional(),
+    offlineAmount: Joi.number().allow(null).optional(),
   }),
   files: (files) => {
     if (!files.length) return null; // No files, validation passes
@@ -558,11 +552,158 @@ const updateMammography = {
   },
 };
 
+/* ***************************** Patient Mammography CRUD Validation *************************** */
+
+/* ***************************** Patient GP CRUD Validation *************************** */
+
+/**
+ * Validation schema for creating a GP record
+ */
+const createGPRecord = {
+  body: Joi.object().keys({
+    patientId: Joi.string().uuid().allow('', null).optional().default(null),
+    weight: Joi.number().allow('', null).optional().default(null),
+    height: Joi.number().allow('', null).optional().default(null),
+    sugar: Joi.number().allow('', null).optional().default(null),
+    bp: Joi.string().allow('', null).optional().default(null),
+    hb: Joi.number().allow('', null).optional().default(null),
+    complaints: Joi.array().items(Joi.string().allow('', null)).allow('', null).optional().default(null),
+    kco: Joi.array().items(Joi.string().allow('', null)).allow('', null).optional().default(null),
+    findings: Joi.array().items(Joi.string().allow('', null)).allow('', null).optional().default(null),
+    systemicExamination: Joi.array().items(Joi.string().allow('', null)).allow('', null).optional().default(null),
+    treatment: Joi.string().allow('', null).optional().default(null),
+    advice: Joi.string().allow('', null).optional().default(null),
+    // medicine: Joi.string().allow('', null).optional().default(null),
+    // medicine: Joi.array().items(Joi.string().allow('', null)).allow('', null).optional().default(null),
+    medicine: Joi.array().items(
+      Joi.object().keys({
+        key: Joi.number().optional(),
+        medicineType: Joi.string().optional(),
+        medicine: Joi.string().optional(),
+        dose: Joi.string().optional(),
+        when: Joi.string().optional(),
+        frequency: Joi.string().optional(),
+        duration: Joi.string().optional(),
+        notes: Joi.string().allow('', null).optional().default(null),
+      })
+    ),
+    followUpDate: Joi.date().allow('', null).optional().default(null),
+    onlineAmount: Joi.number().allow('', null).optional().default(null),
+    offlineAmount: Joi.number().allow('', null).optional().default(null),
+    findingsOptionsDetails: Joi.object()
+      .keys({
+        temperatureDetails: Joi.string().allow('', null).optional().default(null),
+        bpDetails: Joi.string().allow('', null).optional().default(null),
+        pulseRateDetails: Joi.string().allow('', null).optional().default(null),
+        respiratoryRateDetails: Joi.string().allow('', null).optional().default(null),
+        generalExaminationDetails: Joi.string().allow('', null).optional().default(null),
+        skinLesionDetails: Joi.string().allow('', null).optional().default(null),
+      })
+      .allow('', null)
+      .optional()
+      .default(null),
+    systemicExaminationOptionsDetails: Joi.object()
+      .keys({
+        respiratoryDetails: Joi.string().allow('', null).optional().default(null),
+        cardioVascularDetails: Joi.string().allow('', null).optional().default(null),
+        cnsDetails: Joi.string().allow('', null).optional().default(null),
+        perAbdominalExaminationDetails: Joi.string().allow('', null).optional().default(null),
+      })
+      .allow('', null)
+      .optional()
+      .default(null),
+    otherComplaints: Joi.string().allow('', null).optional().default(null),
+  }),
+};
+
+/**
+ * Validation schema for getting a list of GP records by patient ID
+ */
+const getGPRecordsByPatient = {
+  query: Joi.object().keys({
+    patientId: Joi.string().uuid().required(),
+  }),
+};
+
+/**
+ * Validation schema for getting a GP record by ID
+ */
+const getGPRecord = {
+  params: Joi.object().keys({
+    gpRecordId: Joi.string().uuid().required(),
+  }),
+};
+
+/**
+ * Validation schema for updating a GP record
+ */
+const updateGPRecord = {
+  params: Joi.object().keys({
+    gpRecordId: Joi.string().uuid().required(),
+  }),
+  body: Joi.object()
+    .keys({
+      weight: Joi.number().allow('', null).optional().default(null),
+      height: Joi.number().allow('', null).optional().default(null),
+      sugar: Joi.number().allow('', null).optional().default(null),
+      bp: Joi.string().allow('', null).optional().default(null),
+      hb: Joi.number().allow('', null).optional().default(null),
+      complaints: Joi.array().items(Joi.string().allow('', null)).allow('', null).optional().default(null),
+      kco: Joi.array().items(Joi.string().allow('', null)).allow('', null).optional().default(null),
+      findings: Joi.array().items(Joi.string().allow('', null)).allow('', null).optional().default(null),
+      systemicExamination: Joi.array().items(Joi.string().allow('', null)).allow('', null).optional().default(null),
+      treatment: Joi.string().allow('', null).optional().default(null),
+      advice: Joi.string().allow('', null).optional().default(null),
+      // medicine: Joi.string().allow('', null).optional().default(null),
+      // medicine: Joi.array().items(Joi.string().allow('', null)).allow('', null).optional().default(null),
+      medicine: Joi.array().items(
+        Joi.object().keys({
+          key: Joi.number().optional(),
+          medicineType: Joi.string().optional(),
+          medicine: Joi.string().optional(),
+          dose: Joi.string().optional(),
+          when: Joi.string().optional(),
+          frequency: Joi.string().optional(),
+          duration: Joi.string().optional(),
+          notes: Joi.string().allow('', null).optional().default(null),
+        })
+      ),
+      followUpDate: Joi.date().allow('', null).optional().default(null),
+      onlineAmount: Joi.number().allow('', null).optional().default(null),
+      offlineAmount: Joi.number().allow('', null).optional().default(null),
+      findingsOptionsDetails: Joi.object()
+        .keys({
+          temperatureDetails: Joi.string().allow('', null).optional().default(null),
+          bpDetails: Joi.string().allow('', null).optional().default(null),
+          pulseRateDetails: Joi.string().allow('', null).optional().default(null),
+          respiratoryRateDetails: Joi.string().allow('', null).optional().default(null),
+          generalExaminationDetails: Joi.string().allow('', null).optional().default(null),
+          skinLesionDetails: Joi.string().allow('', null).optional().default(null),
+        })
+        .allow('', null)
+        .optional()
+        .default(null),
+      systemicExaminationOptionsDetails: Joi.object()
+        .keys({
+          respiratoryDetails: Joi.string().allow('', null).optional().default(null),
+          cardioVascularDetails: Joi.string().allow('', null).optional().default(null),
+          cnsDetails: Joi.string().allow('', null).optional().default(null),
+          perAbdominalExaminationDetails: Joi.string().allow('', null).optional().default(null),
+        })
+        .allow('', null)
+        .optional()
+        .default(null),
+      otherComplaints: Joi.string().allow('', null).optional().default(null),
+    })
+    .min(1),
+};
+
+/* ***************************** Patient GP CRUD Validation *************************** */
+
 module.exports = {
   createPatient,
   updateMammography,
   updatePatient,
-  // getPatients,
   addDentalPatientRecord,
   getPatientsByClinic,
   getPatientById,
@@ -578,4 +719,8 @@ module.exports = {
   deleteTreatment,
   getMammography,
   createMammography,
+  createGPRecord,
+  getGPRecordsByPatient,
+  getGPRecord,
+  updateGPRecord,
 };

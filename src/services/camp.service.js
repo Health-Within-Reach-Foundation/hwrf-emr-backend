@@ -1,8 +1,6 @@
 const httpStatus = require('http-status');
-const { userService, emailService, roleService } = require('.');
 const { Clinic } = require('../models/clinic.model');
 const ApiError = require('../utils/ApiError');
-const { createRole } = require('./role.service');
 const { Specialty } = require('../models/specialty.model');
 const { Op } = require('sequelize');
 const { User } = require('../models/user.model');
@@ -15,22 +13,47 @@ const { Mammography } = require('../models/mammography.model');
 const { Treatment } = require('../models/treatment.model');
 const { Diagnosis } = require('../models/diagnosis.model');
 const { TreatmentSetting } = require('../models/treatment-setting.model');
-const { calculateCampAnalytics, calculateDentistryAnalytics } = require('../utils/camp-utility');
+const {
+  calculateCampAnalytics,
+  calculateDentistryAnalytics,
+  calculateGPAnalytics,
+  calculateMammographyAnalytics,
+} = require('../utils/camp-utility');
+const { GeneralPhysicianRecord } = require('../models/gp-record.model');
 
-// function to create camp
-const createCamp = async (campData) => {
+/**
+ * Creates a new camp with the provided data.
+ *
+ * @param {Object} campData - The data for the new camp.
+ * @param {string} campData.name - The name of the camp.
+ * @param {string} campData.location - The location of the camp.
+ * @param {string} campData.city - The city where the camp is located.
+ * @param {Array<number>} campData.vans - The list of van IDs associated with the camp.
+ * @param {Date} campData.startDate - The start date of the camp.
+ * @param {Date} campData.endDate - The end date of the camp.
+ * @param {Array<number>} campData.specialties - The list of specialty IDs associated with the camp.
+ * @param {number} campData.organizerId - The ID of the organizer of the camp.
+ * @param {number} campData.clinicId - The ID of the clinic associated with the camp.
+ * @param {Array<number>} campData.users - The list of user IDs associated with the camp.
+ * @returns {Promise<Object>} The created camp object.
+ * @throws {ApiError} If one or more specialties are not found.
+ */
+const createCamp = async (campData, transaction = null) => {
   const { name, location, city, vans, startDate, endDate, specialties, organizerId, clinicId, users } = campData;
 
-  const camp = await Camp.create({
-    name,
-    location,
-    city,
-    startDate,
-    endDate,
-    organizerId,
-    clinicId,
-    vans,
-  });
+  const camp = await Camp.create(
+    {
+      name,
+      location,
+      city,
+      startDate,
+      endDate,
+      organizerId,
+      clinicId,
+      vans,
+    },
+    { transaction }
+  );
 
   const specialtiesDoc = await Specialty.findAll({
     where: {
@@ -44,13 +67,20 @@ const createCamp = async (campData) => {
     throw new ApiError(httpStatus.BAD_REQUEST, 'One or more specialties not found');
   }
 
-  await camp.addSpecialties(specialtiesDoc);
+  await camp.addSpecialties(specialtiesDoc, { transaction });
 
-  await camp.addUsers(users);
+  await camp.addUsers(users, { transaction });
 
   return camp;
 };
 
+/**
+ * Retrieves a list of camps based on the provided clinic ID and optional status.
+ *
+ * @param {number} clinicId - The ID of the clinic to filter camps by.
+ * @param {string|null} [status=null] - The optional status to filter camps by. If not provided, all statuses are included.
+ * @returns {Promise<Array>} A promise that resolves to an array of camp objects.
+ */
 const getCamps = async (clinicId, status = null) => {
   let where = { clinicId };
   if (status) {
@@ -75,7 +105,7 @@ const getCamps = async (clinicId, status = null) => {
 
 /**
  * Fetch camp details by campId.
- * @param {string} campId
+ * @param {uid} campId
  * @returns {Promise<Object>}
  */
 const getCampById = async (campId) => {
@@ -143,6 +173,13 @@ const getCampById = async (campId) => {
   return camp;
 };
 
+/**
+ * Sets the current camp for a user.
+ *
+ * @param {number} campId - The ID of the camp to set as current.
+ * @param {number} userId - The ID of the user whose current camp is being set.
+ * @returns {Promise<Object>} - A promise that resolves to the updated user object.
+ */
 const setCurrentCamp = async (campId, userId) => {
   const user = await User.update({ currentCampId: campId }, { where: { id: userId } });
   return user;
@@ -154,7 +191,7 @@ const setCurrentCamp = async (campId, userId) => {
  * @param {Object} campData - Data to update the camp
  * @returns {Promise<Camp>}
  */
-const updateCampById = async (campId, campData) => {
+const updateCampById = async (campId, campData, transaction = null) => {
   const { name, location, city, startDate, endDate, specialties, vans, users } = campData;
 
   console.log('campData -->', campData, new Date());
@@ -170,21 +207,8 @@ const updateCampById = async (campId, campData) => {
   // Update basic camp details
   Object.assign(camp, updatedCampBody);
 
-  await camp.save();
+  await camp.save({ transaction });
   const originalEndDate = camp.endDate;
-
-  // // Check if endDate is today or in the future, and update status to "active"
-  // if (endDate && new Date(endDate) >= new Date()) {
-  //   camp.status = 'active'; // Set camp status to 'active'
-  //   await camp.save(); // Save the updated status
-  // }
-
-  // if (endDate && new Date(endDate) < new Date()) {
-  //   console.log("inside if condition -->", endDate, new Date(endDate), typeof endDate, typeof new Date(endDate))
-
-  //   camp.status = 'inactive'; // Set camp status to 'inactive'
-  //   await camp.save(); // Save the updated status
-  // }
 
   const today = new Date().toISOString().split('T')[0]; // Strip time
   const formattedEndDate = new Date(endDate).toISOString().split('T')[0];
@@ -211,7 +235,7 @@ const updateCampById = async (campId, campData) => {
     }
   }
 
-  await camp.save();
+  await camp.save({ transaction });
 
   // Handle Specialties (Many-to-Many)
   if (specialties) {
@@ -223,7 +247,7 @@ const updateCampById = async (campId, campData) => {
       throw new ApiError(httpStatus.BAD_REQUEST, 'One or more specialties not found');
     }
 
-    await camp.setSpecialties(specialtyRecords); // Updates specialties
+    await camp.setSpecialties(specialtyRecords, { transaction }); // Updates specialties
   }
 
   // Handle Users (Many-to-Many)
@@ -236,13 +260,30 @@ const updateCampById = async (campId, campData) => {
       throw new ApiError(httpStatus.BAD_REQUEST, 'One or more users not found');
     }
 
-    await camp.setUsers(userRecords); // Updates users
+    await camp.setUsers(userRecords, { transaction }); // Updates users
   }
 
-  return camp.reload(); // Return updated camp with relations
+  return camp.reload({ transaction }); // Return updated camp with relations
 };
 
+/**
+ * Fetches detailed information about a specific camp, including associated clinics, users, patients, and their related data.
+ *
+ * @param {number} campId - The ID of the camp to fetch details for.
+ * @returns {Promise<Object>} - A promise that resolves to an object containing camp details, flattened patients for UI display, and analytics data.
+ * @throws {ApiError} - Throws an error if the camp is not found.
+ *
+ * @example
+ * const campDetails = await getCampDetails(1);
+ * console.log(campDetails);
+ *
+ * @typedef {Object} CampDetails
+ * @property {Object} camp - The camp details.
+ * @property {Array<Object>} patients - Flattened patients for UI display.
+ * @property {Object} analytics - Analytics data calculated from unique patients.
+ */
 const getCampDetails = async (campId) => {
+  console.log('Fetching camp details for campId:', campId);
   const camp = await Camp.findByPk(campId, {
     include: [
       {
@@ -265,6 +306,7 @@ const getCampDetails = async (campId) => {
           {
             model: Appointment,
             as: 'appointments',
+            where: { campId },
             attributes: { exclude: ['createdAt', 'updatedAt'] },
             required: false,
             include: [
@@ -297,7 +339,8 @@ const getCampDetails = async (campId) => {
                   {
                     model: TreatmentSetting,
                     as: 'treatmentSettings',
-                    attributes: ['id', 'treatingDoctor', 'onlineAmount', 'offlineAmount', 'crownStatus', 'paymentMode', 'nextDate'],
+                    attributes: ['id', 'treatingDoctor', 'onlineAmount', 'offlineAmount', 'crownStatus', 'nextDate'],
+                    where: { campId },
                     required: false,
                   },
                 ],
@@ -307,8 +350,16 @@ const getCampDetails = async (campId) => {
           {
             model: Mammography,
             as: 'mammography',
-            attributes: ['id'],
+            attributes: ['id', 'createdAt', 'onlineAmount', 'offlineAmount'],
             required: false,
+            where: { campId },
+          },
+          {
+            model: GeneralPhysicianRecord,
+            as: 'gpRecords',
+            attributes: ['id', 'createdAt', 'onlineAmount', 'offlineAmount'],
+            required: false,
+            where: { campId },
           },
         ],
       },
@@ -326,6 +377,7 @@ const getCampDetails = async (campId) => {
   }
 
   console.log('Total registered patients:', camp.patients.length);
+  console.log('Camp patient', camp.patients[0]);
 
   // **Step 1: Flat patients for UI display (Can contain duplicates for multiple services)**
   const flatPatients = camp.patients.flatMap((patient) => {
@@ -336,6 +388,14 @@ const getCampDetails = async (campId) => {
       const totalPaidAmount = patient.diagnoses.reduce((sum, diagnosis) => {
         return sum + (diagnosis.treatment ? Number(diagnosis.treatment.paidAmount) : 0);
       }, 0);
+      const totalGPPaidAmount = patient.gpRecords.reduce((sum, record) => {
+        return sum + (record ? (record.onlineAmount ? Number(record.onlineAmount) : 0) + (record.offlineAmount ? Number(record.offlineAmount) : 0) : 0);
+      }, 0);
+
+      const totalMammoPaidAmount = patient.mammography
+        ? (patient.mammography.onlineAmount ? Number(patient.mammography.onlineAmount) : 0) +
+          (patient.mammography.offlineAmount ? Number(patient.mammography.offlineAmount) : 0)
+        : 0;
 
       const treatingDoctors = Array.from(
         new Set(
@@ -350,7 +410,14 @@ const getCampDetails = async (campId) => {
         treatmentDate: appointment ? appointment.appointmentDate : null,
         tokenNumber: queue ? queue.tokenNumber : null,
         serviceTaken: queue ? queue.queueType : null,
-        paidAmount: queue && queue.queueType === 'Dentistry' ? totalPaidAmount : null,
+        paidAmount:
+          queue && queue.queueType === 'Dentistry'
+            ? totalPaidAmount
+            : queue && queue.queueType === 'GP'
+            ? totalGPPaidAmount
+            : queue && queue.queueType === 'Mammography'
+            ? totalMammoPaidAmount
+            : null,
         treatingDoctors: queue && queue.queueType === 'Dentistry' ? treatingDoctors : null,
       };
     });
@@ -371,6 +438,8 @@ const getCampDetails = async (campId) => {
   // **Step 3: Calculate analytics using unique patients**
   const campAnalytics = calculateCampAnalytics(uniquePatients);
   campAnalytics.dentistryAnalytics = calculateDentistryAnalytics(uniquePatients);
+  campAnalytics.gpAnalytics = calculateGPAnalytics(uniquePatients);
+  campAnalytics.mammoAnalytics = calculateMammographyAnalytics(uniquePatients);
 
   return {
     ...camp.toJSON(),

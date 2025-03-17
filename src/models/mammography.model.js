@@ -15,6 +15,14 @@ const initModel = (sequelize) => {
         defaultValue: DataTypes.UUIDV4,
         primaryKey: true,
       },
+      campId: {
+        type: DataTypes.UUID,
+        allowNull: true,
+        references: {
+          model: 'camps',
+          key: 'id',
+        },
+      },
       menstrualAge: {
         type: DataTypes.INTEGER,
         allowNull: true,
@@ -173,11 +181,11 @@ const initModel = (sequelize) => {
         defaultValue: { frequency: null, quantity: null },
         allowNull: false,
       },
-      misheriTobacco:{
+      misheriTobacco: {
         type: DataTypes.ENUM('Yes', 'No'),
         allowNull: true,
       },
-      misheriTobaccoDetails:{
+      misheriTobaccoDetails: {
         type: DataTypes.JSONB,
         defaultValue: { frequency: null, quantity: null },
         allowNull: false,
@@ -189,6 +197,14 @@ const initModel = (sequelize) => {
           model: 'patients',
           key: 'id',
         },
+      },
+      onlineAmount: {
+        type: DataTypes.FLOAT,
+        allowNull: true,
+      },
+      offlineAmount: {
+        type: DataTypes.FLOAT,
+        allowNull: true,
       },
     },
     {
