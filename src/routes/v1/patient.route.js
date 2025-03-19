@@ -33,10 +33,7 @@ router
     patientController.getPatientsByClinic // Controller
   );
 
-router.route('/follow-ups').get(
-  auth(),
-  patientController.getPatientFollowUps
-);
+router.route('/follow-ups').get(auth(), patientController.getPatientFollowUps);
 
 /* **************************** Pateint crud route ******************************** */
 
@@ -85,6 +82,7 @@ router
     upload.array('xrayFiles'),
 
     parseArrayFields([
+      // 'diagnosisDate',
       'complaints',
       'treatmentsSuggested',
       'currentStatus',
@@ -114,7 +112,12 @@ router
   .post(
     auth(),
     upload.array('xrayFiles'),
-    parseArrayFields(['treatmentStatus', 'treatingDoctor', 'treatmentDate', 'nextDate']),
+    parseArrayFields([
+      'treatmentStatus',
+      'treatingDoctor',
+      // 'treatmentDate',
+      // 'nextDate'
+    ]),
     (req, res, next) => {
       console.log('req body --------', req.body, req.files);
       next();
@@ -134,7 +137,11 @@ router
       console.log('req body --------', req.body, req.files);
       next();
     },
-    parseArrayFields(['treatmentStatus', 'treatingDoctor', 'nextDate']),
+    parseArrayFields([
+      'treatmentStatus', 
+      'treatingDoctor', 
+      // 'nextDate'
+    ]),
     validate(patientValidation.updateTreatment),
     patientController.updateTreatment
   )
@@ -200,29 +207,13 @@ router
     validate(patientValidation.createGPRecord),
     patientController.createGPRecord
   )
-  .get(
-    auth(),
-    validate(patientValidation.getGPRecordsByPatient),
-    patientController.getGPRecordsByPatient
-  );
+  .get(auth(), validate(patientValidation.getGPRecordsByPatient), patientController.getGPRecordsByPatient);
 
 router
   .route('/gp-records/:gpRecordId')
-  .patch(
-    auth(),
-    validate(patientValidation.updateGPRecord),
-    patientController.updateGPRecord
-  )
-  .get(
-    auth(),
-    validate(patientValidation.getGPRecord),
-    patientController.getGPRecordById
-  )
-  .delete(
-    auth(),
-    validate(patientValidation.getGPRecord),
-    patientController.deleteGPRecord
-  );
+  .patch(auth(), validate(patientValidation.updateGPRecord), patientController.updateGPRecord)
+  .get(auth(), validate(patientValidation.getGPRecord), patientController.getGPRecordById)
+  .delete(auth(), validate(patientValidation.getGPRecord), patientController.deleteGPRecord);
 
 /* **************************** Pateint GP crud routes ******************************** */
 

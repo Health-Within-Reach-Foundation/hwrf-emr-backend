@@ -251,6 +251,7 @@ const getPatientDetailsById = async (patientId, specialtyId) => {
  */
 const createDiagnosis = async (diagnosisBody, transaction = null) => {
   const {
+    diagnosisDate,
     selectedTeeth,
     childSelectedTeeth,
     adultSelectedTeeth,
@@ -275,6 +276,7 @@ const createDiagnosis = async (diagnosisBody, transaction = null) => {
   const createDiagnosisAndTreatment = async (teeth, quadrantType) => {
     const diagnosis = await Diagnosis.create(
       {
+        diagnosisDate: diagnosisDate.toISOString().split('T')[0],
         complaints,
         treatmentsSuggested,
         selectedTeeth: teeth,
@@ -419,9 +421,11 @@ const updateDiagnosis = async (diagnosisId, updateBody, transaction = null) => {
       ? updateBody.selectedTeeth[0] // Take first element if exists
       : null; // Otherwise, set to null
 
-  const { complaints, treatmentsSuggested, dentalQuadrantType, xrayStatus, xray, notes, estimatedCost } = updateBody;
+  const { diagnosisDate, complaints, treatmentsSuggested, dentalQuadrantType, xrayStatus, xray, notes, estimatedCost } =
+    updateBody;
 
   const updatedDiagnosisBody = {
+    diagnosisDate: diagnosisDate.toISOString().split('T')[0],
     complaints,
     treatmentsSuggested,
     selectedTeeth,

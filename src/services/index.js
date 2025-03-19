@@ -11,3 +11,4 @@ module.exports.rolePermissionService = require('./role-permission.service');
 module.exports.formTemplateService = require('./form-template.service');
 module.exports.superadminServices = require('./superadmin.service');
 module.exports.formFieldsService = require('./form-fields.service');
+module.exports.whatsappCommunicationService = require('./whatsapp-communication.service');

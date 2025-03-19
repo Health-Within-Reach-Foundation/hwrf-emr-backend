@@ -104,6 +104,7 @@ const addDentalPatientRecord = {
  */
 const createDiagnosis = {
   body: Joi.object().keys({
+    diagnosisDate: Joi.date().required().description('Date of diagnosis'),
     complaints: Joi.array().items(Joi.string()).optional(),
     treatmentsSuggested: Joi.array().items(Joi.string()).optional(),
     currentStatus: Joi.array().items(Joi.string()).optional(),
@@ -163,6 +164,7 @@ const updateDiagnosis = {
     diagnosisId: Joi.string().uuid().required(),
   }),
   body: Joi.object().keys({
+    diagnosisDate: Joi.date().optional(),
     complaints: Joi.array().items(Joi.string()).optional(),
     treatmentsSuggested: Joi.array().items(Joi.string()).optional(),
     // currentStatus: Joi.array().items(Joi.string()).optional(),
@@ -176,6 +178,7 @@ const updateDiagnosis = {
     additionalDetails: Joi.object().optional(),
     patientId: Joi.string().uuid().optional(),
     estimatedCost: Joi.number().optional(),
+    key: Joi.string().optional(),
   }),
   files: (files) => {
     if (!files.length) return null; // No files, validation passes
@@ -231,7 +234,7 @@ const createTreatment = {
     onlineAmount: Joi.number().optional(),
     offlineAmount: Joi.number().optional(),
     // settingPaidAmount: Joi.number().optional(),
-    nextDate: Joi.date().allow(null).optional().description('follow up date of treatment'),
+    nextDate: Joi.date().allow(null).empty(['null', null]).optional().description('follow up date of treatment'),
   }),
   files: (files) => {
     if (!files.length) return null; // No files, validation passes
@@ -306,7 +309,8 @@ const updateTreatment = {
         .optional(),
       onlineAmount: Joi.number().optional(),
       offlineAmount: Joi.number().optional(),
-      nextDate: Joi.date().allow(null).optional().description('follow up date of treatment'),
+      // nextDate: Joi.date().allow(null).optional().description('follow up date of treatment'),
+      nextDate: Joi.date().allow(null).empty(['null', null]).optional().description('follow up date of treatment'),
     })
     .min(1),
   files: (files) => {
