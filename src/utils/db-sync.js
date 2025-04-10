@@ -8,11 +8,10 @@ const logger = require('../config/logger');
  * @param {boolean} options.force - If true, drops existing tables and recreates them.
  * @param {boolean} options.alter - If true, attempts to make schema changes without dropping tables.
  */
-const initializeDatabase = async ({ force = false, alter = false } = {}) => {
+const initializeDatabase = async ({ force = false, alter = true } = {}) => {
   try {
     logger.info('Starting database synchronization...');
     db.sequelize.authenticate().then(() => {
-
       const defineUuidGenerateFunction = async () => {
         await db.sequelize.query(`
       CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
@@ -20,7 +19,7 @@ const initializeDatabase = async ({ force = false, alter = false } = {}) => {
       };
       defineUuidGenerateFunction();
       // console.log("Connected to Database");
-    })
+    });
     logger.info('Database connection has been established successfully.');
 
     await db.sequelize.sync({ force, alter });

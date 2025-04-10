@@ -57,7 +57,7 @@ const approveClinic = catchAsync(async (req, res) => {
   try {
     const clinicResponse = await clinicService.updateClinicById(req.params.clinicId, req.body, transaction);
 
-    const admin = await userService.getUserById(clinicResponse.ownerId);
+    const admin = await userService.getSimpleUserById(clinicResponse.ownerId);
 
     // update the status of admin
     admin.status = 'active';

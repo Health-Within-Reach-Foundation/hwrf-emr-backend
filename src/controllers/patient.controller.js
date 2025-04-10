@@ -1,6 +1,6 @@
 const httpStatus = require('http-status');
 const catchAsync = require('../utils/catchAsync');
-const { patientService, clinicService, appointmentService, dentalService, campService } = require('../services');
+const { patientService, clinicService, appointmentService, campService } = require('../services');
 const generateRegNo = require('../utils/generate-regNo');
 const { uploadFile } = require('../utils/azure-service');
 const fs = require('fs');
@@ -73,25 +73,6 @@ const createPatient = catchAsync(async (req, res) => {
 });
 
 /**
- * Adds a dental patient record.
- *
- * @param {Object} req - The request object.
- * @param {Object} req.body - The body of the request containing the dental patient record data.
- * @param {Object} res - The response object.
- * @returns {Promise<void>} - A promise that resolves when the dental patient record is added.
- */
-const addDentalPatientRecord = catchAsync(async (req, res) => {
-  // const { patientId } = req.params;
-  const record = await dentalService.addDentalPatientRecord(req.body);
-  res.status(httpStatus.CREATED).json({
-    success: true,
-    message: 'Dental patient record added successfully!',
-
-    data: record,
-  });
-});
-
-/**
  * Controller to handle the creation of a mammography record.
  *
  * @param {Object} req - Express request object
@@ -109,32 +90,65 @@ const addDentalPatientRecord = catchAsync(async (req, res) => {
  * @throws {ApiError} - Throws an error if file upload or processing fails
  */
 const createMammography = catchAsync(async (req, res) => {
-  const { file, body } = req;
+  const { file, body, files } = req;
+  console.log('req.files', req.files);
+  console.log('req.body', req.body);
+  console.log('req.file', file);
   const campId = req?.user?.currentCampId || null;
   const { patientId } = req.params;
   const screeningImageFilePath = {};
+  const aiReportFilePath = {};
 
-  if (file) {
-    try {
-      const fileKey = `clinics/${req?.user?.clinicId}/mammography/${patientId}/${file.originalname}`; // Generate unique key
-      const uploadResult = await uploadFile(file, fileKey);
+  if (files && Object.keys(files).length > 0) {
+    // if files key named screeningFile is present
+    if (files.screeningFile && files.screeningFile.length > 0) {
+      const screeningFile = files.screeningFile[0];
+      try {
+        const fileKey = `clinics/${req?.user?.clinicId}/mammography/${patientId}/${screeningFile.originalname}`; // Generate unique key
+        const uploadResult = await uploadFile(screeningFile, fileKey);
 
-      if (!uploadResult.success) {
-        throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, `Failed to upload ${file.originalname}`);
+        if (!uploadResult.success) {
+          throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, `Failed to upload ${screeningFile.originalname}`);
+        }
+
+        // Save file metadata
+        screeningImageFilePath.key = fileKey;
+        screeningImageFilePath.fileName = screeningFile.originalname;
+        screeningImageFilePath.uploadedAt = new Date().toISOString();
+
+        // Delete the temporary file from local storage
+        fs.unlink(screeningFile.path, (err) => {
+          if (err) console.error(`Error deleting temporary file: ${err}`);
+        });
+      } catch (err) {
+        console.error(`Error processing file ${screeningFile.originalname}:`, err);
+        throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, `Error uploading file: ${err.message}`);
       }
+    }
 
-      // Save file metadata
-      screeningImageFilePath.key = fileKey;
-      screeningImageFilePath.fileName = file.originalname;
-      screeningImageFilePath.uploadedAt = new Date().toISOString();
+    if (files.aiReport && files.aiReport.length > 0) {
+      const aiReportFile = files.aiReport[0];
+      // generate the code
+      try {
+        const fileKey = `clinics/${req?.user?.clinicId}/mammography/${patientId}/reports/${aiReportFile.originalname}`; // Generate unique key
+        const uploadResult = await uploadFile(aiReportFile, fileKey);
+        if (!uploadResult.success) {
+          throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, `Failed to upload ${aiReportFile.originalname}`);
+        }
 
-      // Delete the temporary file from local storage
-      fs.unlink(file.path, (err) => {
-        if (err) console.error(`Error deleting temporary file: ${err}`);
-      });
-    } catch (err) {
-      console.error(`Error processing file ${file.originalname}:`, err);
-      throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, `Error uploading file: ${err.message}`);
+        // Save file metadata
+        aiReportFilePath.key = fileKey;
+        aiReportFilePath.fileName = aiReportFile.originalname;
+        aiReportFilePath.uploadedAt = new Date().toISOString();
+
+        // Delete the temporary file from local storage
+        fs.unlink(aiReportFile.path, (err) => {
+          if (err) console.error(`Error deleting temporary file: ${err}`);
+        });
+      } catch (err) {
+        console.error(`Error processing file ${aiReportFile.originalname}:`, err);
+        throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, `Error uploading file: ${err.message}`);
+      }
     }
   }
 
@@ -143,6 +157,7 @@ const createMammography = catchAsync(async (req, res) => {
     ...body,
     campId,
     screeningImage: screeningImageFilePath, // Attach uploaded file paths if available
+    aiReport: aiReportFilePath,
   };
   const record = await patientService.createMammography(patientId, mammographyBody);
   res.status(httpStatus.CREATED).json({
@@ -191,46 +206,99 @@ const getMammography = catchAsync(async (req, res) => {
  */
 const updateMammography = catchAsync(async (req, res) => {
   const { patientId } = req.params;
-  const { file, body } = req;
+  const { files, body } = req;
   const screeningImageFilePath = {};
+  const aiReportFilePath = {};
 
-  if (file) {
-    try {
-      const fileKey = `clinics/${req?.user?.clinicId}/mammography/${body.patientId}/${file.originalname}`; // Generate unique key
-      const uploadResult = await uploadFile(file, fileKey);
+  // if (file) {
+  //   try {
+  //     const fileKey = `clinics/${req?.user?.clinicId}/mammography/${body.patientId}/${file.originalname}`; // Generate unique key
+  //     const uploadResult = await uploadFile(file, fileKey);
 
-      if (!uploadResult.success) {
-        throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, `Failed to upload ${file.originalname}`);
+  //     if (!uploadResult.success) {
+  //       throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, `Failed to upload ${file.originalname}`);
+  //     }
+
+  //     // Save file metadata
+  //     screeningImageFilePath.key = fileKey;
+  //     screeningImageFilePath.fileName = file.originalname;
+  //     screeningImageFilePath.uploadedAt = new Date().toISOString();
+
+  //     // Delete the temporary file from local storage
+  //     fs.unlink(file.path, (err) => {
+  //       if (err) console.error(`Error deleting temporary file: ${err}`);
+  //     });
+  //   } catch (err) {
+  //     console.error(`Error processing file ${file.originalname}:`, err);
+  //     throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, `Error uploading file: ${err.message}`);
+  //   }
+  // }
+
+  // Append file paths to the request body
+  
+  if (files && Object.keys(files).length > 0) {
+    // if files key named screeningFile is present
+    if (files.screeningFile && files.screeningFile.length > 0) {
+      const screeningFile = files.screeningFile[0];
+      try {
+        const fileKey = `clinics/${req?.user?.clinicId}/mammography/${patientId}/${screeningFile.originalname}`; // Generate unique key
+        const uploadResult = await uploadFile(screeningFile, fileKey);
+
+        if (!uploadResult.success) {
+          throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, `Failed to upload ${screeningFile.originalname}`);
+        }
+
+        // Save file metadata
+        screeningImageFilePath.key = fileKey;
+        screeningImageFilePath.fileName = screeningFile.originalname;
+        screeningImageFilePath.uploadedAt = new Date().toISOString();
+
+        // Delete the temporary file from local storage
+        fs.unlink(screeningFile.path, (err) => {
+          if (err) console.error(`Error deleting temporary file: ${err}`);
+        });
+      } catch (err) {
+        console.error(`Error processing file ${screeningFile.originalname}:`, err);
+        throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, `Error uploading file: ${err.message}`);
       }
+    }
 
-      // Save file metadata
-      screeningImageFilePath.key = fileKey;
-      screeningImageFilePath.fileName = file.originalname;
-      screeningImageFilePath.uploadedAt = new Date().toISOString();
+    if (files.aiReport && files.aiReport.length > 0) {
+      const aiReportFile = files.aiReport[0];
+      // generate the code
+      try {
+        const fileKey = `clinics/${req?.user?.clinicId}/mammography/${patientId}/reports/${aiReportFile.originalname}`; // Generate unique key
+        const uploadResult = await uploadFile(aiReportFile, fileKey);
+        if (!uploadResult.success) {
+          throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, `Failed to upload ${aiReportFile.originalname}`);
+        }
 
-      // Delete the temporary file from local storage
-      fs.unlink(file.path, (err) => {
-        if (err) console.error(`Error deleting temporary file: ${err}`);
-      });
-    } catch (err) {
-      console.error(`Error processing file ${file.originalname}:`, err);
-      throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, `Error uploading file: ${err.message}`);
+        // Save file metadata
+        aiReportFilePath.key = fileKey;
+        aiReportFilePath.fileName = aiReportFile.originalname;
+        aiReportFilePath.uploadedAt = new Date().toISOString();
+
+        // Delete the temporary file from local storage
+        fs.unlink(aiReportFile.path, (err) => {
+          if (err) console.error(`Error deleting temporary file: ${err}`);
+        });
+      } catch (err) {
+        console.error(`Error processing file ${aiReportFile.originalname}:`, err);
+        throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, `Error uploading file: ${err.message}`);
+      }
     }
   }
 
-  // Append file paths to the request body
-  let mammographyBody;
-  if (Object.keys(screeningImageFilePath).length > 0) {
-    mammographyBody = {
-      ...body,
-      screeningImage: screeningImageFilePath, // Attach uploaded file paths if available
-    };
-  } else {
-    mammographyBody = {
-      ...body,
-    };
-  }
+  let mammographyBody = { ...body };
 
+  if (Object.keys(screeningImageFilePath).length > 0) {
+    mammographyBody.screeningImage = screeningImageFilePath;
+  }
+  
+  if (Object.keys(aiReportFilePath).length > 0) {
+    mammographyBody.aiReport = aiReportFilePath;
+  }
+  
   const record = await patientService.updateMammography(patientId, mammographyBody);
   res.status(httpStatus.CREATED).json({
     success: true,
@@ -842,7 +910,6 @@ const getPatientFollowUps = catchAsync(async (req, res) => {
 
 module.exports = {
   createPatient,
-  addDentalPatientRecord,
   getPatientsByClinic,
   getPatientDetailsById,
   updatePatientDetails,

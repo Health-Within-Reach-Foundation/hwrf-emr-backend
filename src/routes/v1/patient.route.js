@@ -39,13 +39,6 @@ router.route('/follow-ups').get(auth(), patientController.getPatientFollowUps);
 
 /* **************************** Pateint dental crud routes ******************************** */
 
-router.route('/dental-records').post(
-  auth(),
-  // roleAuthorization('doctor', 'receptionist'),
-  validate(patientValidation.addDentalPatientRecord),
-  patientController.addDentalPatientRecord
-);
-
 router
   .route('/diagnosis')
   .post(
@@ -138,8 +131,8 @@ router
       next();
     },
     parseArrayFields([
-      'treatmentStatus', 
-      'treatingDoctor', 
+      'treatmentStatus',
+      'treatingDoctor',
       // 'nextDate'
     ]),
     validate(patientValidation.updateTreatment),
@@ -155,11 +148,9 @@ router
   .route('/mammography/:patientId')
   .post(
     auth(),
-    upload.single('screeningFile'),
-    (req, res, next) => {
-      console.log('req body --------', req.body, req.files);
-      next();
-    },
+    // There are two files sepratly comming from the front end for this api 1. screeningFile 2. aiReport, how to handle this in multer
+    validate(patientValidation.createMammography),
+    upload.fields([{ name: 'screeningFile' }, { name: 'aiReport' }]),
     parseArrayFields([
       'smokingDetails',
       'imagingStudies',
@@ -169,12 +160,13 @@ router
       'numberOfPregnancies',
       'previousTreatmentDetails',
     ]),
-    validate(patientValidation.createMammography),
     patientController.createMammography
   )
   .patch(
     auth(),
-    upload.single('screeningFile'),
+    // upload.single('screeningFile'),
+    validate(patientValidation.updateMammography),
+    upload.fields([{ name: 'screeningFile' }, { name: 'aiReport' }]),
     (req, res, next) => {
       console.log('req body --------', req.body, req.files);
       next();
@@ -187,7 +179,6 @@ router
       'alcoholDetails',
       'previousTreatmentDetails',
     ]),
-    validate(patientValidation.updateMammography),
     patientController.updateMammography
   )
   .get(auth(), validate(patientValidation.getMammography), patientController.getMammography);

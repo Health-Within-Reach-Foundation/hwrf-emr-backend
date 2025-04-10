@@ -201,18 +201,6 @@ const getPatientDetailsById = async (patientId, specialtyId) => {
         order: [['createdAt', 'DESC']],
         separate: true,
       },
-      // {
-      //   model: PatientRecord,
-      //   as: 'records',
-      //   include: [
-      //     {
-      //       model: DentistPatientRecord, // Include Dentist-specific data
-      //       as: 'dentalData',
-      //       attributes: { exclude: ['createdAt', 'updatedAt'] },
-      //     },
-      //   ],
-      //   required: false, // Ensure patient is returned even if no records exist
-      // },
       // Include Queue records for the patient
       {
         model: Queue,
@@ -794,6 +782,7 @@ const createMammography = async (patientId, mammographyBody) => {
     }
 
     const {
+      lastMenstrualDate = null,
       menstrualAge = null,
       numberOfPregnancies = null,
       numberOfDeliveries = null,
@@ -802,6 +791,7 @@ const createMammography = async (patientId, mammographyBody) => {
     } = mammographyBody;
 
     const newMammographyBody = {
+      lastMenstrualDate: lastMenstrualDate !== 'null' && lastMenstrualDate !== undefined ? new Date(lastMenstrualDate) : null,
       menstrualAge: menstrualAge !== 'null' ? Number(menstrualAge) : null,
       numberOfPregnancies: numberOfPregnancies !== 'null' ? Number(numberOfPregnancies) : null,
       numberOfDeliveries: numberOfDeliveries !== 'null' ? Number(numberOfDeliveries) : null,
@@ -863,6 +853,7 @@ const updateMammography = async (patientId, updateBody) => {
     }
 
     const {
+      lastMenstrualDate = null,
       menstrualAge = null,
       numberOfPregnancies = null,
       numberOfDeliveries = null,
@@ -871,6 +862,7 @@ const updateMammography = async (patientId, updateBody) => {
     } = updateBody;
 
     const newMammographyBody = {
+      lastMenstrualDate: lastMenstrualDate !== 'null' && lastMenstrualDate !== null ? new Date(lastMenstrualDate) : null,
       menstrualAge: menstrualAge !== 'null' ? Number(menstrualAge) : null,
       numberOfPregnancies: numberOfPregnancies !== 'null' ? Number(numberOfPregnancies) : null,
       numberOfDeliveries: numberOfDeliveries !== 'null' ? Number(numberOfDeliveries) : null,

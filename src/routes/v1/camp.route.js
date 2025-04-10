@@ -13,6 +13,7 @@ router
 
 router.post('/set-camp', auth(), campController.setCurrentCamp);
 
+router.get('/analytics', auth(), campController.getAllCampsAnalytics);
 router
   .route('/:campId')
   .get(

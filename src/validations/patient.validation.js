@@ -352,7 +352,7 @@ const createMammography = {
   }),
   body: Joi.object().keys({
     menstrualAge: Joi.number().integer().min(0).allow('null', null).optional(),
-    lastMenstrualDate: Joi.date().allow(null).optional(),
+    lastMenstrualDate: Joi.date().allow(null).empty(['null', null]).optional(),
     cycleType: Joi.string().valid('Regular', 'Irregular').allow('', null).optional(),
     obstetricHistory: Joi.object()
       .keys({
@@ -401,6 +401,8 @@ const createMammography = {
     nippleRetraction: Joi.string().valid('No', 'Right', 'Left', 'Both').allow('', null).optional(),
     nippleRetractionDetails: Joi.string().allow('', null).optional(),
     additionalInfo: Joi.string().allow('', null).optional(),
+    reportStatus: Joi.string().valid('Normal', 'Abnormal').allow('', null).optional(),
+    aiReportScore: Joi.number().allow('', null).optional(),
     painDetails: Joi.string().allow('', null).optional(),
     // numberOfPregnancies: Joi.alternatives().try(Joi.number().integer().min(0), Joi.string().valid('null').allow(null)).optional(),
     numberOfPregnancies: Joi.number().integer().min(0).allow('null', null).optional(),
@@ -429,16 +431,24 @@ const createMammography = {
       .default({ timesPerDay: null, yearsUsed: null }),
     previousCancerDetails: Joi.string().allow('', null).optional(),
     lumpDetails: Joi.string().allow('', null).optional(),
-    onlineAmount: Joi.number().allow(null).optional(),
-    offlineAmount: Joi.number().allow(null).optional(),
+    onlineAmount: Joi.number().allow(null).empty(['null', null]).optional(),
+    offlineAmount: Joi.number().allow(null).empty(['null', null]).optional(),
   }),
   files: (files) => {
     if (!files.length) return null; // No files, validation passes
 
     for (const file of files) {
-      // Check if the file is an image based on MIME type
-      if (!file.mimetype.startsWith('image/')) {
-        return `Invalid file type for file: ${file.originalname}. Only image files are allowed.`;
+      // Check if the file is of an allowed type
+      if (
+        ![
+          'image/jpeg',
+          'image/png',
+          'application/pdf',
+          'application/msword',
+          'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        ].includes(file.mimetype)
+      ) {
+        return `Invalid file type for file: ${file.originalname}. Only JPEG, PNG, PDF, DOC, or DOCX files are allowed.`;
       }
       // Uncomment the below section to add a size limit if needed
       // if (file.size > 5 * 1024 * 1024) {
@@ -465,7 +475,7 @@ const getMammography = {
 const updateMammography = {
   body: Joi.object().keys({
     menstrualAge: Joi.number().integer().min(0).allow('null', null).optional(),
-    lastMenstrualDate: Joi.date().allow(null).optional(),
+    lastMenstrualDate: Joi.date().allow(null).empty(['null', null]).optional(),
     skinChanges: Joi.string().valid('No', 'Right', 'Left', 'Both').allow('', null).optional(),
     pain: Joi.string().valid('No', 'Right', 'Left', 'Both').allow('', null).optional(),
     cycleType: Joi.string().valid('Regular', 'Irregular').allow('', null).optional(),
@@ -509,6 +519,8 @@ const updateMammography = {
     nippleRetraction: Joi.string().valid('No', 'Right', 'Left', 'Both').allow('', null).optional(),
     nippleRetractionDetails: Joi.string().allow('', null).optional(),
     additionalInfo: Joi.string().allow('', null).optional(),
+    reportStatus: Joi.string().valid('Normal', 'Abnormal').allow('', null).optional(),
+    aiReportScore: Joi.number().allow('', null).optional(),
     patientId: Joi.string().uuid().optional(), // Foreign key, optional during updates
     mammoReport: Joi.string().optional(), // Foreign key, optional during updates
     painDetails: Joi.string().allow('', null).optional(),
@@ -535,16 +547,38 @@ const updateMammography = {
       .optional(),
     previousCancerDetails: Joi.string().allow('', null).optional(),
     lumpDetails: Joi.string().allow('', null).optional(),
-    onlineAmount: Joi.number().allow(null).optional(),
-    offlineAmount: Joi.number().allow(null).optional(),
+    onlineAmount: Joi.number().allow(null).empty(['null', null]).optional(),
+    offlineAmount: Joi.number().allow(null).empty(['null', null]).optional(),
   }),
+  // files: (files) => {
+  //   if (!files.length) return null; // No files, validation passes
+
+  //   for (const file of files) {
+  //     // Check if the file is an image based on MIME type
+  //     if (!file.mimetype.startsWith('image/')) {
+  //       return `Invalid file type for file: ${file.originalname}. Only image files are allowed.`;
+  //     }
+  //     // Uncomment the below section to add a size limit if needed
+  //     // if (file.size > 5 * 1024 * 1024) {
+  //     //   return `File ${file.originalname} exceeds the maximum size of 5MB.`;
+  //     // }
+  //   }
+
   files: (files) => {
     if (!files.length) return null; // No files, validation passes
 
     for (const file of files) {
-      // Check if the file is an image based on MIME type
-      if (!file.mimetype.startsWith('image/')) {
-        return `Invalid file type for file: ${file.originalname}. Only image files are allowed.`;
+      // Check if the file is of an allowed type
+      if (
+        ![
+          'image/jpeg',
+          'image/png',
+          'application/pdf',
+          'application/msword',
+          'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        ].includes(file.mimetype)
+      ) {
+        return `Invalid file type for file: ${file.originalname}. Only JPEG, PNG, PDF, DOC, or DOCX files are allowed.`;
       }
       // Uncomment the below section to add a size limit if needed
       // if (file.size > 5 * 1024 * 1024) {

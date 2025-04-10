@@ -5,7 +5,6 @@ module.exports.userService = require('./user.service');
 module.exports.clinicService = require('./clinic.service');
 module.exports.patientService = require('./patient.service');
 module.exports.appointmentService = require('./appoinment.service');
-module.exports.dentalService = require('./dental.service');
 module.exports.campService = require('./camp.service');
 module.exports.rolePermissionService = require('./role-permission.service');
 module.exports.formTemplateService = require('./form-template.service');

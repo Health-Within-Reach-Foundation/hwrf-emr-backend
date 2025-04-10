@@ -122,10 +122,22 @@ const updateCampById = catchAsync(async (req, res) => {
   }
 });
 
+const getAllCampsAnalytics = catchAsync(async (req, res) => {
+  const { clinicId } = req.user;
+  const analytics = await campService.getAllCampsAnalytics(clinicId);
+  res.status(200).json({
+    success: true,
+    message: 'Camps analytics fetched successfully',
+    data: analytics,
+  });
+});
+
+
 module.exports = {
   getCamps,
   createCamp,
   setCurrentCamp,
   getCampById,
   updateCampById,
+  getAllCampsAnalytics,
 };
