@@ -17,7 +17,7 @@ router.get('/analytics', auth(), campController.getAllCampsAnalytics);
 router
   .route('/:campId')
   .get(
-    // auth(),
+    auth(),
     // roleAuthorization('admin', 'organizer'),
     validate(campValidation.getCampById),
     campController.getCampById

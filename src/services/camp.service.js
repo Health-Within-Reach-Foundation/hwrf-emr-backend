@@ -376,9 +376,6 @@ const getCampDetails = async (campId) => {
     throw new ApiError(httpStatus.NOT_FOUND, 'Camp not found');
   }
 
-  console.log('Total registered patients:', camp.patients.length);
-  console.log('Camp patient', camp.patients[0]);
-
   // **Step 1: Flat patients for UI display (Can contain duplicates for multiple services)**
   const flatPatients = camp.patients.flatMap((patient) => {
     const appointments = patient.appointments.length > 0 ? patient.appointments : [null];
@@ -388,6 +385,38 @@ const getCampDetails = async (campId) => {
       const totalPaidAmount = patient.diagnoses.reduce((sum, diagnosis) => {
         return sum + (diagnosis.treatment ? Number(diagnosis.treatment.paidAmount) : 0);
       }, 0);
+
+      const collectedDenistryOnlineAmount = patient.diagnoses.reduce((sum, diagnosis) => {
+        return (
+          sum +
+          (diagnosis.treatment
+            ? diagnosis.treatment.treatmentSettings.reduce((innerSum, ts) => {
+                return innerSum + (ts.onlineAmount ? Number(ts.onlineAmount) : 0);
+              }, 0)
+            : 0)
+        );
+      }, 0);
+
+      const collectedDenistryCash = patient.diagnoses.reduce((sum, diagnosis) => {
+        return (
+          sum +
+          (diagnosis.treatment
+            ? diagnosis.treatment.treatmentSettings.reduce((innerSum, ts) => {
+                return innerSum + (ts.offlineAmount ? Number(ts.offlineAmount) : 0);
+              }, 0)
+            : 0)
+        );
+      }, 0);
+
+      const collectedGPOnlineAmount = patient.gpRecords.reduce((sum, record) => {
+        return sum + (record ? (record.onlineAmount ? Number(record.onlineAmount) : 0) : 0);
+      }, 0);
+
+      const collectedGPCash = patient.gpRecords.reduce((sum, record) => {
+        return sum + (record ? (record.offlineAmount ? Number(record.offlineAmount) : 0) : 0);
+      }, 0);
+
+
       const totalGPPaidAmount = patient.gpRecords.reduce((sum, record) => {
         return (
           sum +
@@ -397,6 +426,18 @@ const getCampDetails = async (campId) => {
             : 0)
         );
       }, 0);
+
+      const collectedMammoOnlineAmount = patient.mammography
+        ? patient.mammography.onlineAmount
+          ? Number(patient.mammography.onlineAmount)
+          : 0
+        : 0;
+
+      const collectedMammoCash = patient.mammography
+        ? patient.mammography.offlineAmount
+          ? Number(patient.mammography.offlineAmount)
+          : 0
+        : 0;
 
       const totalMammoPaidAmount = patient.mammography
         ? (patient.mammography.onlineAmount ? Number(patient.mammography.onlineAmount) : 0) +
@@ -425,6 +466,14 @@ const getCampDetails = async (campId) => {
             ? totalMammoPaidAmount
             : null,
         treatingDoctors: queue && queue.queueType === 'Dentistry' ? treatingDoctors : null,
+        collectedAmount:
+          queue && queue.queueType === 'Dentistry'
+            ? { onlineAmount: collectedDenistryOnlineAmount, offlineAmount: collectedDenistryCash }
+            : queue && queue.queueType === 'GP'
+            ? { onlineAmount: collectedGPOnlineAmount, offlineAmount: collectedGPCash }
+            : queue && queue.queueType === 'Mammography'
+            ? { onlineAmount: collectedMammoOnlineAmount, offlineAmount: collectedMammoCash }
+            : null,
       };
     });
   });
