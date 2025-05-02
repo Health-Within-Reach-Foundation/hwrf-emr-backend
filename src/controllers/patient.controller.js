@@ -187,6 +187,22 @@ const getMammography = catchAsync(async (req, res) => {
 });
 
 /**
+ * Delete mammography record for a specific patient.
+ * @param {Object} req - Express request object.
+ * @param {Object} req.params - Request parameters.
+ * @param {string} req.params.patientId - ID of the patient.
+ * @param {Object} res - Express response object.
+ */
+const deleteMammography = catchAsync(async (req, res) => {
+  const { patientId } = req.params;
+  await patientService.deleteMammography(patientId);
+  res.status(httpStatus.OK).json({
+    success: true,
+    message: 'Mammography Reports deleted successfully!',
+  });
+});
+
+/**
  * Updates mammography details for a patient.
  *
  * This function handles the update of mammography details for a patient, including the upload of a screening image file
@@ -235,7 +251,7 @@ const updateMammography = catchAsync(async (req, res) => {
   // }
 
   // Append file paths to the request body
-  
+
   if (files && Object.keys(files).length > 0) {
     // if files key named screeningFile is present
     if (files.screeningFile && files.screeningFile.length > 0) {
@@ -294,11 +310,11 @@ const updateMammography = catchAsync(async (req, res) => {
   if (Object.keys(screeningImageFilePath).length > 0) {
     mammographyBody.screeningImage = screeningImageFilePath;
   }
-  
+
   if (Object.keys(aiReportFilePath).length > 0) {
     mammographyBody.aiReport = aiReportFilePath;
   }
-  
+
   const record = await patientService.updateMammography(patientId, mammographyBody);
   res.status(httpStatus.CREATED).json({
     success: true,
@@ -932,4 +948,5 @@ module.exports = {
   updateGPRecord,
   deleteGPRecord,
   getPatientFollowUps,
+  deleteMammography,
 };

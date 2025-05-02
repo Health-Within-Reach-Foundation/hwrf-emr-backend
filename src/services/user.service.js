@@ -195,6 +195,7 @@ const getUserAssociatedToClinic = async (userEmail) => {
     ],
   });
 
+  console.log('getUserAssociatedToClinic -->', user);
   // Check if user exists
   if (!user) {
     throw new ApiError(httpStatus.NOT_FOUND, 'User not found');

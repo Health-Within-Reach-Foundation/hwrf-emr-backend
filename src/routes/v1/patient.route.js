@@ -181,7 +181,8 @@ router
     ]),
     patientController.updateMammography
   )
-  .get(auth(), validate(patientValidation.getMammography), patientController.getMammography);
+  .get(auth(), validate(patientValidation.getMammography), patientController.getMammography)
+  .delete(auth(), validate(patientValidation.getMammography), patientController.deleteMammography);
 
 /* **************************** Pateint mammography crud routes ******************************** */
 

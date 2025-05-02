@@ -791,7 +791,8 @@ const createMammography = async (patientId, mammographyBody) => {
     } = mammographyBody;
 
     const newMammographyBody = {
-      lastMenstrualDate: lastMenstrualDate !== 'null' && lastMenstrualDate !== undefined ? new Date(lastMenstrualDate) : null,
+      lastMenstrualDate:
+        lastMenstrualDate !== 'null' && lastMenstrualDate !== undefined ? new Date(lastMenstrualDate) : null,
       menstrualAge: menstrualAge !== 'null' ? Number(menstrualAge) : null,
       numberOfPregnancies: numberOfPregnancies !== 'null' ? Number(numberOfPregnancies) : null,
       numberOfDeliveries: numberOfDeliveries !== 'null' ? Number(numberOfDeliveries) : null,
@@ -892,7 +893,7 @@ const deleteMammography = async (patientId) => {
     if (!mammography) {
       throw new ApiError(httpStatus.NOT_FOUND, 'Mammography record not found');
     }
-    await mammography.destroy();
+    await mammography.destroy({ force: true });
     return { message: 'Mammography record deleted successfully' };
   } catch (error) {
     console.error(error);
@@ -957,7 +958,7 @@ const updateGPRecord = async (id, updateData) => {
  * @returns {Promise<number>} - The number of records deleted.
  */
 const deleteGPRecord = async (id) => {
-  return GeneralPhysicianRecord.destroy({ where: { id } });
+  return GeneralPhysicianRecord.destroy({ where: { id }, force: true });
 };
 
 /**
