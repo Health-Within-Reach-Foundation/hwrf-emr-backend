@@ -416,7 +416,6 @@ const getCampDetails = async (campId) => {
         return sum + (record ? (record.offlineAmount ? Number(record.offlineAmount) : 0) : 0);
       }, 0);
 
-
       const totalGPPaidAmount = patient.gpRecords.reduce((sum, record) => {
         return (
           sum +
@@ -504,21 +503,21 @@ const getCampDetails = async (campId) => {
 };
 
 // Function to get the analytics like revenue, patient category by service taken, revenue category by services for the On going month all camps
-const getAllCampsAnalytics = async (clinicId) => {
-  const startDate = new Date();
-  startDate.setDate(1); // First day of the current month
-  startDate.setHours(0, 0, 0, 0);
+const getAllCampsAnalytics = async (clinicId, startDate, endDate) => {
+  // const startDate = new Date();
+  // startDate.setDate(1); // First day of the current month
+  // startDate.setHours(0, 0, 0, 0);
 
-  const endDate = new Date();
-  endDate.setMonth(endDate.getMonth() + 1);
-  endDate.setDate(0); // Last day of the current month
-  endDate.setHours(23, 59, 59, 999);
+  // // const endDate = new Date();
+  // endDate.setMonth(endDate.getMonth() + 1);
+  // endDate.setDate(0); // Last day of the current month
+  // endDate.setHours(23, 59, 59, 999);
 
   console.log('Fetching camp analytics for current month:', startDate, 'to', endDate);
 
   const camps = await Camp.findAll({
-    // where: { startDate: { [Op.between]: [startDate, endDate] }, clinicId }, // Filter camps for current month
-    where: { clinicId }, // Filter camps for current month
+    where: { startDate: { [Op.between]: [startDate, endDate] }, clinicId }, // Filter camps for current month
+    // where: { clinicId }, // Filter camps for current month
     include: [
       {
         model: Patient,
@@ -585,32 +584,36 @@ const getAllCampsAnalytics = async (clinicId) => {
   });
 
   if (!camps || camps.length === 0) {
-    throw new ApiError(httpStatus.NOT_FOUND, 'No camps found for this month');
+    throw new ApiError(httpStatus.NOT_FOUND, 'No camps found for the given date range');
   }
 
   let totalRegisteredPatients = 0;
   let totalAttended = 0;
-  let totalMissed = 0;
   let totalEarnings = 0;
 
   let dentistryAnalytics = {
     totalPatients: 0,
     totalAttended: 0,
-    totalMissed: 0,
+    onlineEarnings: 0,
+    offlineEarnings: 0,
+    crownEarnings: 0,
     totalEarnings: 0,
+    doctorWiseData: {},
   };
 
   let gpAnalytics = {
     totalPatients: 0,
     totalAttended: 0,
-    totalMissed: 0,
+    onlineEarnings: 0,
+    offlineEarnings: 0,
     totalEarnings: 0,
   };
 
   let mammoAnalytics = {
     totalPatients: 0,
     totalAttended: 0,
-    totalMissed: 0,
+    onlineEarnings: 0,
+    offlineEarnings: 0,
     totalEarnings: 0,
   };
 
@@ -624,7 +627,6 @@ const getAllCampsAnalytics = async (clinicId) => {
 
     totalRegisteredPatients += uniquePatients.length;
     totalAttended += uniquePatients.filter((p) => p.hasAppointments).length;
-    totalMissed += uniquePatients.length - totalAttended;
 
     const campDentistry = calculateDentistryAnalytics(uniquePatients);
     const campGP = calculateGPAnalytics(uniquePatients);
@@ -632,32 +634,46 @@ const getAllCampsAnalytics = async (clinicId) => {
 
     dentistryAnalytics.totalPatients += campDentistry.totalDentistryPatients;
     dentistryAnalytics.totalAttended += campDentistry.totalAttended;
-    dentistryAnalytics.totalMissed += campDentistry.missed;
+    dentistryAnalytics.onlineEarnings += campDentistry.onlineEarnings;
+    dentistryAnalytics.offlineEarnings += campDentistry.offlineEarnings;
+    dentistryAnalytics.crownEarnings += campDentistry.crownEarnings;
     dentistryAnalytics.totalEarnings += campDentistry.totalEarnings;
+
+    // Update doctorWiseData keys
+    if (campDentistry.doctorWiseData) {
+      for (const [doctorName, doctorStats] of Object.entries(campDentistry.doctorWiseData)) {
+        if (!dentistryAnalytics.doctorWiseData[doctorName]) {
+          dentistryAnalytics.doctorWiseData[doctorName] = {
+            patientsTreated: 0,
+            onlineEarnings: 0,
+            offlineEarnings: 0,
+          };
+        }
+        dentistryAnalytics.doctorWiseData[doctorName].patientsTreated += doctorStats?.patientsTreated || 0;
+        dentistryAnalytics.doctorWiseData[doctorName].onlineEarnings += doctorStats?.onlineEarnings || 0;
+        dentistryAnalytics.doctorWiseData[doctorName].offlineEarnings += doctorStats?.offlineEarnings || 0;
+      }
+    }
 
     gpAnalytics.totalPatients += campGP.totalGPPatients;
     gpAnalytics.totalAttended += campGP.totalAttended;
-    gpAnalytics.totalMissed += campGP.missed;
-    gpAnalytics.totalEarnings += campGP.onlineEarnings + campGP.offlineEarnings;
+    gpAnalytics.onlineEarnings += campGP.onlineEarnings;
+    gpAnalytics.offlineEarnings += campGP.offlineEarnings;
+    gpAnalytics.totalEarnings += campGP.totalEarnings;
 
     mammoAnalytics.totalPatients += campMammo.totalMammographyPatients;
     mammoAnalytics.totalAttended += campMammo.totalAttended;
-    mammoAnalytics.totalMissed += campMammo.missed;
-    mammoAnalytics.totalEarnings += campMammo.onlineEarnings + campMammo.offlineEarnings;
+    mammoAnalytics.onlineEarnings += campMammo.onlineEarnings;
+    mammoAnalytics.offlineEarnings += campMammo.offlineEarnings;
+    mammoAnalytics.totalEarnings += campMammo.totalEarnings;
 
-    totalEarnings +=
-      campDentistry.totalEarnings +
-      campGP.onlineEarnings +
-      campGP.offlineEarnings +
-      campMammo.onlineEarnings +
-      campMammo.offlineEarnings;
+    totalEarnings += campDentistry.totalEarnings + campGP.totalEarnings + campMammo.totalEarnings;
   });
 
   return {
     totalCamps: camps.length,
     totalRegisteredPatients,
     totalAttended,
-    totalMissed,
     totalEarnings,
     dentistryAnalytics,
     gpAnalytics,
