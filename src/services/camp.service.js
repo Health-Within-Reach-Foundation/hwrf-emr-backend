@@ -1,4 +1,5 @@
 const httpStatus = require('http-status');
+const fs = require('fs');
 const { Clinic } = require('../models/clinic.model');
 const ApiError = require('../utils/ApiError');
 const { Specialty } = require('../models/specialty.model');
@@ -515,6 +516,13 @@ const getAllCampsAnalytics = async (clinicId, startDate, endDate) => {
 
   console.log('Fetching camp analytics for current month:', startDate, 'to', endDate);
 
+  const allCamps = await Camp.findAll({
+    where: { startDate: { [Op.between]: [startDate, endDate] }, clinicId },
+    attributes: ['id'],
+  });
+
+  const campIds = allCamps.map((camp) => camp.id);
+
   const camps = await Camp.findAll({
     where: { startDate: { [Op.between]: [startDate, endDate] }, clinicId }, // Filter camps for current month
     // where: { clinicId }, // Filter camps for current month
@@ -528,6 +536,7 @@ const getAllCampsAnalytics = async (clinicId, startDate, endDate) => {
           {
             model: Appointment,
             as: 'appointments',
+            where: { campId: { [Op.in]: campIds } }, // Filter appointments by camp IDs
             attributes: { exclude: ['createdAt', 'updatedAt'] },
             required: false,
             include: [
@@ -540,6 +549,7 @@ const getAllCampsAnalytics = async (clinicId, startDate, endDate) => {
           },
           {
             model: Queue,
+            where: { campId: { [Op.in]: campIds } }, // Filter appointments by camp IDs
             as: 'queues',
             attributes: ['tokenNumber', 'queueDate', 'queueType', 'specialtyId'],
             required: false,
@@ -558,6 +568,8 @@ const getAllCampsAnalytics = async (clinicId, startDate, endDate) => {
                 include: [
                   {
                     model: TreatmentSetting,
+                    where: { campId: { [Op.in]: campIds } }, // Filter appointments by camp IDs
+
                     as: 'treatmentSettings',
                     attributes: ['id', 'treatingDoctor', 'onlineAmount', 'offlineAmount', 'crownStatus', 'nextDate'],
                     required: false,
@@ -568,12 +580,14 @@ const getAllCampsAnalytics = async (clinicId, startDate, endDate) => {
           },
           {
             model: Mammography,
+            where: { campId: { [Op.in]: campIds } }, // Filter appointments by camp IDs
             as: 'mammography',
             attributes: ['id', 'createdAt', 'onlineAmount', 'offlineAmount'],
             required: false,
           },
           {
             model: GeneralPhysicianRecord,
+            where: { campId: { [Op.in]: campIds } }, // Filter appointments by camp IDs
             as: 'gpRecords',
             attributes: ['id', 'createdAt', 'onlineAmount', 'offlineAmount'],
             required: false,
@@ -582,6 +596,9 @@ const getAllCampsAnalytics = async (clinicId, startDate, endDate) => {
       },
     ],
   });
+
+  // Write the camp object into a file for debugging with proper strcutured JSON not in Object or Promise
+  // fs.writeFileSync('camps.json', JSON.stringify(camps, null, 2));
 
   if (!camps || camps.length === 0) {
     throw new ApiError(httpStatus.NOT_FOUND, 'No camps found for the given date range');
