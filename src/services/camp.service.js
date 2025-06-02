@@ -634,7 +634,21 @@ const getAllCampsAnalytics = async (clinicId, startDate, endDate) => {
     totalEarnings: 0,
   };
 
+  // campsTable to show on UI with columns (date, camp name, total patient, online, offline, crown earning, total earning) 
+  const campsTable = [];
+
+
   camps.forEach((camp) => {
+    let campRow = {
+      date: camp.startDate, // Format date as YYYY-MM-DD
+      campName: camp.name,
+      totalPatients: 0,
+      onlineEarnings: 0,
+      offlineEarnings: 0,
+      crownEarnings: 0,
+      totalEarnings: 0,
+    };
+
     const uniquePatients = camp.patients.map((p) => ({
       ...p.toJSON(),
       hasAppointments: p.appointments.length > 0,
@@ -642,12 +656,22 @@ const getAllCampsAnalytics = async (clinicId, startDate, endDate) => {
       servicesTaken: Array.from(new Set(p.queues.map((q) => q.queueType))),
     }));
 
+    campRow.totalPatients = uniquePatients.length;
+
     totalRegisteredPatients += uniquePatients.length;
     totalAttended += uniquePatients.filter((p) => p.hasAppointments).length;
 
     const campDentistry = calculateDentistryAnalytics(uniquePatients);
     const campGP = calculateGPAnalytics(uniquePatients);
     const campMammo = calculateMammographyAnalytics(uniquePatients);
+
+
+    // Update cmpRow with earnings
+    campRow.onlineEarnings = campDentistry.onlineEarnings + campGP.onlineEarnings + campMammo.onlineEarnings;
+    campRow.offlineEarnings = campDentistry.offlineEarnings + campGP.offlineEarnings + campMammo.offlineEarnings;
+    campRow.crownEarnings = campDentistry.crownEarnings;
+    campRow.totalEarnings = campDentistry.totalEarnings + campGP.totalEarnings + campMammo.totalEarnings;
+
 
     dentistryAnalytics.totalPatients += campDentistry.totalDentistryPatients;
     dentistryAnalytics.totalAttended += campDentistry.totalAttended;
@@ -685,10 +709,13 @@ const getAllCampsAnalytics = async (clinicId, startDate, endDate) => {
     mammoAnalytics.totalEarnings += campMammo.totalEarnings;
 
     totalEarnings += campDentistry.totalEarnings + campGP.totalEarnings + campMammo.totalEarnings;
+
+    campsTable.push(campRow);
   });
 
   return {
     totalCamps: camps.length,
+    campsTable,
     totalRegisteredPatients,
     totalAttended,
     totalEarnings,
