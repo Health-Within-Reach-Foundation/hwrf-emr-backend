@@ -4,8 +4,6 @@ const { Appointment } = require('../models/appointment.model');
 const { Queue } = require('../models/queue.model');
 const { Specialty } = require('../models/specialty.model');
 const { Patient } = require('../models/patient.model');
-const { PatientRecord } = require('../models/patient-record.model');
-const { DentistPatientRecord } = require('../models/dentist-patient-record');
 const { Camp } = require('../models/camp.model');
 const { patientService } = require('.');
 
@@ -253,18 +251,6 @@ const getAppointments = async (queryOptions, clinicId, campId) => {
         model: Specialty,
         as: 'specialty',
         attributes: ['id', 'name'], // Specialty details
-      },
-      {
-        model: PatientRecord,
-        as: 'records',
-        attributes: ['id', 'description', 'billingDetails'], // Patient record details
-        include: [
-          {
-            model: DentistPatientRecord, // Dentist-specific data
-            as: 'dentalData',
-            attributes: { exclude: ['createdAt', 'updatedAt'] },
-          },
-        ],
       },
     ],
   });

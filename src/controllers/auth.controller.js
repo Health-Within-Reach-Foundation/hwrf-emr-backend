@@ -220,7 +220,7 @@ const verifyEmail = catchAsync(async (req, res) => {
 const getMe = catchAsync(async (req, res) => {
   console.log('Req from getMe function --> ', req.user.specialties);
   const user = await userService.getUserById(req.user.id); // Use service to fetch user data
-
+   
   res.status(httpStatus.OK).json({
     success: true,
     user,
@@ -241,7 +241,7 @@ const verifyToken = catchAsync(async (req, res) => {
   console.log(req.query);
   const payload = await tokenService.verifyToken(req.query.token, tokenTypes.SET_PASSWORD);
   // Return user details on successful token verification
-  const user = await userService.getUserById(payload.userId);
+  const user = await userService.getSimpleUserById(payload.userId);
   res.status(httpStatus.OK).json({
     success: true,
     message: 'Token verified successfully.',

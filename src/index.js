@@ -3,6 +3,7 @@ const app = require('./app');
 const config = require('./config/config');
 const logger = require('./config/logger');
 const { scheduleCampStatusUpdate } = require('./utils/cron-jobs/deactivate-camp.job');
+const { scheduleTokenCleanup } = require('./utils/cron-jobs/clean-expired-token.job');
 const initializeDatabase = require('./utils/db-sync');
 
 let server;
@@ -18,6 +19,7 @@ initializeDatabase() // Ensures schema alignment
     process.exit(1);
   });
 scheduleCampStatusUpdate();
+scheduleTokenCleanup();
 
 const exitHandler = () => {
   if (server) {

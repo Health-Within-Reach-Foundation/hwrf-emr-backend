@@ -63,7 +63,7 @@ const refreshAuth = async (refreshToken, accessToken) => {
     const refreshTokenDoc = await tokenService.verifyToken(refreshToken, tokenTypes.REFRESH);
     if (accessTokenDocValidity && refreshTokenDoc) {
       console.group('*Expired access so creating a new access token only as refresh token is still valid');
-      const user = await userService.getUserById(refreshTokenDoc.userId);
+      const user = await userService.getSimpleUserById(refreshTokenDoc.userId);
       if (!user) {
         throw new Error();
       }
@@ -72,7 +72,7 @@ const refreshAuth = async (refreshToken, accessToken) => {
     } else {
       const refreshTokenDoc = await tokenService.verifyToken(refreshToken, tokenTypes.REFRESH);
       console.group('*Expired refresh token');
-      const user = await userService.getUserById(refreshTokenDoc.userId);
+      const user = await userService.getSimpleUserById(refreshTokenDoc.userId);
       user.currentCampId = null;
       await user.save();
       await refreshTokenDoc.destroy({ force: true });
@@ -100,7 +100,7 @@ const resetPassword = async (resetPasswordToken, newPassword) => {
     console.log('hello -->');
     const resetPasswordTokenDoc = await tokenService.verifyToken(resetPasswordToken, tokenTypes.SET_PASSWORD);
     console.log('verifed reset token --> ', resetPasswordTokenDoc);
-    const user = await userService.getUserById(resetPasswordTokenDoc.userId);
+    const user = await userService.getSimpleUserById(resetPasswordTokenDoc.userId);
     if (!user) {
       throw new Error();
     }
@@ -123,7 +123,7 @@ const resetPassword = async (resetPasswordToken, newPassword) => {
 const verifyEmail = async (verifyEmailToken) => {
   try {
     const verifyEmailTokenDoc = await tokenService.verifyToken(verifyEmailToken, tokenTypes.VERIFY_EMAIL);
-    const user = await userService.getUserById(verifyEmailTokenDoc.user);
+    const user = await userService.getSimpleUserById(verifyEmailTokenDoc.user);
     if (!user) {
       throw new Error();
     }

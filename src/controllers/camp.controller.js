@@ -122,10 +122,23 @@ const updateCampById = catchAsync(async (req, res) => {
   }
 });
 
+const getAllCampsAnalytics = catchAsync(async (req, res) => {
+  const { clinicId } = req?.user;
+  // const clinicId = '2f435fdb-7354-450b-8efc-f49b4bf08c4b';
+  const { startDate, endDate } = req.body;
+  const analytics = await campService.getAllCampsAnalytics(clinicId, startDate, endDate);
+  res.status(200).json({
+    success: true,
+    message: 'Camps analytics fetched successfully',
+    data: analytics,
+  });
+});
+
 module.exports = {
   getCamps,
   createCamp,
   setCurrentCamp,
   getCampById,
   updateCampById,
+  getAllCampsAnalytics,
 };

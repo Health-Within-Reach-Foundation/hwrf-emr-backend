@@ -1,4 +1,5 @@
 const httpStatus = require('http-status');
+const fs = require('fs');
 const { Clinic } = require('../models/clinic.model');
 const ApiError = require('../utils/ApiError');
 const { Specialty } = require('../models/specialty.model');
@@ -95,9 +96,9 @@ const getCamps = async (clinicId, status = null) => {
     include: [
       { model: User, as: 'users', attributes: ['id', 'name', 'email'] },
       { model: Specialty, as: 'specialties', attributes: ['id', 'name'] },
-      { model: Appointment, as: 'appointments', attributes: ['id', 'appointmentDate', 'status'] },
+      // { model: Appointment, as: 'appointments', attributes: ['id', 'appointmentDate', 'status'] },
     ],
-    order: [['endDate', 'DESC']],
+    order: [['startDate', 'DESC']],
   });
 
   return camps;
@@ -376,9 +377,6 @@ const getCampDetails = async (campId) => {
     throw new ApiError(httpStatus.NOT_FOUND, 'Camp not found');
   }
 
-  console.log('Total registered patients:', camp.patients.length);
-  console.log('Camp patient', camp.patients[0]);
-
   // **Step 1: Flat patients for UI display (Can contain duplicates for multiple services)**
   const flatPatients = camp.patients.flatMap((patient) => {
     const appointments = patient.appointments.length > 0 ? patient.appointments : [null];
@@ -388,9 +386,58 @@ const getCampDetails = async (campId) => {
       const totalPaidAmount = patient.diagnoses.reduce((sum, diagnosis) => {
         return sum + (diagnosis.treatment ? Number(diagnosis.treatment.paidAmount) : 0);
       }, 0);
-      const totalGPPaidAmount = patient.gpRecords.reduce((sum, record) => {
-        return sum + (record ? (record.onlineAmount ? Number(record.onlineAmount) : 0) + (record.offlineAmount ? Number(record.offlineAmount) : 0) : 0);
+
+      const collectedDenistryOnlineAmount = patient.diagnoses.reduce((sum, diagnosis) => {
+        return (
+          sum +
+          (diagnosis.treatment
+            ? diagnosis.treatment.treatmentSettings.reduce((innerSum, ts) => {
+                return innerSum + (ts.onlineAmount ? Number(ts.onlineAmount) : 0);
+              }, 0)
+            : 0)
+        );
       }, 0);
+
+      const collectedDenistryCash = patient.diagnoses.reduce((sum, diagnosis) => {
+        return (
+          sum +
+          (diagnosis.treatment
+            ? diagnosis.treatment.treatmentSettings.reduce((innerSum, ts) => {
+                return innerSum + (ts.offlineAmount ? Number(ts.offlineAmount) : 0);
+              }, 0)
+            : 0)
+        );
+      }, 0);
+
+      const collectedGPOnlineAmount = patient.gpRecords.reduce((sum, record) => {
+        return sum + (record ? (record.onlineAmount ? Number(record.onlineAmount) : 0) : 0);
+      }, 0);
+
+      const collectedGPCash = patient.gpRecords.reduce((sum, record) => {
+        return sum + (record ? (record.offlineAmount ? Number(record.offlineAmount) : 0) : 0);
+      }, 0);
+
+      const totalGPPaidAmount = patient.gpRecords.reduce((sum, record) => {
+        return (
+          sum +
+          (record
+            ? (record.onlineAmount ? Number(record.onlineAmount) : 0) +
+              (record.offlineAmount ? Number(record.offlineAmount) : 0)
+            : 0)
+        );
+      }, 0);
+
+      const collectedMammoOnlineAmount = patient.mammography
+        ? patient.mammography.onlineAmount
+          ? Number(patient.mammography.onlineAmount)
+          : 0
+        : 0;
+
+      const collectedMammoCash = patient.mammography
+        ? patient.mammography.offlineAmount
+          ? Number(patient.mammography.offlineAmount)
+          : 0
+        : 0;
 
       const totalMammoPaidAmount = patient.mammography
         ? (patient.mammography.onlineAmount ? Number(patient.mammography.onlineAmount) : 0) +
@@ -419,6 +466,14 @@ const getCampDetails = async (campId) => {
             ? totalMammoPaidAmount
             : null,
         treatingDoctors: queue && queue.queueType === 'Dentistry' ? treatingDoctors : null,
+        collectedAmount:
+          queue && queue.queueType === 'Dentistry'
+            ? { onlineAmount: collectedDenistryOnlineAmount, offlineAmount: collectedDenistryCash }
+            : queue && queue.queueType === 'GP'
+            ? { onlineAmount: collectedGPOnlineAmount, offlineAmount: collectedGPCash }
+            : queue && queue.queueType === 'Mammography'
+            ? { onlineAmount: collectedMammoOnlineAmount, offlineAmount: collectedMammoCash }
+            : null,
       };
     });
   });
@@ -448,6 +503,228 @@ const getCampDetails = async (campId) => {
   };
 };
 
+// Function to get the analytics like revenue, patient category by service taken, revenue category by services for the On going month all camps
+const getAllCampsAnalytics = async (clinicId, startDate, endDate) => {
+  // const startDate = new Date();
+  // startDate.setDate(1); // First day of the current month
+  // startDate.setHours(0, 0, 0, 0);
+
+  // // const endDate = new Date();
+  // endDate.setMonth(endDate.getMonth() + 1);
+  // endDate.setDate(0); // Last day of the current month
+  // endDate.setHours(23, 59, 59, 999);
+
+  console.log('Fetching camp analytics for current month:', startDate, 'to', endDate);
+
+  const allCamps = await Camp.findAll({
+    where: { startDate: { [Op.between]: [startDate, endDate] }, clinicId },
+    attributes: ['id'],
+  });
+
+  const campIds = allCamps.map((camp) => camp.id);
+
+  const camps = await Camp.findAll({
+    where: { startDate: { [Op.between]: [startDate, endDate] }, clinicId }, // Filter camps for current month
+    // where: { clinicId }, // Filter camps for current month
+    include: [
+      {
+        model: Patient,
+        as: 'patients',
+        attributes: ['id', 'name', 'regNo', 'age', 'sex', 'mobile'],
+        through: { attributes: [] },
+        include: [
+          {
+            model: Appointment,
+            as: 'appointments',
+            where: { campId: { [Op.in]: campIds } }, // Filter appointments by camp IDs
+            attributes: { exclude: ['createdAt', 'updatedAt'] },
+            required: false,
+            include: [
+              {
+                model: Specialty,
+                as: 'specialty',
+                attributes: { exclude: ['id', 'createdAt', 'updatedAt'] },
+              },
+            ],
+          },
+          {
+            model: Queue,
+            where: { campId: { [Op.in]: campIds } }, // Filter appointments by camp IDs
+            as: 'queues',
+            attributes: ['tokenNumber', 'queueDate', 'queueType', 'specialtyId'],
+            required: false,
+          },
+          {
+            model: Diagnosis,
+            as: 'diagnoses',
+            attributes: ['id', 'createdAt'],
+            required: false,
+            include: [
+              {
+                model: Treatment,
+                as: 'treatment',
+                attributes: ['id', 'paidAmount', 'status'],
+                required: false,
+                include: [
+                  {
+                    model: TreatmentSetting,
+                    where: { campId: { [Op.in]: campIds } }, // Filter appointments by camp IDs
+
+                    as: 'treatmentSettings',
+                    attributes: ['id', 'treatingDoctor', 'onlineAmount', 'offlineAmount', 'crownStatus', 'nextDate'],
+                    required: false,
+                  },
+                ],
+              },
+            ],
+          },
+          {
+            model: Mammography,
+            where: { campId: { [Op.in]: campIds } }, // Filter appointments by camp IDs
+            as: 'mammography',
+            attributes: ['id', 'createdAt', 'onlineAmount', 'offlineAmount'],
+            required: false,
+          },
+          {
+            model: GeneralPhysicianRecord,
+            where: { campId: { [Op.in]: campIds } }, // Filter appointments by camp IDs
+            as: 'gpRecords',
+            attributes: ['id', 'createdAt', 'onlineAmount', 'offlineAmount'],
+            required: false,
+          },
+        ],
+      },
+    ],
+  });
+
+  // Write the camp object into a file for debugging with proper strcutured JSON not in Object or Promise
+  // fs.writeFileSync('camps.json', JSON.stringify(camps, null, 2));
+
+  if (!camps || camps.length === 0) {
+    throw new ApiError(httpStatus.NOT_FOUND, 'No camps found for the given date range');
+  }
+
+  let totalRegisteredPatients = 0;
+  let totalAttended = 0;
+  let totalEarnings = 0;
+
+  let dentistryAnalytics = {
+    totalPatients: 0,
+    totalAttended: 0,
+    onlineEarnings: 0,
+    offlineEarnings: 0,
+    crownEarnings: 0,
+    totalEarnings: 0,
+    doctorWiseData: {},
+  };
+
+  let gpAnalytics = {
+    totalPatients: 0,
+    totalAttended: 0,
+    onlineEarnings: 0,
+    offlineEarnings: 0,
+    totalEarnings: 0,
+  };
+
+  let mammoAnalytics = {
+    totalPatients: 0,
+    totalAttended: 0,
+    onlineEarnings: 0,
+    offlineEarnings: 0,
+    totalEarnings: 0,
+  };
+
+  // campsTable to show on UI with columns (date, camp name, total patient, online, offline, crown earning, total earning) 
+  const campsTable = [];
+
+
+  camps.forEach((camp) => {
+    let campRow = {
+      date: camp.startDate, // Format date as YYYY-MM-DD
+      campName: camp.name,
+      totalPatients: 0,
+      onlineEarnings: 0,
+      offlineEarnings: 0,
+      crownEarnings: 0,
+      totalEarnings: 0,
+    };
+
+    const uniquePatients = camp.patients.map((p) => ({
+      ...p.toJSON(),
+      hasAppointments: p.appointments.length > 0,
+      hasQueues: p.queues.length > 0,
+      servicesTaken: Array.from(new Set(p.queues.map((q) => q.queueType))),
+    }));
+
+    campRow.totalPatients = uniquePatients.length;
+
+    totalRegisteredPatients += uniquePatients.length;
+    totalAttended += uniquePatients.filter((p) => p.hasAppointments).length;
+
+    const campDentistry = calculateDentistryAnalytics(uniquePatients);
+    const campGP = calculateGPAnalytics(uniquePatients);
+    const campMammo = calculateMammographyAnalytics(uniquePatients);
+
+
+    // Update cmpRow with earnings
+    campRow.onlineEarnings = campDentistry.onlineEarnings + campGP.onlineEarnings + campMammo.onlineEarnings;
+    campRow.offlineEarnings = campDentistry.offlineEarnings + campGP.offlineEarnings + campMammo.offlineEarnings;
+    campRow.crownEarnings = campDentistry.crownEarnings;
+    campRow.totalEarnings = campDentistry.totalEarnings + campGP.totalEarnings + campMammo.totalEarnings;
+
+
+    dentistryAnalytics.totalPatients += campDentistry.totalDentistryPatients;
+    dentistryAnalytics.totalAttended += campDentistry.totalAttended;
+    dentistryAnalytics.onlineEarnings += campDentistry.onlineEarnings;
+    dentistryAnalytics.offlineEarnings += campDentistry.offlineEarnings;
+    dentistryAnalytics.crownEarnings += campDentistry.crownEarnings;
+    dentistryAnalytics.totalEarnings += campDentistry.totalEarnings;
+
+    // Update doctorWiseData keys
+    if (campDentistry.doctorWiseData) {
+      for (const [doctorName, doctorStats] of Object.entries(campDentistry.doctorWiseData)) {
+        if (!dentistryAnalytics.doctorWiseData[doctorName]) {
+          dentistryAnalytics.doctorWiseData[doctorName] = {
+            patientsTreated: 0,
+            onlineEarnings: 0,
+            offlineEarnings: 0,
+          };
+        }
+        dentistryAnalytics.doctorWiseData[doctorName].patientsTreated += doctorStats?.patientsTreated || 0;
+        dentistryAnalytics.doctorWiseData[doctorName].onlineEarnings += doctorStats?.onlineEarnings || 0;
+        dentistryAnalytics.doctorWiseData[doctorName].offlineEarnings += doctorStats?.offlineEarnings || 0;
+      }
+    }
+
+    gpAnalytics.totalPatients += campGP.totalGPPatients;
+    gpAnalytics.totalAttended += campGP.totalAttended;
+    gpAnalytics.onlineEarnings += campGP.onlineEarnings;
+    gpAnalytics.offlineEarnings += campGP.offlineEarnings;
+    gpAnalytics.totalEarnings += campGP.totalEarnings;
+
+    mammoAnalytics.totalPatients += campMammo.totalMammographyPatients;
+    mammoAnalytics.totalAttended += campMammo.totalAttended;
+    mammoAnalytics.onlineEarnings += campMammo.onlineEarnings;
+    mammoAnalytics.offlineEarnings += campMammo.offlineEarnings;
+    mammoAnalytics.totalEarnings += campMammo.totalEarnings;
+
+    totalEarnings += campDentistry.totalEarnings + campGP.totalEarnings + campMammo.totalEarnings;
+
+    campsTable.push(campRow);
+  });
+
+  return {
+    totalCamps: camps.length,
+    campsTable,
+    totalRegisteredPatients,
+    totalAttended,
+    totalEarnings,
+    dentistryAnalytics,
+    gpAnalytics,
+    mammoAnalytics,
+  };
+};
+
 module.exports = {
   createCamp,
   getCamps,
@@ -455,4 +732,5 @@ module.exports = {
   setCurrentCamp,
   updateCampById,
   getCampDetails,
+  getAllCampsAnalytics,
 };

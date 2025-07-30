@@ -33,21 +33,11 @@ router
     patientController.getPatientsByClinic // Controller
   );
 
-router.route('/follow-ups').get(
-  auth(),
-  patientController.getPatientFollowUps
-);
+router.route('/follow-ups').get(auth(), patientController.getPatientFollowUps);
 
 /* **************************** Pateint crud route ******************************** */
 
 /* **************************** Pateint dental crud routes ******************************** */
-
-router.route('/dental-records').post(
-  auth(),
-  // roleAuthorization('doctor', 'receptionist'),
-  validate(patientValidation.addDentalPatientRecord),
-  patientController.addDentalPatientRecord
-);
 
 router
   .route('/diagnosis')
@@ -85,6 +75,7 @@ router
     upload.array('xrayFiles'),
 
     parseArrayFields([
+      // 'diagnosisDate',
       'complaints',
       'treatmentsSuggested',
       'currentStatus',
@@ -114,7 +105,12 @@ router
   .post(
     auth(),
     upload.array('xrayFiles'),
-    parseArrayFields(['treatmentStatus', 'treatingDoctor', 'treatmentDate', 'nextDate']),
+    parseArrayFields([
+      'treatmentStatus',
+      'treatingDoctor',
+      // 'treatmentDate',
+      // 'nextDate'
+    ]),
     (req, res, next) => {
       console.log('req body --------', req.body, req.files);
       next();
@@ -134,7 +130,11 @@ router
       console.log('req body --------', req.body, req.files);
       next();
     },
-    parseArrayFields(['treatmentStatus', 'treatingDoctor', 'nextDate']),
+    parseArrayFields([
+      'treatmentStatus',
+      'treatingDoctor',
+      // 'nextDate'
+    ]),
     validate(patientValidation.updateTreatment),
     patientController.updateTreatment
   )
@@ -148,11 +148,9 @@ router
   .route('/mammography/:patientId')
   .post(
     auth(),
-    upload.single('screeningFile'),
-    (req, res, next) => {
-      console.log('req body --------', req.body, req.files);
-      next();
-    },
+    // There are two files sepratly comming from the front end for this api 1. screeningFile 2. aiReport, how to handle this in multer
+    validate(patientValidation.createMammography),
+    upload.fields([{ name: 'screeningFile' }, { name: 'aiReport' }]),
     parseArrayFields([
       'smokingDetails',
       'imagingStudies',
@@ -162,12 +160,13 @@ router
       'numberOfPregnancies',
       'previousTreatmentDetails',
     ]),
-    validate(patientValidation.createMammography),
     patientController.createMammography
   )
   .patch(
     auth(),
-    upload.single('screeningFile'),
+    // upload.single('screeningFile'),
+    validate(patientValidation.updateMammography),
+    upload.fields([{ name: 'screeningFile' }, { name: 'aiReport' }]),
     (req, res, next) => {
       console.log('req body --------', req.body, req.files);
       next();
@@ -180,10 +179,10 @@ router
       'alcoholDetails',
       'previousTreatmentDetails',
     ]),
-    validate(patientValidation.updateMammography),
     patientController.updateMammography
   )
-  .get(auth(), validate(patientValidation.getMammography), patientController.getMammography);
+  .get(auth(), validate(patientValidation.getMammography), patientController.getMammography)
+  .delete(auth(), validate(patientValidation.getMammography), patientController.deleteMammography);
 
 /* **************************** Pateint mammography crud routes ******************************** */
 
@@ -200,29 +199,13 @@ router
     validate(patientValidation.createGPRecord),
     patientController.createGPRecord
   )
-  .get(
-    auth(),
-    validate(patientValidation.getGPRecordsByPatient),
-    patientController.getGPRecordsByPatient
-  );
+  .get(auth(), validate(patientValidation.getGPRecordsByPatient), patientController.getGPRecordsByPatient);
 
 router
   .route('/gp-records/:gpRecordId')
-  .patch(
-    auth(),
-    validate(patientValidation.updateGPRecord),
-    patientController.updateGPRecord
-  )
-  .get(
-    auth(),
-    validate(patientValidation.getGPRecord),
-    patientController.getGPRecordById
-  )
-  .delete(
-    auth(),
-    validate(patientValidation.getGPRecord),
-    patientController.deleteGPRecord
-  );
+  .patch(auth(), validate(patientValidation.updateGPRecord), patientController.updateGPRecord)
+  .get(auth(), validate(patientValidation.getGPRecord), patientController.getGPRecordById)
+  .delete(auth(), validate(patientValidation.getGPRecord), patientController.deleteGPRecord);
 
 /* **************************** Pateint GP crud routes ******************************** */
 

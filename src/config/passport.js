@@ -2,13 +2,8 @@ const { Strategy: JwtStrategy, ExtractJwt } = require('passport-jwt');
 const config = require('./config');
 const { tokenTypes } = require('./tokens');
 const { User } = require('../models/user.model');
-const { Role } = require('../models/role.model');
-const { Permission } = require('../models/permission.model'); // Import Permission model
-const { Clinic } = require('../models/clinic.model');
-const { Specialty } = require('../models/specialty.model');
-const { Camp } = require('../models/camp.model');
 const { userService } = require('../services');
-
+const logger = require('./logger');
 
 const jwtOptions = {
   secretOrKey: config.jwt.secret,
@@ -64,15 +59,21 @@ const jwtVerify = async (payload, done) => {
     //     },
     //   ],
     // });
+    logger.info('JWT verification started');
+    // start time to measure how much time is taken to verify the token
+    const startTime = Date.now();
     const user = await userService.getUserById(payload.sub);
-
+    // log the time taken to verify the token
+    const endTime = Date.now();
+    const timeTaken = endTime - startTime;
+    logger.warn(`Time taken to verify the token: ${timeTaken}ms`);
     if (!user) {
       return done(null, false);
     }
     // Extract permissions and attach to user object
     const permissions = user.roles.flatMap((role) => role.permissions.map((perm) => perm.action));
     user.permissions = Array.from(new Set(permissions)); // Avoid duplicate permissions
-
+    logger.info('JWT verification completed');
     done(null, user);
   } catch (error) {
     console.error('Error in JWT verification:', error);

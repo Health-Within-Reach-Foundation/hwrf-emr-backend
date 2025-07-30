@@ -201,18 +201,6 @@ const getPatientDetailsById = async (patientId, specialtyId) => {
         order: [['createdAt', 'DESC']],
         separate: true,
       },
-      // {
-      //   model: PatientRecord,
-      //   as: 'records',
-      //   include: [
-      //     {
-      //       model: DentistPatientRecord, // Include Dentist-specific data
-      //       as: 'dentalData',
-      //       attributes: { exclude: ['createdAt', 'updatedAt'] },
-      //     },
-      //   ],
-      //   required: false, // Ensure patient is returned even if no records exist
-      // },
       // Include Queue records for the patient
       {
         model: Queue,
@@ -251,6 +239,7 @@ const getPatientDetailsById = async (patientId, specialtyId) => {
  */
 const createDiagnosis = async (diagnosisBody, transaction = null) => {
   const {
+    diagnosisDate,
     selectedTeeth,
     childSelectedTeeth,
     adultSelectedTeeth,
@@ -275,6 +264,7 @@ const createDiagnosis = async (diagnosisBody, transaction = null) => {
   const createDiagnosisAndTreatment = async (teeth, quadrantType) => {
     const diagnosis = await Diagnosis.create(
       {
+        diagnosisDate: diagnosisDate.toISOString().split('T')[0],
         complaints,
         treatmentsSuggested,
         selectedTeeth: teeth,
@@ -419,9 +409,11 @@ const updateDiagnosis = async (diagnosisId, updateBody, transaction = null) => {
       ? updateBody.selectedTeeth[0] // Take first element if exists
       : null; // Otherwise, set to null
 
-  const { complaints, treatmentsSuggested, dentalQuadrantType, xrayStatus, xray, notes, estimatedCost } = updateBody;
+  const { diagnosisDate, complaints, treatmentsSuggested, dentalQuadrantType, xrayStatus, xray, notes, estimatedCost } =
+    updateBody;
 
   const updatedDiagnosisBody = {
+    diagnosisDate: diagnosisDate.toISOString().split('T')[0],
     complaints,
     treatmentsSuggested,
     selectedTeeth,
@@ -790,6 +782,7 @@ const createMammography = async (patientId, mammographyBody) => {
     }
 
     const {
+      lastMenstrualDate = null,
       menstrualAge = null,
       numberOfPregnancies = null,
       numberOfDeliveries = null,
@@ -798,6 +791,8 @@ const createMammography = async (patientId, mammographyBody) => {
     } = mammographyBody;
 
     const newMammographyBody = {
+      lastMenstrualDate:
+        lastMenstrualDate !== 'null' && lastMenstrualDate !== undefined ? new Date(lastMenstrualDate) : null,
       menstrualAge: menstrualAge !== 'null' ? Number(menstrualAge) : null,
       numberOfPregnancies: numberOfPregnancies !== 'null' ? Number(numberOfPregnancies) : null,
       numberOfDeliveries: numberOfDeliveries !== 'null' ? Number(numberOfDeliveries) : null,
@@ -859,6 +854,7 @@ const updateMammography = async (patientId, updateBody) => {
     }
 
     const {
+      lastMenstrualDate = null,
       menstrualAge = null,
       numberOfPregnancies = null,
       numberOfDeliveries = null,
@@ -867,6 +863,7 @@ const updateMammography = async (patientId, updateBody) => {
     } = updateBody;
 
     const newMammographyBody = {
+      lastMenstrualDate: lastMenstrualDate !== 'null' && lastMenstrualDate !== null ? new Date(lastMenstrualDate) : null,
       menstrualAge: menstrualAge !== 'null' ? Number(menstrualAge) : null,
       numberOfPregnancies: numberOfPregnancies !== 'null' ? Number(numberOfPregnancies) : null,
       numberOfDeliveries: numberOfDeliveries !== 'null' ? Number(numberOfDeliveries) : null,
@@ -896,7 +893,7 @@ const deleteMammography = async (patientId) => {
     if (!mammography) {
       throw new ApiError(httpStatus.NOT_FOUND, 'Mammography record not found');
     }
-    await mammography.destroy();
+    await mammography.destroy({ force: true });
     return { message: 'Mammography record deleted successfully' };
   } catch (error) {
     console.error(error);
@@ -961,7 +958,7 @@ const updateGPRecord = async (id, updateData) => {
  * @returns {Promise<number>} - The number of records deleted.
  */
 const deleteGPRecord = async (id) => {
-  return GeneralPhysicianRecord.destroy({ where: { id } });
+  return GeneralPhysicianRecord.destroy({ where: { id }, force: true });
 };
 
 /**

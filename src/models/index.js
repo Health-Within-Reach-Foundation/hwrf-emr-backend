@@ -71,7 +71,6 @@
 //     }
 //   });
 
-
 // // Set up model associations if defined
 // // Object.keys(db).forEach((modelName) => {
 // //   console.log('Setting the association', db);
@@ -90,7 +89,6 @@
 //   }
 // });
 
-
 // // Define relationships
 
 // // Export the Sequelize instance and all models
@@ -98,7 +96,6 @@
 // db.Sequelize = Sequelize;
 
 // module.exports = db;
-
 
 const fs = require('fs');
 const path = require('path');
@@ -127,7 +124,6 @@ fs.readdirSync(__dirname)
     const model = require(modelPath); // Import the model
 
     if (model.initModel) {
-      console.log('Initializing model:', modelPath);
       model.initModel(sequelize); // Initialize the model
     } else {
       logger.warn(`Model at ${modelPath} does not export an initModel method`);
@@ -142,7 +138,6 @@ Object.keys(sequelize.models).forEach((modelName) => {
 // Set up model associations if defined
 Object.keys(db).forEach((modelName) => {
   if (db[modelName].associate) {
-    console.log(`Setting up associations for model: ${modelName}`);
     db[modelName].associate(db); // Pass the full db object for associations
   }
 });

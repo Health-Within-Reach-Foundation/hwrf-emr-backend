@@ -27,7 +27,7 @@ const createUser = async (userBody, transaction = null) => {
  * @returns {Promise<User>}
  */
 const getUserById = async (id) => {
-  return User.findByPk(id, {
+  const user = User.findByPk(id, {
     include: [
       {
         model: Role,
@@ -64,7 +64,57 @@ const getUserById = async (id) => {
       },
     ],
   });
+  return user;
 };
+
+// const getUserById = async (id) => {
+//   try {
+//     // Fetch user details with minimal data
+//     const user = await User.findByPk(id);
+
+//     if (!user) {
+//       return null; // Or handle error case
+//     }
+
+//     // Fetch related roles and permissions separately
+//     const roles = await user.getRoles({
+//       include: [
+//         {
+//           as: 'permissions',
+//           model: Permission,
+//           attributes: ['id', 'action'],
+//         },
+//       ],
+//       attributes: { exclude: ['createdAt', 'updatedAt', 'userId', 'clinicId'] },
+//     });
+
+//     user.roles = roles;
+
+//     // Fetch associated clinic data
+//     const clinic = await user.getClinic({
+//       attributes: ['id', 'clinicName', 'status'],
+//     });
+//     user.clinic = clinic;
+
+//     // Fetch associated specialties
+//     const specialties = await user.getSpecialties({
+//       attributes: ['id', 'name', 'departmentName'],
+//     });
+//     user.specialties = specialties;
+
+//     // Fetch active camps associated with the user
+//     const camps = await user.getCamps({
+//       attributes: { exclude: ['clinicId', 'updatedAt'] },
+//       where: { status: 'active' },
+//     });
+//     user.camps = camps;
+
+//     return user;
+//   } catch (error) {
+//     console.error('Error in getUserById:', error);
+//     throw error; // Handle error at a higher level
+//   }
+// };
 
 /**
  * Get user by email
@@ -145,6 +195,7 @@ const getUserAssociatedToClinic = async (userEmail) => {
     ],
   });
 
+  console.log('getUserAssociatedToClinic -->', user);
   // Check if user exists
   if (!user) {
     throw new ApiError(httpStatus.NOT_FOUND, 'User not found');
@@ -204,13 +255,36 @@ const getUsersByClinic = async (clinicId) => {
 };
 
 /**
+ * Get simple user by id
+ * @param {string} id
+ * @returns {Promise<User>}
+ */
+const getSimpleUserById = async (id) => {
+  const user = await User.findByPk(id, {});
+  return user;
+};
+
+/**
+ * Get simple user by email
+ * @param {string} email
+ * @returns {Promise<User>}
+ */
+
+const getSimpleUserByEmail = async (email) => {
+  const user = await User.findOne({
+    where: { email },
+  });
+  return user;
+};
+
+/**
  * Update user by id
  * @param {string} userId
  * @param {Object} updateBody
  * @returns {Promise<User>}
  */
 const updateUserById = async (userId, updateBody) => {
-  const user = await getUserById(userId);
+  const user = await getSimpleUserById(userId);
   if (!user) {
     throw new ApiError(httpStatus.NOT_FOUND, 'User not found');
   }
@@ -316,7 +390,7 @@ const updateUser = async (userId, updateBody, transaction = null) => {
  * @returns {Promise<User>}
  */
 const deleteUserById = async (userId) => {
-  const user = await getUserById(userId);
+  const user = await getSimpleUserById(userId);
   if (!user) {
     throw new ApiError(httpStatus.NOT_FOUND, 'User not found');
   }
@@ -337,6 +411,8 @@ module.exports = {
   getUserById,
   getUserByEmail,
   getUsersByClinic,
+  getSimpleUserById,
+  getSimpleUserByEmail,
   updateUserById,
   updateUser,
   deleteUserById,

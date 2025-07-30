@@ -23,6 +23,9 @@ const envVarsSchema = Joi.object()
     AZURE_STORAGE_ACCOUNT_KEY: Joi.string().allow('', null).optional(),
     AZURE_EMAIL_CONNECTION_STRING: Joi.string().allow('', null).optional(),
     MAIL_ALIAS_USER: Joi.string().allow('', null).optional(),
+    WA_API_URL: Joi.string().allow('', null).optional(),
+    WA_PHONE_NUMBER_ID: Joi.string().allow('', null).optional(),
+    WA_ACCESS_TOKEN: Joi.string().allow('', null).optional(),
   })
   .unknown();
 
@@ -58,6 +61,11 @@ module.exports = {
   client_domain: envVars.CLIENT_DOMAIN,
   azure_storage_account_name: envVars.AZURE_STORAGE_ACCOUNT_NAME,
   azure_storage_account_key: envVars.AZURE_STORAGE_ACCOUNT_KEY,
-  mail_alias_user:envVars.MAIL_ALIAS_USER,
-  azure_email_connection_string:envVars.AZURE_EMAIL_CONNECTION_STRING
+  mail_alias_user: envVars.MAIL_ALIAS_USER,
+  azure_email_connection_string: envVars.AZURE_EMAIL_CONNECTION_STRING,
+  whatsapp: {
+    api_url: envVars.WA_API_URL,
+    phone_number_id: envVars.WA_PHONE_NUMBER_ID,
+    access_token: envVars.WA_ACCESS_TOKEN,
+  },
 };
