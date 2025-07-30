@@ -1,6 +1,13 @@
 const httpStatus = require('http-status');
 const catchAsync = require('../utils/catchAsync');
-const { clinicService, userService, tokenService, emailService, formFieldsService } = require('../services');
+const {
+  clinicService,
+  userService,
+  tokenService,
+  emailService,
+  formFieldsService,
+  whatsappCommunicationService,
+} = require('../services');
 const { getAllFormTemplates, createFormTemplate } = require('../services/form-template.service');
 const { bulkCreateRole } = require('../services/role-permission.service');
 const { Op } = require('sequelize');
@@ -50,7 +57,7 @@ const approveClinic = catchAsync(async (req, res) => {
   try {
     const clinicResponse = await clinicService.updateClinicById(req.params.clinicId, req.body, transaction);
 
-    const admin = await userService.getUserById(clinicResponse.ownerId);
+    const admin = await userService.getSimpleUserById(clinicResponse.ownerId);
 
     // update the status of admin
     admin.status = 'active';
@@ -220,6 +227,47 @@ const getFileByKey = catchAsync(async (req, res) => {
   await getFile(key, res);
 });
 
+// Accept the req body
+const sendWhatsAppMessageController = catchAsync(async (req, res) => {
+  const { recipientPhone, templateName, templateVariables } = req.body;
+
+  try {
+    if (!recipientPhone || !templateName) {
+      return res.status(400).json({ error: 'Phone number and template name are required' });
+    }
+    const response = await whatsappCommunicationService.sendWhatsAppMessage(recipientPhone, templateName, templateVariables);
+    res.status(httpStatus.OK).json({
+      success: true,
+      message: 'WhatsApp message sent successfully',
+      data: response,
+    });
+  } catch (error) {
+    console.error('Error sending WhatsApp message:', error);
+    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, 'Error sending WhatsApp message');
+  }
+});
+
+/**
+ * Handles sending a broadcast WhatsApp message
+ */
+const sendBroadcastMessage = catchAsync(async (req, res) => {
+  try {
+    const { phoneNumbers, templateName, templateVariables } = req.body;
+
+    if (!phoneNumbers || !Array.isArray(phoneNumbers) || phoneNumbers.length === 0) {
+      return res.status(400).json({ error: 'Phone numbers array is required' });
+    }
+    if (!templateName) {
+      return res.status(400).json({ error: 'Template name is required' });
+    }
+
+    const response = await whatsappCommunicationService.broadcastWhatsAppMessage(phoneNumbers, templateName, templateVariables);
+    res.status(200).json({ success: true, response });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 module.exports = {
   getClinics,
   getClinic,
@@ -228,6 +276,8 @@ module.exports = {
   getSpecialtyDepartmentsByClinic,
   updateClinicById,
   getFileByKey,
+  sendWhatsAppMessageController,
+  sendBroadcastMessage,
   // createRole,
   // getRolesByClinic
 };

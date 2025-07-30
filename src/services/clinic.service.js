@@ -337,7 +337,7 @@ const onboardClinic = async (clinicData, transaction = null) => {
   }
 
   // Step 2: Check if the admin email already exists
-  const existingAdmin = await userService.getUserByEmail(adminEmail);
+  const existingAdmin = await userService.getSimpleUserByEmail(adminEmail);
   if (existingAdmin) {
     throw new ApiError(httpStatus.BAD_REQUEST, 'Admin email is already in use.');
   }

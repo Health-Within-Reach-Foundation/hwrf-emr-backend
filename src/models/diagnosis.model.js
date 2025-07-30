@@ -94,6 +94,10 @@ const initModel = (sequelize) => {
         type: DataTypes.DECIMAL,
         allowNull: true,
       },
+      diagnosisDate: {
+        type: DataTypes.DATEONLY,
+        allowNull: true,
+      },
     },
     {
       sequelize,

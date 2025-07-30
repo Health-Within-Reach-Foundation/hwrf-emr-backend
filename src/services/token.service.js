@@ -80,7 +80,7 @@ const verifyAccessToken = async (token) => {
     }
 
     // Check if the user exists
-    const user = await userService.getUserById(payload.sub);
+    const user = await userService.getSimpleUserById(payload.sub);
     if (!user) {
       return false;
     }
@@ -153,7 +153,7 @@ const generatePasswordToken = async (user, type, transaction = null) => {
   console.log('User and typeof user-->', user.id, typeof user);
   if (typeof user === 'string') {
     // user param act as email
-    user = await userService.getUserByEmail(user);
+    user = await userService.getSimpleUserByEmail(user);
   }
   // const user = await userService.getUserByEmail(email);
   if (!user && typeof user !== 'string') {

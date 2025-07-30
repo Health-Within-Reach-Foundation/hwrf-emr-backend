@@ -13,10 +13,15 @@ router
 
 router.post('/set-camp', auth(), campController.setCurrentCamp);
 
+router.post(
+  '/analytics',
+  auth(),
+  campController.getAllCampsAnalytics
+);
 router
   .route('/:campId')
   .get(
-    // auth(),
+    auth(),
     // roleAuthorization('admin', 'organizer'),
     validate(campValidation.getCampById),
     campController.getCampById

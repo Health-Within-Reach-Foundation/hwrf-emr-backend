@@ -82,14 +82,14 @@ const crownEarnings = dentistryPatients.reduce((sum, p) => {
     return sum + p.diagnoses.reduce((dSum, d) => {
         if (d.treatment) {
             return dSum + d.treatment.treatmentSettings.reduce((tSum, ts) => {
-                console.log('crownStatus:', ts.crownStatus, ts);
+                // console.log('crownStatus:', ts.crownStatus, ts);
                 if (ts.crownStatus) {
-                    console.log('crownStatus true:', ts.crownStatus);
-                    console.log('onlineAmount:', ts.onlineAmount);
-                    console.log('offlineAmount:', ts.offlineAmount);
+                    // console.log('crownStatus true:', ts.crownStatus);
+                    // console.log('onlineAmount:', ts.onlineAmount);
+                    // console.log('offlineAmount:', ts.offlineAmount);
                     tSum += Number(ts.onlineAmount || 0) + Number(ts.offlineAmount || 0);
                 }
-                console.log('tSum:', tSum);
+                // console.log('tSum:', tSum);
                 return tSum;
             }, 0);
         }
@@ -100,7 +100,7 @@ const crownEarnings = dentistryPatients.reduce((sum, p) => {
 const totalEarnings = onlineEarnings + offlineEarnings;
 
 
-  console.log("crownEarnings", crownEarnings);
+  // console.log("crownEarnings", crownEarnings);
 
   // Doctor-wise data, calculate the doctor-wise earnings but if the crownStatus is false then don't include the offlineAmount and onlineAmount of that treatmentSettings in the earnings
   const doctorWiseData = {};
@@ -154,19 +154,19 @@ const calculateGPAnalytics = (patients) => {
 
   const onlineEarnings = gpPatients.reduce((sum, p) => {
     const patientOnlineEarnings = p?.gpRecords?.reduce((dSum, d) => {
-      console.log(`Patient ID: ${p.id}, GP Record ID: ${d.id}, Online Amount: ${d.onlineAmount}`);
+      // console.log(`Patient ID: ${p.id}, GP Record ID: ${d.id}, Online Amount: ${d.onlineAmount}`);
       return dSum + Number(d?.onlineAmount || 0);
     }, 0);
-    console.log(`Patient ID: ${p.id}, Total Online Earnings: ${patientOnlineEarnings}`);
+    // console.log(`Patient ID: ${p.id}, Total Online Earnings: ${patientOnlineEarnings}`);
     return sum + patientOnlineEarnings;
   }, 0);
 
   const offlineEarnings = gpPatients.reduce((sum, p) => {
     const patientOfflineEarnings = p?.gpRecords?.reduce((dSum, d) => {
-      console.log(`Patient ID: ${p.id}, GP Record ID: ${d.id}, Offline Amount: ${d.offlineAmount}`);
+      // console.log(`Patient ID: ${p.id}, GP Record ID: ${d.id}, Offline Amount: ${d.offlineAmount}`);
       return dSum + Number(d?.offlineAmount || 0);
     }, 0);
-    console.log(`Patient ID: ${p.id}, Total Offline Earnings: ${patientOfflineEarnings}`);
+    // console.log(`Patient ID: ${p.id}, Total Offline Earnings: ${patientOfflineEarnings}`);
     return sum + patientOfflineEarnings;
   }, 0);
 

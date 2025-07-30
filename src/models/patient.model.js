@@ -12,8 +12,6 @@ class Patient extends Model {
     // Each Patient belongs to a Clinic
     Patient.belongsTo(models.Clinic, { foreignKey: 'clinicId', as: 'clinic' });
     Patient.hasOne(models.Mammography, { foreignKey: 'patientId', as: 'mammography' });
-    // A Patient can have many PatientRecords
-    Patient.hasMany(models.PatientRecord, { foreignKey: 'patientId', as: 'records' });
 
     Patient.hasMany(models.Diagnosis, { foreignKey: 'patientId', as: 'diagnoses' });
 

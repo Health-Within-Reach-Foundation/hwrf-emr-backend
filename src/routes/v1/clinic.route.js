@@ -50,6 +50,10 @@ router
   .patch(auth(), validate(formFieldsValidation.updateFormFieldById), formFieldsController.updateFormFieldById)
   .delete(auth(), validate(formFieldsValidation.deleteFormFieldById), formFieldsController.deleteFormFieldById);
 
+// router.route('/send-whatsapp-message').post(clinicController.sendWhatsAppMessageController);
+
+// router.route('/send-broadcast-whatsapp-message').post(clinicController.sendBroadcastMessage);
+
 router
   .route('/:clinicId')
   .get(
