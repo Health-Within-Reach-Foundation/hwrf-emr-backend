@@ -4,19 +4,16 @@ const authController = require('../../controllers/auth.controller');
 const auth = require('../../middlewares/auth');
 const { clinicValidation, authValidation } = require('../../validations');
 const isClinicActive = require('../../middlewares/clinic-active');
-const { userController } = require('../../controllers');
 
 const router = express.Router();
 
-// Register api for sign up (superadmin)
 router.post('/register', validate(authValidation.register), authController.register);
 
 router.route('/onboard-clinic').post(validate(clinicValidation.onboardClinic), authController.onboardClinic);
 
-// login api for sign up (docter / assistant / receptionits)
 router.post('/login', validate(authValidation.login), isClinicActive, authController.login);
 
-router.post('/logout', validate(authValidation.logout), authController.logout);
+router.post('/logout', auth(), validate(authValidation.logout), authController.logout);
 
 router.post('/refresh-tokens', validate(authValidation.refreshTokens), authController.refreshTokens);
 
@@ -30,9 +27,7 @@ router.post('/send-verification-email', auth(), authController.sendVerificationE
 
 router.post('/verify-email', validate(authValidation.verifyEmail), authController.verifyEmail);
 
-// router.route('/set-password').post(validate(authValidation.resetPassword), authController.resetPassword);
-
-router.get('/verify-token',auth(), validate(authValidation.verifyEmail), authController.verifyToken);
+router.get('/verify-token',validate(authValidation.verifyEmail), authController.verifyToken);
 
 module.exports = router;
 

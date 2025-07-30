@@ -6,101 +6,171 @@ const { Specialty } = require('../models/specialty.model');
 const { Patient } = require('../models/patient.model');
 const { PatientRecord } = require('../models/patient-record.model');
 const { DentistPatientRecord } = require('../models/dentist-patient-record');
-const { Op, Sequelize } = require('sequelize');
+const { Camp } = require('../models/camp.model');
+const { patientService } = require('.');
 
 /**
- * Book an appointment for the patient
- * @param {Object} appointmentBody
- * @returns {Promise<Appointment>}
+ * Books an appointment for a patient.
+ *
+ * @param {Object} appointmentBody - The body of the appointment request.
+ * @param {string} appointmentBody.patientId - The ID of the patient.
+ * @param {Array<number>} appointmentBody.specialties - The list of specialty IDs for the appointment.
+ * @param {Date} appointmentBody.appointmentDate - The date of the appointment.
+ * @param {string} appointmentBody.status - The status of the appointment.
+ * @param {string} [appointmentBody.clinicId] - The ID of the clinic.
+ * @param {string} [appointmentBody.campId] - The ID of the camp (optional).
+ * @returns {Promise<Array<Object>>} - A promise that resolves to an array of created appointment objects.
+ * @throws {ApiError} - Throws an error if the patient is not found or if an appointment already exists.
  */
-/**
- * Book multiple appointments for the patient
- * @param {Object} appointmentBody
- * @returns {Promise<Array<Appointment>>}
- */
-const bookAppointment = async (appointmentBody) => {
-  const { patientId, specialties, appointmentDate, status, clinicId } = appointmentBody;
+const bookAppointment = async (appointmentBody, transaction = null) => {
+  const { patientId, specialties, appointmentDate, status, clinicId, campId } = appointmentBody;
 
-  // Ensure specialtyId is treated as an array
-  // const specialties = Array.isArray(specialtyId) ? specialtyId : [specialtyId]; // Handle single ID or array
-
-  // Initialize an array to store created appointments
-  const createdAppointments = [];
-
-  for (const specialty of specialties) {
-    // Check if an appointment already exists for this specialty and date
-    const existingAppointment = await Appointment.findOne({
-      where: { patientId, specialtyId: specialty, appointmentDate },
+  if (campId) {
+    // Step 1: Check if the patient is already associated with the camp
+    const camp = await Camp.findByPk(campId, {
+      include: {
+        model: Patient,
+        as: 'patients',
+        where: { id: patientId },
+        required: false, // Do not enforce join condition
+      },
     });
 
-    if (existingAppointment) {
-      throw new ApiError(
-        httpStatus.BAD_REQUEST,
-        `Appointment already exists for this date and specialty (${specialty}).`
-      );
-    }
+    if (!camp || camp.patients.length === 0) {
+      console.log(`⛺ Patient ${patientId} is NOT associated with Camp ${campId}, adding now...`);
 
-    // Create a new appointment for the current specialty
-    const appointment = await Appointment.create({
-      patientId,
-      specialtyId: specialty,
-      clinicId,
-      appointmentDate,
-      status,
-    });
+      const patient = await patientService.getPatientById(patientId);
 
-    // Push created appointment to the array
-    createdAppointments.push(appointment);
+      if (!patient) {
+        throw new ApiError(httpStatus.NOT_FOUND, 'Patient not found');
+      }
 
-    // Add patient to the queue if appointment is today
-    const localAppointmentDate = new Date(appointmentDate).toLocaleDateString('en-CA'); // 'YYYY-MM-DD'
-    const today = new Date().toLocaleDateString('en-CA'); // 'YYYY-MM-DD'
-
-    if (localAppointmentDate === today) {
-      console.log(`Adding to queue for specialty ***********(${specialty})`);
-      await addToQueue(patientId, specialty, appointmentDate, clinicId);
+      // Step 2: Associate the patient with the camp
+      await camp.addPatient(patient, { transaction });
+      console.log(`✅ Patient ${patientId} successfully associated with Camp ${campId}`);
     }
   }
 
-  return createdAppointments; // Return all created appointments
+  console.log('Received appointmentDate (Raw) -->', appointmentDate, typeof appointmentDate);
+
+  const formattedDate = appointmentDate.toISOString().split('T')[0]; // No need to format, it's already "YYYY-MM-DD"
+
+  console.log('Formatted appointmentDate for DB -->', formattedDate);
+
+  const createdAppointments = [];
+
+  for (const specialty of specialties) {
+    const existingAppointment = await Appointment.findOne({
+      where: { patientId, specialtyId: specialty, appointmentDate: formattedDate, campId },
+    });
+
+    if (existingAppointment) {
+      throw new ApiError(httpStatus.BAD_REQUEST, `Already added into queue.`);
+    }
+
+    // Create a new appointment
+    const appointment = await Appointment.create(
+      {
+        patientId,
+        specialtyId: specialty,
+        clinicId,
+        appointmentDate: formattedDate, // Store formatted date
+        status,
+        campId: campId || null, // Handle null campId explicitly
+      },
+      { transaction }
+    );
+
+    createdAppointments.push(appointment);
+
+    // Compare dates correctly
+    const today = new Date().toLocaleDateString('en-CA'); // Ensure today's date is correct
+
+    console.log(
+      today,
+      'today date is matching with formateed Date -->',
+      today === formattedDate,
+      typeof formattedDate,
+      typeof today,
+      today
+    );
+    if (formattedDate == today) {
+      console.log(`Adding to queue for specialty (${specialty}) and camp (${campId || 'No Camp'})`);
+      await addToQueue(patientId, specialty, formattedDate, clinicId, campId, transaction);
+    }
+  }
+
+  return createdAppointments;
 };
 
-
-
 /**
- * Add patient to the queue
- * @param {String} patientId
- * @param {String} specialtyId
- * @param {Date} queueDate
+ * Adds a patient to the queue for a specific specialty, clinic, and camp on a given date.
+ *
+ * @async
+ * @function addToQueue
+ * @param {string} patientId - The ID of the patient to be added to the queue.
+ * @param {string} specialtyId - The ID of the specialty for which the patient is being queued.
+ * @param {Date} queueDate - The date for which the patient is being queued.
+ * @param {string} clinicId - The ID of the clinic where the patient is being queued.
+ * @param {string} [campId] - The ID of the camp where the patient is being queued (optional).
+ * @returns {Promise<Object>} The newly created queue entry.
+ * @throws {ApiError} If any required fields are missing or if the operation fails.
  */
-const addToQueue = async (patientId, specialtyId, queueDate, clinicId) => {
-  // Increment token number for the day and specialty
-  const lastToken = await Queue.findOne({
-    where: { queueDate, specialtyId },
-    order: [['tokenNumber', 'DESC']],
-  });
+const addToQueue = async (patientId, specialtyId, queueDate, clinicId, campId, transaction) => {
+  try {
+    // ✅ Ensure All Required Fields Exist
+    if (!patientId || !specialtyId || !queueDate || !clinicId) {
+      // throw new ApiError(httpStatus. 'Missing required fields to add patient to queue');
+      throw new ApiError(httpStatus.BAD_REQUEST, 'Missing required fields to add patient to queue');
+    }
 
-  const queueType = await Specialty.findByPk(specialtyId);
+    // ✅ Fetch Last Token for the Specialty, Clinic & Camp
+    const lastToken = await Queue.findOne({
+      where: { queueDate, specialtyId, clinicId, campId }, // Ensure clinicId is included
+      order: [['tokenNumber', 'DESC']],
+      lock: true, // Helps prevent race conditions in transactions
+    });
 
-  const tokenNumber = lastToken ? lastToken.tokenNumber + 1 : 1;
+    // ✅ Get the Department Name for Queue Type
+    const specialty = await Specialty.findByPk(specialtyId);
+    if (!specialty) {
+      throw new ApiError(httpStatus.BAD_REQUEST, `Service not found.`);
+    }
 
-  await Queue.create({
-    patientId,
-    specialtyId,
-    queueDate,
-    tokenNumber,
-    clinicId,
-    queueType: queueType.departmentName,
-  });
+    // ✅ Assign New Token Number
+    const newTokenNumber = lastToken ? lastToken.tokenNumber + 1 : 1;
+
+    // ✅ Ensure Atomicity with a Transaction (Prevents Duplicate Token Issues)
+    const newQueueEntry = await Queue.create(
+      {
+        patientId,
+        specialtyId,
+        queueDate,
+        tokenNumber: newTokenNumber,
+        clinicId,
+        campId,
+        queueType: specialty.departmentName,
+      },
+      { transaction, lock: true }
+    );
+
+    return newQueueEntry; // Return the created queue entry
+  } catch (error) {
+    console.error('[ERROR] Failed to add patient to queue:', error);
+    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, 'Failed to add patient to queue');
+  }
 };
 
 /**
- * Update appointment status
- * @param {String} appointmentId
- * @param {Object} updateBody
- * @returns {Promise<Appointment>}
+ * Updates the status of an appointment.
+ *
+ * @param {number} appointmentId - The ID of the appointment to update.
+ * @param {Object} updateBody - The object containing the updated appointment details.
+ * @param {string} updateBody.status - The new status of the appointment.
+ * @returns {Promise<Object>} The updated appointment object.
+ * @throws {ApiError} If the appointment is not found.
  */
-const updateAppointmentStatus = async (appointmentId, updateBody) => {
+const updateAppointment = async (appointmentId, updateBody) => {
   const appointment = await Appointment.findByPk(appointmentId);
 
   if (!appointment) {
@@ -113,122 +183,31 @@ const updateAppointmentStatus = async (appointmentId, updateBody) => {
 };
 
 /**
- * Fetch appointments with dynamic filters
- * @param {Object} queryOptions
- * @param {String} clinicId
- * @returns {Promise<Object>}
+ * Fetches appointments based on the provided query options, clinic ID, and camp ID.
+ *
+ * @param {Object} queryOptions - The query options for fetching appointments.
+ * @param {date} queryOptions.appointmentDate - The date of the appointment.
+ * @param {string} queryOptions.status - The status of the appointment.
+ * @param {string} queryOptions.specialtyId - The ID of the specialty.
+ * @param {string} [queryOptions.sortBy='createdAt'] - The field to sort by.
+ * @param {string} [queryOptions.order='desc'] - The order of sorting (asc or desc).
+ * @param {number} [queryOptions.page=1] - The page number for pagination.
+ * @param {number} [queryOptions.limit] - The number of records per page.
+ * @param {string} clinicId - The ID of the clinic.
+ * @param {string} campId - The ID of the camp.
+ * @returns {Promise<Object>} The paginated response containing the appointments.
+ * @returns {boolean} return.success - Indicates if the operation was successful.
+ * @returns {Array} return.data - The list of flattened appointments.
  */
-// const getAppointments = async (queryOptions, clinicId) => {
-//   console.log('ClinicId -->', clinicId);
-
-//   const {
-//     appointmentDate,
-//     status,
-//     specialtyId,
-//     sortBy = 'appointmentDate',
-//     order = 'asc',
-//     page = 1,
-//     limit = 10,
-//   } = queryOptions;
-
-//   console.log('appointmentDate -->', appointmentDate);
-
-//   // Build dynamic filters
-//   const where = { clinicId }; // Filter by clinic ID
-
-//   if (appointmentDate) {
-//     where.appointmentDate = appointmentDate; // Directly match DATE, no time zone
-//   }
-
-//   // Filter by status
-//   if (status) {
-//     where.status = status;
-//   }
-
-//   // Filter by specialty
-//   if (specialtyId) {
-//     where.specialtyId = specialtyId;
-//   }
-
-//   // Pagination
-//   const offset = (page - 1) * limit;
-
-//   // Fetch appointments with relations and pagination
-//   const { rows: appointments, count: total } = await Appointment.findAndCountAll({
-//     where,
-//     limit: parseInt(limit, 10),
-//     offset: parseInt(offset, 10),
-//     order: [[sortBy, order]],
-//     include: [
-//       {
-//         model: Patient,
-//         as: 'patient',
-//         attributes: ['id', 'name', 'age', 'sex', 'mobile', 'regNo'], // Include patient details
-//         include: [
-//           {
-//             model: Queue, // Include Queue via Patient
-//             as: 'queues',
-//             attributes: ['tokenNumber', 'queueDate', 'queueType', 'specialtyId', 'patientId'], // Only required fields
-//             where: {
-//               clinicId, // Ensure queue is for the same clinic
-//               queueDate: appointmentDate, // Match the queue date with appointmentDate
-//             },
-//             required: false, // Allow patients without queue data
-//           },
-//         ],
-//       },
-//       {
-//         model: Specialty,
-//         as: 'specialty',
-//         attributes: ['id', 'name'], // Include specialty details
-//       },
-//       {
-//         model: PatientRecord,
-//         as: 'record',
-//         attributes: ['id', 'description', 'billingDetails'], // Include patient record
-//         include: [
-//           {
-//             model: DentistPatientRecord, // Include Dentist-specific data
-//             as: 'dentalData',
-//             attributes: { exclude: ['createdAt', 'updatedAt'] },
-//           },
-//         ],
-//       },
-//     ],
-//   });
-
-//   console.log('Appointments -->', appointments);
-
-//   // Return paginated response
-//   return {
-//     success: true,
-//     data: appointments,
-//     meta: {
-//       total,
-//       page: parseInt(page, 10),
-//       limit: parseInt(limit, 10),
-//       totalPages: Math.ceil(total / limit),
-//     },
-//   };
-// };
-
-const getAppointments = async (queryOptions, clinicId) => {
+const getAppointments = async (queryOptions, clinicId, campId) => {
   console.log('ClinicId -->', clinicId);
 
-  const {
-    appointmentDate,
-    status,
-    specialtyId,
-    sortBy = 'appointmentDate',
-    order = 'asc',
-    page = 1,
-    limit = 10,
-  } = queryOptions;
+  const { appointmentDate, status, specialtyId, sortBy = 'createdAt', order = 'desc', page = 1, limit } = queryOptions;
 
   console.log('appointmentDate -->', appointmentDate);
 
   // Build dynamic filters
-  const where = { clinicId }; // Filter by clinic ID
+  const where = { clinicId, campId }; // Filter by clinic ID
 
   if (appointmentDate) {
     where.appointmentDate = appointmentDate; // Match DATE directly
@@ -243,19 +222,19 @@ const getAppointments = async (queryOptions, clinicId) => {
   }
 
   // Pagination
-  const offset = (page - 1) * limit;
+  // const offset = (page - 1) * limit;
 
   // Fetch appointments with relations and pagination
   const { rows: appointments, count: total } = await Appointment.findAndCountAll({
     where,
-    limit: parseInt(limit, 10),
-    offset: parseInt(offset, 10),
+    // limit: parseInt(limit, 10),
+    // offset: parseInt(offset, 10),
     order: [[sortBy, order]],
     include: [
       {
         model: Patient,
         as: 'patient',
-        attributes: ['id', 'name', 'age', 'sex', 'mobile', 'regNo'], // Patient details
+        attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt'] },
         include: [
           {
             model: Queue, // Include Queue via Patient
@@ -263,7 +242,8 @@ const getAppointments = async (queryOptions, clinicId) => {
             attributes: ['tokenNumber', 'queueDate', 'queueType', 'specialtyId'], // Queue details
             where: {
               clinicId, // Filter queues by clinic
-              queueDate: appointmentDate, // Filter queues by date
+              campId,
+              // queueDate: appointmentDate, // Filter queues by date
             },
             required: false, // Allow patients without queue data
           },
@@ -289,17 +269,15 @@ const getAppointments = async (queryOptions, clinicId) => {
     ],
   });
 
-  console.log('Raw Appointments -->', appointments);
-
   // **Flatten Response** to remove nesting
   const flattenedAppointments = appointments.map((appointment, index) => {
     const { patient, specialty, records } = appointment;
 
-    console.log('Patient -->', patient.queues);
     return {
       id: appointment.id,
       appointmentDate: appointment.appointmentDate,
       status: appointment.status,
+      statusUpdatedAt: appointment.statusUpdatedAt,
       specialtyId: specialty?.id,
       specialtyName: specialty?.name,
       patientId: patient?.id,
@@ -311,6 +289,7 @@ const getAppointments = async (queryOptions, clinicId) => {
       tokenNumber: patient?.queues?.find((queue) => queue.specialtyId === appointment.specialtyId).tokenNumber || null, // Extract token number
       queueType: patient?.queues?.find((queue) => queue.specialtyId === appointment.specialtyId).queueType || null, // Extract queue type
       queueDate: patient?.queues?.find((queue) => queue.specialtyId === appointment.specialtyId).queueDate || null, // Extract queue date
+      primaryDoctor: patient?.primaryDoctor?.label || null,
       // recordId: record?.id || null,
       // description: record?.description || null,
       // billingDetails: record?.billingDetails || null,
@@ -319,23 +298,21 @@ const getAppointments = async (queryOptions, clinicId) => {
     };
   });
 
-  console.log('Flattened Appointments -->', flattenedAppointments);
-
   // Return paginated response
   return {
     success: true,
     data: flattenedAppointments,
-    meta: {
-      total,
-      page: parseInt(page, 10),
-      limit: parseInt(limit, 10),
-      totalPages: Math.ceil(total / limit),
-    },
+    // meta: {
+    //   total,
+    //   // page: parseInt(page, 10),
+    //   // limit: parseInt(limit, 10),
+    //   // totalPages: Math.ceil(total / limit),
+    // },
   };
 };
 
 module.exports = {
   bookAppointment,
-  updateAppointmentStatus,
+  updateAppointment,
   getAppointments,
 };

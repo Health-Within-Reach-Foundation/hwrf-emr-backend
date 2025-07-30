@@ -1,11 +1,15 @@
-// models/token.js
 const { DataTypes, Model } = require('sequelize');
 const { tokenTypes } = require('../config/tokens');
-// const { User } = require('./user.model');
+
 
 class Token extends Model {
   static associate(models) {
-    Token.belongsTo(models.User, { foreignKey: 'userId', as: 'user' });
+    Token.belongsTo(models.User, {
+      foreignKey: 'userId',
+      as: 'user',
+      onDelete: 'CASCADE', // Deletes Tokens if User is deleted
+      onUpdate: 'CASCADE',
+    });
   }
 }
 
@@ -27,7 +31,13 @@ const initModel = (sequelize) => {
         },
       },
       type: {
-        type: DataTypes.ENUM(tokenTypes.ACCESS, tokenTypes.REFRESH, tokenTypes.RESET_PASSWORD,tokenTypes.VERIFY_EMAIL, tokenTypes.SET_PASSWORD),
+        type: DataTypes.ENUM(
+          tokenTypes.ACCESS,
+          tokenTypes.REFRESH,
+          tokenTypes.RESET_PASSWORD,
+          tokenTypes.VERIFY_EMAIL,
+          tokenTypes.SET_PASSWORD
+        ),
         allowNull: false,
       },
       expires: {
@@ -50,4 +60,4 @@ const initModel = (sequelize) => {
   );
 };
 
-module.exports = {Token, initModel};
+module.exports = { Token, initModel };

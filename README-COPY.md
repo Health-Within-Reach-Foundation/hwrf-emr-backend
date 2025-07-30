@@ -153,7 +153,7 @@ The environment variables can be found and modified in the `.env` file. They com
 PORT=3000
 
 # URL of the Mongo DB
-MONGODB_URL=mongodb://127.0.0.1:27017/node-boilerplate
+POSTGRES_URL=postgres://postgres:password@localhost:5432/emr_db
 
 # JWT
 # JWT secret key

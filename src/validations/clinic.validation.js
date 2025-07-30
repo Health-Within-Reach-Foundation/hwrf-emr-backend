@@ -1,6 +1,9 @@
 const Joi = require('joi');
 const { password, clinicStatusValidation } = require('./custom.validation');
 
+/**
+ * Validation schema for onboarding a clinic.
+ */
 const onboardClinic = {
   body: Joi.object().keys({
     clinicName: Joi.string().required(),
@@ -19,10 +22,12 @@ const onboardClinic = {
     adminPhoneNumber: Joi.string()
       .required()
       .pattern(/^[0-9]{10,15}$/),
-    password: Joi.string().required().custom(password),
   }),
 };
 
+/**
+ * Validation schema for querying clinics.
+ */
 const queryOptionsValidation = {
   query: Joi.object().keys({
     status: Joi.string()
@@ -50,12 +55,27 @@ const queryOptionsValidation = {
   }),
 };
 
+/**
+ * Validation schema for getting a clinic by ID.
+ */
 const getClinic = {
   params: Joi.object().keys({
-    clinicId: Joi.string(),
+    clinicId: Joi.string().uuid(),
   }),
 };
 
+/**
+ * Validation schema for getting a file by key.
+ */
+const getFileByKey = {
+  query: Joi.object().keys({
+    key: Joi.string(),
+  }),
+};
+
+/**
+ * Validation schema for approving a clinic.
+ */
 const approveClinic = {
   params: Joi.object().keys({
     clinicId: Joi.string(),
@@ -65,10 +85,35 @@ const approveClinic = {
   }),
 };
 
+/**
+ * Validation schema for creating a role.
+ */
 const createRole = {
   body: Joi.object().keys({
     roleName: Joi.string().required(),
     roleDescription: Joi.string().optional(),
+  }),
+};
+
+/**
+ * Validation schema for updating a clinic by ID.
+ */
+const updateClinicById = {
+  params: Joi.object().keys({
+    clinicId: Joi.string().uuid().required(), // Clinic ID must be a valid UUID
+  }),
+  body: Joi.object().keys({
+    clinicName: Joi.string().optional(),
+    address: Joi.string().allow('', null).optional(),
+    city: Joi.string().allow('', null).optional(),
+    state: Joi.string().allow('', null).optional(),
+    phoneNumber: Joi.string()
+      .pattern(/^[0-9]{10,15}$/)
+      .allow('', null)
+      .optional(),
+    contactEmail: Joi.string().email().allow('', null).optional(),
+    status: Joi.string().valid('pending', 'active', 'inactive').optional(),
+    specialties: Joi.array().items(Joi.string().uuid()).optional(),
   }),
 };
 
@@ -77,5 +122,7 @@ module.exports = {
   queryOptionsValidation,
   getClinic,
   approveClinic,
-  createRole
+  createRole,
+  updateClinicById,
+  getFileByKey,
 };

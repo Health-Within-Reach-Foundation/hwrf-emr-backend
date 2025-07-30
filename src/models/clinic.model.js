@@ -10,8 +10,8 @@ class Clinic extends Model {
     // A Clinic can have many Appointments
     Clinic.hasMany(models.Appointment, { foreignKey: 'clinicId', as: 'appointments' });
 
-     // A Clinic can have many Specialties
-     Clinic.belongsToMany(models.Specialty, {
+    // A Clinic can have many Specialties
+    Clinic.belongsToMany(models.Specialty, {
       through: 'clinic_specialties', // Junction table name
       foreignKey: 'clinicId',
       as: 'specialties',
@@ -21,6 +21,11 @@ class Clinic extends Model {
       foreignKey: 'clinicId',
       as: 'camps',
     });
+
+    // A Clinic can have many FormTemplates
+    Clinic.hasMany(models.FormTemplate, { foreignKey: 'clinicId', as: 'formTemplates' });
+
+    Clinic.hasMany(models.FormFields, { foreignKey: 'clinicId', as: 'formFields' });
   }
 }
 

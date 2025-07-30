@@ -1,8 +1,10 @@
 const Joi = require('joi');
 
+/**
+ * Validation for fetching appointments
+ */
 const getAppointments = {
   query: Joi.object().keys({
-    // clinicId: Joi.string().uuid().required(), // Clinic filter required
     appointmentDate: Joi.date().iso().optional(), // Date picker filter
     status: Joi.string().valid('registered', 'in-progress', 'completed', 'cancelled'), // Filter by status
     specialtyId: Joi.string().uuid().optional(), // Filter by specialty
@@ -21,16 +23,20 @@ const createAppointment = {
     patientId: Joi.string().uuid().required(), // Patient ID (UUID)
     specialties: Joi.array().items(Joi.string().uuid()).optional(),
     appointmentDate: Joi.date().required(), // Appointment Date
-    status: Joi.string().valid('registered', 'in', 'out').default('registered'), // Status with default
+    status: Joi.string().valid('in queue', 'in', 'out').default('in queue'), // Status with default
   }),
 };
 
 /**
- * Validation for updating appointment status
+ * Validation for updating appointment
  */
 const updateAppointment = {
+  params: Joi.object().keys({
+    appointmentId: Joi.string().uuid().required(), // Filter by specialty
+  }),
   body: Joi.object().keys({
-    status: Joi.string().valid('registered', 'in', 'out').required(),
+    status: Joi.string().valid('in queue', 'in', 'out', 'cancelled').required(),
+    statusUpdatedAt: Joi.date().optional(),
   }),
 };
 

@@ -1,8 +1,7 @@
 const httpStatus = require('http-status');
-const { userService, emailService, roleService } = require('.');
+const { userService, emailService } = require('.');
 const { Clinic } = require('../models/clinic.model');
 const ApiError = require('../utils/ApiError');
-const { createRole } = require('./role.service');
 const { Specialty } = require('../models/specialty.model');
 const { Op } = require('sequelize');
 const { User } = require('../models/user.model');
@@ -13,14 +12,8 @@ const { Role } = require('../models/role.model');
  * @param {Object} clinicBody
  * @returns {Promise<Clinic>}
  */
-const createClinic = async (clinicBody) => {
-  // console.log("clinicBody -->", clinicBody)
-  // const isClinicExist = await Clinic.findOne({ where: { contactEmail: clinicBody.contactEmail } });
-
-  // if (!isClinicExist) {
-  //   throw new ApiError(httpStatus.BAD_REQUEST, 'Clinic with same contactEmail already taken');
-  // }
-  return Clinic.create(clinicBody);
+const createClinic = async (clinicBody, transaction) => {
+  return Clinic.create(clinicBody, { transaction });
 };
 
 /**
@@ -39,7 +32,7 @@ const getClinicByContactEmailPhoneNumber = async (contactEmail, phoneNumber) => 
   // Query to find clinic based on contactEmail or phoneNumber
   const clinic = await Clinic.findOne({
     where: {
-      [Op.or]: [{ contactEmail }, { phoneNumber }],
+      [Op.and]: [{ contactEmail }, { phoneNumber }],
     },
   });
 
@@ -136,7 +129,7 @@ const getClinics = async (queryOptions) => {
  * @param {Object} clinicBody
  * @return {Promise<Clinic>}
  */
-const updateClinicById = async (clinicId, clinicBody) => {
+const updateClinicById = async (clinicId, clinicBody, transaction = null) => {
   const clinic = await getClinicById(clinicId);
 
   if (!clinic) {
@@ -145,9 +138,9 @@ const updateClinicById = async (clinicId, clinicBody) => {
 
   Object.assign(clinic, clinicBody);
 
-  await clinic.save();
+  await clinic.save({ transaction });
 
-  return clinic;
+  return clinic.reload({ transaction });
 };
 
 /**
@@ -165,111 +158,12 @@ const removeClinicById = async (clinicId) => {
 };
 
 /**
+ * Fetches clinic details by clinic ID.
  *
- * @param {Object} clinicData
- * @returns
+ * @param {number} clinicId - The ID of the clinic to fetch.
+ * @returns {Promise<Object>} The transformed clinic data.
+ * @throws {ApiError} If the clinic is not found.
  */
-const onboardClinic = async (clinicData) => {
-  const {
-    clinicName,
-    address = '',
-    city = '',
-    state = '',
-    phoneNumber = '',
-    contactEmail = '',
-    website,
-    specialties,
-    adminName,
-    adminEmail,
-    adminPhoneNumber,
-    password,
-  } = clinicData;
-
-  // console.log(roleService, userService);
-  console.log(phoneNumber, contactEmail);
-  // Step 1: Check if the clinic email already exists
-  const existingClinic = await getClinicByContactEmailPhoneNumber(contactEmail, phoneNumber);
-  if (existingClinic) {
-    throw new ApiError(httpStatus.BAD_REQUEST, 'Clinic has already been registered!');
-  }
-
-  // Step 2: Check if the admin email already exists
-  const existingAdmin = await userService.getUserByEmail(adminEmail);
-  if (existingAdmin) {
-    throw new ApiError(httpStatus.BAD_REQUEST, 'Admin email is already in use.');
-  }
-
-  // Step 3: Create the clinic first (so we can use its id for the admin user)
-  //   const clinic = await Clinic.create({
-  //     clinicName,
-  //     address,
-  //     city,
-  //     state,
-  //     phoneNumber,
-  //     contactEmail,
-  //   });
-  const clinic = await createClinic({
-    clinicName,
-    address,
-    city,
-    state,
-    phoneNumber,
-    contactEmail,
-  });
-
-  // Step 4: Find the specialties in the database
-  const specialtiesDoc = await Specialty.findAll({
-    where: {
-      id: {
-        [Op.in]: specialties, // Check if the ID is in the array of specialties
-      },
-    },
-  });
-
-  if (!specialtiesDoc || specialtiesDoc.length !== specialties.length) {
-    throw new ApiError(httpStatus.BAD_REQUEST, 'One or more specialties not found');
-  }
-
-  // Step 5: Associate the specialties with the clinic in the junction table
-  await clinic.addSpecialties(specialtiesDoc);
-
-  // Step 4: Create the admin user with the correct clinicId after the clinic is created
-
-  const admin = await userService.createUser({
-    name: adminName,
-    email: adminEmail,
-    password: password,
-    clinicId: clinic.id, // Assign clinicId to user after clinic is created
-    phoneNumber: adminPhoneNumber,
-  });
-
-  // Step 5: Assign the role to the admin user (assuming there's an 'admin' role in your system)
-  //   const adminRole = await Role.create({ roleName: 'admin', userId: admin.id });
-  // await rolespermissionService.createRole({ roleName: 'admin', userId: admin.id, clinicId: clinic.id });
-
-  // await roleService.createRole({ roleName: 'admin', userId: admin.id, clinicId: clinic.id });
-  await createRole({ roleName: 'admin', userId: admin.id, clinicId: clinic.id }, admin);
-  // await admin.addRoles(adminRole);
-
-  // Step 6: Update the clinic's ownerId to the admin's UUID after user creation
-  clinic.ownerId = admin.id;
-  await clinic.save();
-
-  // Send notification to superadmin
-  await emailService.sendClinicOnboardingNotification({
-    clinicName,
-    contactEmail,
-    adminName,
-    address,
-    city,
-    state,
-    adminEmail,
-    clinicId: clinic.id,
-  });
-
-  return { clinic, admin };
-};
-
 const getClinic = async (clinicId) => {
   // Fetch clinic details by ID
   const clinic = await Clinic.findOne({
@@ -291,7 +185,7 @@ const getClinic = async (clinicId) => {
       {
         model: Specialty,
         as: 'specialties',
-        attributes: ['id', 'name'],
+        attributes: ['id', 'name', 'departmentName'],
         through: { attributes: [] }, // Exclude junction table
       },
     ],
@@ -315,18 +209,23 @@ const getClinic = async (clinicId) => {
     clinicPhoneNumber: clinic.phoneNumber,
     adminContactNumber: admin.phoneNumber || 'N/A',
     adminContactEmail: admin.email || 'N/A',
-    specialties: clinic.specialties.map((spec) => spec.name).join(', ') || 'N/A',
+    // specialties: clinic.specialties.map((spec) => spec.name).join(', ') || 'N/A',
+    specialties: clinic.specialties || 'N/A',
     status: clinic.status,
     createdAt: clinic.createdAt,
     allUsers: clinic.users,
   };
 
-  return {
-    success: true,
-    data: transformedData,
-  };
+  return transformedData;
 };
 
+/**
+ * Fetches the specialty departments associated with a specific clinic.
+ *
+ * @param {number} clinicId - The ID of the clinic to fetch specialties for.
+ * @returns {Promise<Array>} - A promise that resolves to an array of specialties associated with the clinic.
+ * @throws {ApiError} - Throws an error if the clinic is not found.
+ */
 const getSpecialtyDepartmentsByClinic = async (clinicId) => {
   // Fetch clinic along with associated specialties
   const clinic = await Clinic.findByPk(clinicId, {
@@ -349,19 +248,138 @@ const getSpecialtyDepartmentsByClinic = async (clinicId) => {
   return clinic.specialties; // Return the associated specialties
 };
 
-const createRoleUnderClinc = async (roleBody) => {
-  return Role.create(roleBody);
+/**
+ * Update a clinic by ID
+ * @param {string} clinicId - ID of the clinic to update
+ * @param {Object} clinicData - Data to update the clinic
+ * @returns {Promise<Clinic>}
+ */
+const updateClinic = async (clinicId, clinicData, transaction = null) => {
+  const { clinicName, address, city, state, phoneNumber, contactEmail, status, specialties } = clinicData;
+
+  // Find existing clinic
+  const clinic = await Clinic.findByPk(clinicId);
+  if (!clinic) {
+    throw new ApiError(httpStatus.NOT_FOUND, 'Clinic not found');
+  }
+
+  // Update basic clinic details
+  await updateClinicById(
+    clinicId,
+    {
+      clinicName,
+      address,
+      city,
+      state,
+      phoneNumber,
+      contactEmail,
+      status,
+    },
+    transaction
+  );
+  // await clinic.update();
+
+  // Handle Specialties (Many-to-Many)
+  if (specialties) {
+    const specialtyRecords = await Specialty.findAll({
+      where: { id: { [Op.in]: specialties } },
+    });
+
+    if (specialtyRecords.length !== specialties.length) {
+      throw new ApiError(httpStatus.BAD_REQUEST, 'One or more specialties not found');
+    }
+
+    await clinic.setSpecialties(specialtyRecords, { transaction }); // Updates clinic specialties
+  }
+
+  return clinic.reload({ transaction }); // Return updated clinic with relations
 };
 
-const getRolesByClinic = async (clinicId) => {
-  const clinicRoles = await Role.findAll({
-    where: { clinicId },
-    attributes: { exclude: ['deletedAt', 'createdAt', 'updatedAt'] },
+/**
+ * Onboards a new clinic and its admin.
+ *
+ * @param {Object} clinicData - The data for the new clinic.
+ * @param {string} clinicData.clinicName - The name of the clinic.
+ * @param {string} [clinicData.address=''] - The address of the clinic.
+ * @param {string} [clinicData.city=''] - The city where the clinic is located.
+ * @param {string} [clinicData.state=''] - The state where the clinic is located.
+ * @param {string} [clinicData.phoneNumber=''] - The phone number of the clinic.
+ * @param {string} clinicData.contactEmail - The contact email of the clinic.
+ * @param {string} clinicData.website - The website of the clinic.
+ * @param {Array<number>} clinicData.specialties - The specialties of the clinic.
+ * @param {string} clinicData.adminName - The name of the clinic admin.
+ * @param {string} clinicData.adminEmail - The email of the clinic admin.
+ * @param {string} clinicData.adminPhoneNumber - The phone number of the clinic admin.
+ * @param {string} [clinicData.password='TzR6!wS@7bH9'] - The password for the clinic admin.
+ * @returns {Promise<Object>} The created clinic and admin.
+ * @throws {ApiError} If the clinic or admin email already exists.
+ */
+
+const onboardClinic = async (clinicData, transaction = null) => {
+  const {
+    clinicName,
+    address = '',
+    city = '',
+    state = '',
+    phoneNumber = '',
+    contactEmail = '',
+    website,
+    specialties,
+    adminName,
+    adminEmail,
+    adminPhoneNumber,
+    password = 'TzR6!wS@7bH9',
+  } = clinicData;
+
+  const existingClinic = await getClinicByContactEmailPhoneNumber(contactEmail, phoneNumber);
+  if (existingClinic) {
+    throw new ApiError(httpStatus.BAD_REQUEST, 'Clinic has already been registered!');
+  }
+
+  // Step 2: Check if the admin email already exists
+  const existingAdmin = await userService.getUserByEmail(adminEmail);
+  if (existingAdmin) {
+    throw new ApiError(httpStatus.BAD_REQUEST, 'Admin email is already in use.');
+  }
+
+  const clinic = await createClinic(
+    {
+      clinicName,
+      address,
+      city,
+      state,
+      phoneNumber,
+      contactEmail,
+    },
+    transaction
+  );
+
+  const specialtiesDoc = await Specialty.findAll({
+    where: {
+      id: {
+        [Op.in]: specialties, // Check if the ID is in the array of specialties
+      },
+    },
   });
 
-  return clinicRoles;
-};
+  await clinic.addSpecialties(specialtiesDoc, { transaction });
 
+  const admin = await userService.createUser(
+    {
+      name: adminName,
+      email: adminEmail,
+      password: password,
+      clinicId: clinic.id, // Assign clinicId to user after clinic is created
+      phoneNumber: adminPhoneNumber,
+    },
+    transaction
+  );
+
+  clinic.ownerId = admin.id;
+  await clinic.save({ transaction });
+
+  return { clinic, admin };
+};
 
 module.exports = {
   createClinic,
@@ -370,9 +388,8 @@ module.exports = {
   getClinics,
   updateClinicById,
   removeClinicById,
-  onboardClinic,
   getClinic,
   getSpecialtyDepartmentsByClinic,
-  createRoleUnderClinc,
-  getRolesByClinic,
+  updateClinic,
+  onboardClinic,
 };

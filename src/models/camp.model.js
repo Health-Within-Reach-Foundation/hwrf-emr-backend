@@ -13,6 +13,8 @@ class Camp extends Model {
       foreignKey: 'campId',
       otherKey: 'userId',
       as: 'users',
+      onDelete: 'CASCADE',
+      onUpdate: 'CASCADE',
     });
 
     // 2. Camp and Clinic - Many-to-One
@@ -82,15 +84,11 @@ const initModel = (sequelize) => {
           notEmpty: { msg: 'Camp name is required' },
         },
       },
-      address: {
+      location: {
         type: DataTypes.STRING,
         allowNull: true,
       },
       city: {
-        type: DataTypes.STRING,
-        allowNull: true,
-      },
-      state: {
         type: DataTypes.STRING,
         allowNull: true,
       },
@@ -105,6 +103,10 @@ const initModel = (sequelize) => {
       endDate: {
         type: DataTypes.DATEONLY,
         allowNull: true
+      },
+      vans: {
+        type: DataTypes.ARRAY(DataTypes.STRING),
+        allowNull: true,
       }
     },
     {

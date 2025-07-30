@@ -6,15 +6,15 @@ const ApiError = require('../utils/ApiError');
 const { tokenTypes } = require('../config/tokens');
 const { User } = require('../models/user.model');
 const { Role } = require('../models/role.model');
-const { Clinic } = require('../models/clinic.model');
-const { sendClinicOnboardingNotification } = require('./email.service');
 const logger = require('../config/logger');
 
 /**
- * Login with username and password
- * @param {string} email
- * @param {string} password
- * @returns {Promise<User>}
+ * Logs in a user using their email and password.
+ *
+ * @param {string} email - The email of the user.
+ * @param {string} password - The password of the user.
+ * @returns {Promise<Object>} The user object without the password.
+ * @throws {ApiError} If the email or password is incorrect.
  */
 const loginUserWithEmailAndPassword = async (email, password) => {
   const user = await userService.getUserByEmail(email);
@@ -28,15 +28,20 @@ const loginUserWithEmailAndPassword = async (email, password) => {
 };
 
 /**
- * Logout
- * @param {string} refreshToken
- * @returns {Promise}
+ * Logs out a user by invalidating their refresh token and updating their current campaign ID.
+ *
+ * @param {string} refreshToken - The refresh token to be invalidated.
+ * @param {string} userId - The ID of the user to be logged out.
+ * @throws {ApiError} If the refresh token is not found.
+ * @returns {Promise<void>} A promise that resolves when the logout process is complete.
  */
-const logout = async (refreshToken) => {
-  console.log('refresh token -->', refreshToken);
+const logout = async (refreshToken, userId) => {
+  console.log('refresh token -->', refreshToken, userId);
   const refreshTokenDoc = await Token.findOne({
     where: { token: refreshToken, type: tokenTypes.REFRESH, blacklisted: false },
   });
+  await User.update({ currentCampId: null }, { where: { id: userId } });
+
   if (!refreshTokenDoc) {
     throw new ApiError(httpStatus.NOT_FOUND, 'Not found');
   }
@@ -44,30 +49,50 @@ const logout = async (refreshToken) => {
 };
 
 /**
- * Refresh auth tokens
- * @param {string} refreshToken
- * @returns {Promise<Object>}
+ * Refreshes the authentication tokens.
+ *
+ * @param {string} refreshToken - The refresh token used to obtain a new access token.
+ * @param {string} accessToken - The current access token to be verified.
+ * @returns {Promise<Object>} An object containing the new access token and refresh token, or null tokens if the refresh token is invalid.
+ * @throws {Error} If the user associated with the refresh token is not found.
  */
-const refreshAuth = async (refreshToken) => {
+const refreshAuth = async (refreshToken, accessToken) => {
   try {
+    //single renewal of access token after
+    const accessTokenDocValidity = await tokenService.verifyAccessToken(accessToken);
     const refreshTokenDoc = await tokenService.verifyToken(refreshToken, tokenTypes.REFRESH);
-    console.log('refreshToken doc -->', refreshTokenDoc);
-    const user = await userService.getUserById(refreshTokenDoc.userId);
-    if (!user) {
-      throw new Error();
+    if (accessTokenDocValidity && refreshTokenDoc) {
+      console.group('*Expired access so creating a new access token only as refresh token is still valid');
+      const user = await userService.getUserById(refreshTokenDoc.userId);
+      if (!user) {
+        throw new Error();
+      }
+      const res = await tokenService.generateAccessTokenOnly(user, refreshToken);
+      return res;
+    } else {
+      const refreshTokenDoc = await tokenService.verifyToken(refreshToken, tokenTypes.REFRESH);
+      console.group('*Expired refresh token');
+      const user = await userService.getUserById(refreshTokenDoc.userId);
+      user.currentCampId = null;
+      await user.save();
+      await refreshTokenDoc.destroy({ force: true });
+      // const res = await tokenService.generateAuthTokens(user);
+      return { access: { token: null }, refresh: { token: null } };
     }
-    await refreshTokenDoc.destroy({ force: true });
-    return tokenService.generateAuthTokens(user);
   } catch (error) {
-    throw new ApiError(httpStatus.UNAUTHORIZED, 'Please authenticate');
+    console.error('error in auth service line 65: ', error);
+    // throw new ApiError(httpStatus.UNAUTHORIZED, 'Please authenticate');
+    return { access: { token: null }, refresh: { token: null } };
   }
 };
 
 /**
- * Reset password
- * @param {string} resetPasswordToken
- * @param {string} newPassword
- * @returns {Promise}
+ * Resets the user's password using the provided reset password token and new password.
+ *
+ * @param {string} resetPasswordToken - The token used to verify the password reset request.
+ * @param {string} newPassword - The new password to set for the user.
+ * @throws {ApiError} If the password reset fails.
+ * @returns {Promise<void>} A promise that resolves when the password has been successfully reset.
  */
 const resetPassword = async (resetPasswordToken, newPassword) => {
   console.log('resetpasswordToken -->', resetPasswordToken);
@@ -80,7 +105,7 @@ const resetPassword = async (resetPasswordToken, newPassword) => {
       throw new Error();
     }
     console.log('FILE: authService --> reset password destroyed');
-    await userService.updateUserById(user.id, { password: newPassword });
+    await userService.updateUserById(user.id, { password: newPassword, status: 'active' });
     await Token.destroy({ where: { userId: user.id, type: tokenTypes.SET_PASSWORD }, force: true });
   } catch (error) {
     logger.error(error);
@@ -89,9 +114,11 @@ const resetPassword = async (resetPasswordToken, newPassword) => {
 };
 
 /**
- * Verify email
- * @param {string} verifyEmailToken
- * @returns {Promise}
+ * Verify the email using the provided token.
+ *
+ * @param {string} verifyEmailToken - The token used to verify the email.
+ * @returns {Promise<void>} - A promise that resolves when the email is successfully verified.
+ * @throws {ApiError} - Throws an error if the email verification fails.
  */
 const verifyEmail = async (verifyEmailToken) => {
   try {
@@ -107,26 +134,42 @@ const verifyEmail = async (verifyEmailToken) => {
   }
 };
 
-const register = async (userBody) => {
+/**
+ * Registers a new user.
+ *
+ * @param {Object} userBody - The user details.
+ * @param {string} userBody.name - The name of the user.
+ * @param {string} userBody.email - The email of the user.
+ * @param {string} userBody.password - The password of the user.
+ * @param {string} userBody.role - The role of the user.
+ * @param {string} userBody.phoneNumber - The phone number of the user.
+ * @returns {Promise<Object>} The created user.
+ * @throws {ApiError} If the email is already taken.
+ */
+const register = async (userBody, transaction = null) => {
   const { name, email, password, role, phoneNumber } = userBody;
   if (await User.isEmailTaken(userBody.email)) {
     throw new ApiError(httpStatus.BAD_REQUEST, 'Email already taken');
   }
-  const superadmin = await User.create({
-    name,
-    email,
-    password,
-    phoneNumber
-  });
-  const superadminRole = await Role.create({ roleName: role, userId: superadmin.id });
+  const superadmin = await User.create(
+    {
+      name,
+      email,
+      password,
+      phoneNumber,
+    },
+    { transaction }
+  );
+  const superadminRole = await Role.create(
+    {
+      roleName: role,
+      userId: superadmin.id,
+    },
+    { transaction }
+  );
 
   // Associate the superadmin with the role using the automatically created junction table
-  await superadmin.addRole(superadminRole);
-
-  // await UserRole.create({
-  //   userId: superadmin.id,
-  //   roleId: superadminRole.id,
-  // });
+  await superadmin.addRole(superadminRole, { transaction });
 
   return superadmin;
 };

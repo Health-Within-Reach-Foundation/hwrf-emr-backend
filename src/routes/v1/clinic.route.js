@@ -2,44 +2,64 @@ const express = require('express');
 const auth = require('../../middlewares/auth');
 const validate = require('../../middlewares/validate');
 const roleAuthorization = require('../../middlewares/role-authorise');
-const { clinicValidation, userValidation } = require('../../validations');
-const { clinicController, userController } = require('../../controllers');
+const { clinicValidation, userValidation, formTemplateValidation, formFieldsValidation } = require('../../validations');
+const { clinicController, userController, formTemplateController, formFieldsController } = require('../../controllers');
 
 const router = express.Router();
 
-// router
-//   .route('/patients')
-//   .post(
-//     auth(),
-//     roleAuthorization('admin', 'receptionist', 'doctor'),
-//     validate(patientValidation.createPatient),
-//     patientController.createPatient
-//   )
-//   .get(
-//     auth(), // Authentication middleware
-//     roleAuthorization('admin', 'receptionist', 'doctor'),
-//     validate(patientValidation.getPatientsByClinic), // Validation
-//     patientController.getPatientsByClinic // Controller
-//   );
-router
-  .route('/specialities')
-  .get(auth(), roleAuthorization('admin', 'receptionist', 'doctor'), clinicController.getSpecialtyDepartmentsByClinic);
+router.route('/specialities').get(auth(), clinicController.getSpecialtyDepartmentsByClinic);
 
-// router.route('/add-patient').post(auth(), roleAuthorization('admin'), validate());
+router.route('/files').get(auth(), validate(clinicValidation.getFileByKey), clinicController.getFileByKey);
 
 router
-  .route('/user')
-  .post(auth(), roleAuthorization('admin'), validate(userValidation.createUser), userController.createClinicUser)
-  .get(auth(), roleAuthorization('admin'), clinicController.getUsersByClinic);
-
+  .route('/form-template')
+  .post(auth(), validate(formTemplateValidation.createFormTemplate), formTemplateController.createFormTemplate)
+  .get(auth(), formTemplateController.getAllFormTemplates);
 
 router
-  .route('/roles')
-  .post(auth(),roleAuthorization('admin'), validate(clinicValidation.createRole), clinicController.createRole)
-  .get(auth(), roleAuthorization('admin'), clinicController.getRolesByClinic);
+  .route('/form-template/:formTemplateId')
+  .get(
+    auth(), // Authentication middleware
+    validate(formTemplateValidation.getFormTemplateById), // Validation for fetching form template
+    formTemplateController.getFormTemplateById // Controller for fetching form template
+  )
+  .patch(
+    auth(), // Authentication middleware
+    validate(formTemplateValidation.updateFormTemplate), // Validation for update request
+    formTemplateController.updateFormTemplate // Controller for updating form template
+  )
+  .delete(
+    auth(), // Authentication middleware
+    validate(formTemplateValidation.deleteFormTemplate), // Validation for deleting form template
+    formTemplateController.deleteFormTemplate // Controller for deleting form template
+  );
 
+router
+  .route('/form-fields')
+  .post(auth(), validate(formFieldsValidation.createFormFields), formFieldsController.createFormFields)
+  .get(auth(), formFieldsController.getAllFormFields);
 
-  router
+router
+  .route('/form-fields/options')
+  .get(auth(), formFieldsController.getFormFieldsOptions)
+  .patch(auth(), validate(formFieldsValidation.updateFormFieldOptions), formFieldsController.updateFormFieldOptions);
+
+router
+  .route('/form-fields/:formFieldId')
+  .get(auth(), validate(formFieldsValidation.getFormFieldById), formFieldsController.getFormFieldById)
+  .patch(auth(), validate(formFieldsValidation.updateFormFieldById), formFieldsController.updateFormFieldById)
+  .delete(auth(), validate(formFieldsValidation.deleteFormFieldById), formFieldsController.deleteFormFieldById);
+
+router
   .route('/:clinicId')
-  .get(auth(), roleAuthorization('superadmin', 'admin'), validate(clinicValidation.getClinic), clinicController.getClinic);
+  .get(
+    // (req, res)=>{
+    //   return res.status(204).send();
+    // },
+    auth(),
+    // roleAuthorization('superadmin', 'admin'),
+    validate(clinicValidation.getClinic),
+    clinicController.getClinic
+  )
+  .patch(auth(), validate(clinicValidation.updateClinicById), clinicController.updateClinicById);
 module.exports = router;

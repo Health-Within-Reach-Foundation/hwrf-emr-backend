@@ -34,14 +34,17 @@ const generateToken = (userId, expires, type, secret = config.jwt.secret) => {
  * @param {boolean} [blacklisted]
  * @returns {Promise<Token>}
  */
-const saveToken = async (token, userId, expires, type, blacklisted = false) => {
-  const tokenDoc = await Token.create({
-    token,
-    userId,
-    type,
-    expires: expires.toDate(),
-    blacklisted,
-  });
+const saveToken = async (token, userId, expires, type, blacklisted = false, transaction = null) => {
+  const tokenDoc = await Token.create(
+    {
+      token,
+      userId,
+      type,
+      expires: expires.toDate(),
+      blacklisted,
+    },
+    { transaction }
+  );
   return tokenDoc;
 };
 
@@ -52,15 +55,49 @@ const saveToken = async (token, userId, expires, type, blacklisted = false) => {
  * @returns {Promise<Token>}
  */
 const verifyToken = async (token, type) => {
-  console.log('Inside token service function --> verifyToken ==> payload', token, type);
   const payload = jwt.verify(token, config.jwt.secret);
-  console.log('Inside token service function --> verifyToken ==> payload', payload);
-
   const tokenDoc = await Token.findOne({ where: { token, type, userId: payload.sub, blacklisted: false } });
   if (!tokenDoc) {
     throw new Error('Token not found');
   }
   return tokenDoc;
+};
+/**
+ * Verify token, check user validity, and handle token expiration
+ * @param {string} token - The access token to verify
+ * @returns {Promise<boolean>} - Returns true if the user is valid and the token is expired, false otherwise
+ * @throws {Error} - Throws an error if the token is invalid
+ */
+const verifyAccessToken = async (token) => {
+  try {
+    // Decode the token
+    const payload = jwt.decode(token, config.jwt.secret);
+
+    console.log('Payload -->', payload);
+
+    if (!payload) {
+      throw new Error('Access Token Invalid');
+    }
+
+    // Check if the user exists
+    const user = await userService.getUserById(payload.sub);
+    if (!user) {
+      return false;
+    }
+
+    // Check if the token is expired
+    const currentTime = Math.floor(Date.now() / 1000); // Current time in seconds
+    if (payload.exp && payload.exp < currentTime) {
+      return true; // Token is expired but user is valid
+    }
+
+    console.log('Token is still valid -->', payload.exp, currentTime);
+
+    return false; // Token is still valid, or some other condition fails
+  } catch (error) {
+    console.log('Error in verifyAccessToken -->', error);
+    throw new Error('Access Token Invalid');
+  }
 };
 
 /**
@@ -69,13 +106,15 @@ const verifyToken = async (token, type) => {
  * @returns {Promise<Object>}
  */
 const generateAuthTokens = async (user) => {
-  const accessTokenExpires = moment().add(config.jwt.accessExpirationMinutes, 'days');
+  const accessTokenExpires = moment().add(config.jwt.accessExpirationMinutes, 'hours');
   const accessToken = generateToken(user.id, accessTokenExpires, tokenTypes.ACCESS);
 
-  const refreshTokenExpires = moment().add(config.jwt.refreshExpirationDays, 'days');
+  const refreshTokenExpires = moment().add(config.jwt.refreshExpirationDays, 'minutes');
   const refreshToken = generateToken(user.id, refreshTokenExpires, tokenTypes.REFRESH);
   await saveToken(refreshToken, user.id, refreshTokenExpires, tokenTypes.REFRESH);
 
+  console.log('Access Token -->', accessToken, accessTokenExpires);
+  console.log('refresh Token -->', refreshToken);
   return {
     access: {
       token: accessToken,
@@ -87,21 +126,43 @@ const generateAuthTokens = async (user) => {
     },
   };
 };
+/**
+ * Generate auth tokens
+ * @param {User} user
+ * @param {Token} user
+ * @returns {Promise<Object>}
+ */
+const generateAccessTokenOnly = async (user) => {
+  const accessTokenExpires = moment().add(config.jwt.accessExpirationMinutes, 'minutes');
+  const accessToken = generateToken(user.id, accessTokenExpires, tokenTypes.ACCESS);
+
+  return {
+    access: {
+      token: accessToken,
+      expires: accessTokenExpires.toDate(),
+    },
+  };
+};
 
 /**
  * Generate reset password token
  * @param {string} email
  * @returns {Promise<string>}
  */
-const generatePasswordToken = async (email, type) => {
-  const user = await userService.getUserByEmail(email);
-  if (!user) {
+const generatePasswordToken = async (user, type, transaction = null) => {
+  console.log('User and typeof user-->', user.id, typeof user);
+  if (typeof user === 'string') {
+    // user param act as email
+    user = await userService.getUserByEmail(user);
+  }
+  // const user = await userService.getUserByEmail(email);
+  if (!user && typeof user !== 'string') {
     throw new ApiError(httpStatus.NOT_FOUND, 'No users found with this email');
   }
   const expires = moment().add(config.jwt.accessExpirationMinutes, 'days');
   console.log('Expired in -->', expires);
   const passwordToken = generateToken(user.id, expires, type);
-  await saveToken(passwordToken, user.id, expires, type);
+  await saveToken(passwordToken, user.id, expires, type, false, transaction);
   return passwordToken;
 };
 
@@ -117,12 +178,6 @@ const generateVerifyEmailToken = async (user) => {
   return verifyEmailToken;
 };
 
-/**
- * Generate reset password token
- * @param {string} email
- * @returns {Promise<string>}
- */
-
 module.exports = {
   generateToken,
   saveToken,
@@ -130,4 +185,6 @@ module.exports = {
   generateAuthTokens,
   generatePasswordToken,
   generateVerifyEmailToken,
+  generateAccessTokenOnly,
+  verifyAccessToken,
 };

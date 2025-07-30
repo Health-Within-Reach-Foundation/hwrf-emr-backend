@@ -8,12 +8,14 @@ class Patient extends Model {
   static associate(models) {
     // One Patient can have many Appointments
     Patient.hasMany(models.Appointment, { foreignKey: 'patientId', as: 'appointments' });
-   
+
     // Each Patient belongs to a Clinic
     Patient.belongsTo(models.Clinic, { foreignKey: 'clinicId', as: 'clinic' });
-
+    Patient.hasOne(models.Mammography, { foreignKey: 'patientId', as: 'mammography' });
     // A Patient can have many PatientRecords
     Patient.hasMany(models.PatientRecord, { foreignKey: 'patientId', as: 'records' });
+
+    Patient.hasMany(models.Diagnosis, { foreignKey: 'patientId', as: 'diagnoses' });
 
     // A Patient can have many Queues
     Patient.hasMany(models.Queue, { foreignKey: 'patientId', as: 'queues' });
@@ -24,6 +26,8 @@ class Patient extends Model {
       otherKey: 'campId',
       as: 'camps',
     });
+
+    Patient.hasMany(models.GeneralPhysicianRecord, { foreignKey: 'patientId', as: 'gpRecords' });
   }
 }
 
@@ -41,8 +45,8 @@ const initModel = (sequelize) => {
         primaryKey: true,
       },
       regNo: {
-        type: DataTypes.STRING(20),
-        unique: true,
+        type: DataTypes.INTEGER,
+        // unique: true,
         allowNull: false,
       },
       name: {
@@ -85,6 +89,10 @@ const initModel = (sequelize) => {
         },
         onDelete: 'CASCADE', // Automatically delete patients if the clinic is deleted
         onUpdate: 'CASCADE',
+      },
+      primaryDoctor: {
+        type: DataTypes.JSON,
+        allowNull: true, // Each patient must belong to a clinic
       },
     },
     {

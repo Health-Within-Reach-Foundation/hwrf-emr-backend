@@ -19,6 +19,10 @@ const envVarsSchema = Joi.object()
     EMAIL_FROM: Joi.string(),
     SUPERADMIN_EMAIL: Joi.string(),
     CLIENT_DOMAIN: Joi.string(),
+    AZURE_STORAGE_ACCOUNT_NAME: Joi.string().allow('', null).optional(),
+    AZURE_STORAGE_ACCOUNT_KEY: Joi.string().allow('', null).optional(),
+    AZURE_EMAIL_CONNECTION_STRING: Joi.string().allow('', null).optional(),
+    MAIL_ALIAS_USER: Joi.string().allow('', null).optional(),
   })
   .unknown();
 
@@ -52,4 +56,8 @@ module.exports = {
   },
   superadmin_email: envVars.SUPERADMIN_EMAIL,
   client_domain: envVars.CLIENT_DOMAIN,
+  azure_storage_account_name: envVars.AZURE_STORAGE_ACCOUNT_NAME,
+  azure_storage_account_key: envVars.AZURE_STORAGE_ACCOUNT_KEY,
+  mail_alias_user:envVars.MAIL_ALIAS_USER,
+  azure_email_connection_string:envVars.AZURE_EMAIL_CONNECTION_STRING
 };

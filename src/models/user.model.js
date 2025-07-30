@@ -2,6 +2,7 @@ const { DataTypes, Model, Op } = require('sequelize');
 const bcrypt = require('bcryptjs');
 const { roles, ermRoles } = require('../config/roles');
 const { Role } = require('./role.model');
+const { clinicStatus } = require('../config/constants');
 
 class User extends Model {
   /**
@@ -39,7 +40,14 @@ class User extends Model {
     // User.hasMany(models.TreatmentRecord, { foreignKey: 'docter_id', as: 'treatments' });
 
     // Many-to-Many: Users and Roles
-    User.belongsToMany(models.Role, { through: 'user_roles', foreignKey: 'userId', otherKey: 'roleId', as: 'roles' });
+    User.belongsToMany(models.Role, {
+      through: 'user_roles',
+      foreignKey: 'userId',
+      otherKey: 'roleId',
+      as: 'roles',
+      onDelete: 'CASCADE',
+      onUpdate: 'CASCADE',
+    });
 
     User.belongsTo(models.Clinic, { foreignKey: 'clinicId', as: 'clinic' });
 
@@ -49,6 +57,8 @@ class User extends Model {
       through: 'user_specialties', // Junction table
       foreignKey: 'userId',
       as: 'specialties',
+      onDelete: 'CASCADE',
+      onUpdate: 'CASCADE',
     });
 
     User.belongsToMany(models.Camp, {
@@ -56,6 +66,8 @@ class User extends Model {
       foreignKey: 'userId',
       otherKey: 'campId',
       as: 'camps',
+      onDelete: 'CASCADE',
+      onUpdate: 'CASCADE',
     });
   }
 }
@@ -132,6 +144,10 @@ const initModel = (sequelize) => {
       currentCampId: {
         type: DataTypes.UUID,
         allowNull: true,
+      },
+      status: {
+        type: DataTypes.ENUM(clinicStatus),
+        defaultValue: 'pending',
       },
     },
     {

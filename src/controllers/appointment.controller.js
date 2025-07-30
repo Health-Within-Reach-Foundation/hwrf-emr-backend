@@ -1,43 +1,82 @@
 const httpStatus = require('http-status');
 const catchAsync = require('../utils/catchAsync');
 const { appointmentService } = require('../services');
+const db = require('../models');
+const ApiError = require('../utils/ApiError');
 
-// Controller for booking appointment
+/**
+ * Books an appointment for a patient.
+ *
+ * @param {Object} req - The request object.
+ * @param {Object} req.body - The body of the request containing appointment details.
+ * @param {Object} req.user - The user object containing user details.
+ * @param {string} req.user.clinicId - The ID of the clinic.
+ * @param {string} [req.user.currentCampId] - The ID of the current camp, if any.
+ * @param {Object} res - The response object.
+ * @returns {Promise<void>} - A promise that resolves when the appointment is booked and the response is sent.
+ */
 const bookAppointment = catchAsync(async (req, res) => {
-  // Service call to book appointment
-  const appoinmentData = {
-    ...req.body,
-    clinicId: req.user.clinicId,
-  };
-  const appointment = await appointmentService.bookAppointment(appoinmentData);
+  const transaction = await db.sequelize.transaction();
+  try {
+    const appoinmentData = {
+      ...req.body,
+      clinicId: req.user.clinicId,
+      campId: req.user?.currentCampId,
+    };
+    const appointment = await appointmentService.bookAppointment(appoinmentData, transaction);
 
-  // Return response
-  res.status(httpStatus.CREATED).json({
-    success: true,
-    message: 'Appointment booked successfully',
-    data: appointment,
-  });
+    await transaction.commit();
+    res.status(httpStatus.CREATED).json({
+      success: true,
+      message: 'Patient added in queue',
+      data: appointment,
+    });
+  } catch (error) {
+    await transaction.rollback();
+    console.error('/clinics/appointments/book - controller - bookAppointment --> ', error);
+    throw new ApiError(httpStatus.BAD_REQUEST, `Unable to book appointment: ${error?.message}`);
+  }
 });
 
-// Controller for updating appointment status
-const updateAppointmentStatus = catchAsync(async (req, res) => {
+/**
+ * Updates an appointment with the given appointment ID.
+ *
+ * @param {Object} req - The request object.
+ * @param {Object} req.params - The request parameters.
+ * @param {string} req.params.appointmentId - The ID of the appointment to update.
+ * @param {Object} req.body - The request body containing the update data.
+ * @param {Object} res - The response object.
+ * @returns {Promise<void>} - A promise that resolves when the appointment is updated.
+ */
+const updateAppointment = catchAsync(async (req, res) => {
   const { appointmentId } = req.params;
-  const appointment = await appointmentService.updateAppointmentStatus(appointmentId, req.body);
+  const appointment = await appointmentService.updateAppointment(appointmentId, req.body);
 
   res.status(httpStatus.OK).json({
     success: true,
-    message: 'Appointment status updated successfully',
+    message: 'Queue updated successfully',
     data: appointment,
   });
 });
 
 /**
- * Fetch all appointments with filters and sorting
+ * Get a list of appointments based on query parameters.
+ *
+ * @param {Object} req - Express request object
+ * @param {Object} req.query - Query parameters from the request
+ * @param {Object} req.user - User object from the request
+ * @param {string} req.user.currentCampId - Current camp ID of the user
+ * @param {string} req.user.clinicId - Clinic ID of the user
+ * @param {Object} res - Express response object
+ *
+ * @returns {Promise<void>} - Returns a promise that resolves to void
  */
 const getAppointments = catchAsync(async (req, res) => {
   const queryOptions = req.query; // Query parameters from request
-  const appointments = await appointmentService.getAppointments(queryOptions, req.user.clinicId);
-    
+  const campId = req.user.currentCampId;
+  const clinicId = req.user.clinicId;
+  const appointments = await appointmentService.getAppointments(queryOptions, clinicId, campId);
+
   res.status(httpStatus.OK).json({
     success: true,
     message: 'Appointments fetched successfully',
@@ -49,5 +88,5 @@ const getAppointments = catchAsync(async (req, res) => {
 module.exports = {
   bookAppointment,
   getAppointments,
-  updateAppointmentStatus,
+  updateAppointment,
 };
