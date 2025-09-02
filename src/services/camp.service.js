@@ -603,9 +603,6 @@ const getAllCampsAnalytics = async (clinicId, startDate, endDate) => {
     ],
   });
 
-  // Write the camp object into a file for debugging with proper strcutured JSON not in Object or Promise
-  // fs.writeFileSync('camps.json', JSON.stringify(camps, null, 2));
-
   if (!camps || camps.length === 0) {
     throw new ApiError(httpStatus.NOT_FOUND, 'No camps found for the given date range');
   }
@@ -691,7 +688,6 @@ const getAllCampsAnalytics = async (clinicId, startDate, endDate) => {
       return clonedPatient;
     });
 
-    console.log(`Filtered Patients for Camp ID ${camp.id}:`, filteredPatients.length);
 
     campRow.totalPatients = filteredPatients.length;
 
@@ -701,13 +697,6 @@ const getAllCampsAnalytics = async (clinicId, startDate, endDate) => {
     const campDentistry = calculateDentistryAnalytics(filteredPatients);
     const campGP = calculateGPAnalytics(filteredPatients);
     const campMammo = calculateMammographyAnalytics(filteredPatients);
-
-    if (new Date(camp.startDate).getDate() === new Date('2025-08-12').getDate()) {
-      // Apply specific logic for camps on or before December 8, 2023
-      // console.log('Camp denistry', campDentistry);
-      // console.log('Camp GP', campGP);
-      // console.log('Camp Mammography', campMammo);
-    }
 
     // Update cmpRow with earnings
     campRow.onlineEarnings = campDentistry.onlineEarnings + campGP.onlineEarnings + campMammo.onlineEarnings;
