@@ -522,7 +522,6 @@ const getAllCampsAnalytics = async (clinicId, startDate, endDate) => {
   });
 
   const campIds = allCamps.map((camp) => camp.id);
-
   const camps = await Camp.findAll({
     where: { startDate: { [Op.between]: [startDate, endDate] }, clinicId }, // Filter camps for current month
     // where: { clinicId }, // Filter camps for current month
@@ -569,9 +568,16 @@ const getAllCampsAnalytics = async (clinicId, startDate, endDate) => {
                   {
                     model: TreatmentSetting,
                     where: { campId: { [Op.in]: campIds } }, // Filter appointments by camp IDs
-
                     as: 'treatmentSettings',
-                    attributes: ['id', 'treatingDoctor', 'onlineAmount', 'offlineAmount', 'crownStatus', 'nextDate'],
+                    attributes: [
+                      'id',
+                      'treatingDoctor',
+                      'onlineAmount',
+                      'offlineAmount',
+                      'crownStatus',
+                      'nextDate',
+                      'campId',
+                    ],
                     required: false,
                   },
                 ],
@@ -634,9 +640,8 @@ const getAllCampsAnalytics = async (clinicId, startDate, endDate) => {
     totalEarnings: 0,
   };
 
-  // campsTable to show on UI with columns (date, camp name, total patient, online, offline, crown earning, total earning) 
+  // campsTable to show on UI with columns (date, camp name, total patient, online, offline, crown earning, total earning)
   const campsTable = [];
-
 
   camps.forEach((camp) => {
     let campRow = {
@@ -656,22 +661,59 @@ const getAllCampsAnalytics = async (clinicId, startDate, endDate) => {
       servicesTaken: Array.from(new Set(p.queues.map((q) => q.queueType))),
     }));
 
-    campRow.totalPatients = uniquePatients.length;
+    // Prepare the data: for each patient, keep only those treatmentSettings, mammography, and gpRecords where campId == camp.id
+    const filteredPatients = uniquePatients.map((p) => {
+      // Deep clone the patient to avoid mutating the original object
+      const clonedPatient = { ...p };
 
-    totalRegisteredPatients += uniquePatients.length;
-    totalAttended += uniquePatients.filter((p) => p.hasAppointments).length;
+      // Filter diagnoses/treatmentSettings for Dentistry
+      clonedPatient.diagnoses = p.diagnoses.map((d) => {
+        const clonedDiagnosis = { ...d };
+        if (d.treatment && Array.isArray(d.treatment.treatmentSettings)) {
+          clonedDiagnosis.treatment = {
+            ...d.treatment,
+            treatmentSettings: d.treatment.treatmentSettings.filter((ts) => ts.campId === camp.id),
+          };
+        }
+        return clonedDiagnosis;
+      });
 
-    const campDentistry = calculateDentistryAnalytics(uniquePatients);
-    const campGP = calculateGPAnalytics(uniquePatients);
-    const campMammo = calculateMammographyAnalytics(uniquePatients);
+      // Filter mammography by campId
+      if (p.mammography && p.mammography.campId !== camp.id) {
+        clonedPatient.mammography = null;
+      }
 
+      // Filter gpRecords by campId
+      if (Array.isArray(p.gpRecords)) {
+        clonedPatient.gpRecords = p.gpRecords.filter((gp) => gp.campId === camp.id);
+      }
+
+      return clonedPatient;
+    });
+
+    console.log(`Filtered Patients for Camp ID ${camp.id}:`, filteredPatients.length);
+
+    campRow.totalPatients = filteredPatients.length;
+
+    totalRegisteredPatients += filteredPatients.length;
+    totalAttended += filteredPatients.filter((p) => p.hasAppointments).length;
+
+    const campDentistry = calculateDentistryAnalytics(filteredPatients);
+    const campGP = calculateGPAnalytics(filteredPatients);
+    const campMammo = calculateMammographyAnalytics(filteredPatients);
+
+    if (new Date(camp.startDate).getDate() === new Date('2025-08-12').getDate()) {
+      // Apply specific logic for camps on or before December 8, 2023
+      // console.log('Camp denistry', campDentistry);
+      // console.log('Camp GP', campGP);
+      // console.log('Camp Mammography', campMammo);
+    }
 
     // Update cmpRow with earnings
     campRow.onlineEarnings = campDentistry.onlineEarnings + campGP.onlineEarnings + campMammo.onlineEarnings;
     campRow.offlineEarnings = campDentistry.offlineEarnings + campGP.offlineEarnings + campMammo.offlineEarnings;
     campRow.crownEarnings = campDentistry.crownEarnings;
     campRow.totalEarnings = campDentistry.totalEarnings + campGP.totalEarnings + campMammo.totalEarnings;
-
 
     dentistryAnalytics.totalPatients += campDentistry.totalDentistryPatients;
     dentistryAnalytics.totalAttended += campDentistry.totalAttended;

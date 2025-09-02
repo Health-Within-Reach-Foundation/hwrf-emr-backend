@@ -5,7 +5,7 @@ const emailSubjectBodyForPassword = require('../utils/email-template-password');
 const sendEmailAzure = require('./email.azure.service');
 
 const transport = nodemailer.createTransport(config.email.smtp);
-if (config.env !== 'test') {
+if (config.env === 'development') {
   transport
     .verify()
     .then(() => logger.info('Connected to email server'))
