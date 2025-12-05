@@ -22,14 +22,14 @@ const initializeDatabase = async ({ force = false, alter = true } = {}) => {
     });
     logger.info('Database connection has been established successfully.');
 
-    await db.sequelize.sync({ force, alter });
-    if (force) {
-      logger.warn('All tables dropped and recreated (force sync).');
-    } else if (alter) {
-      logger.info('Database schema altered to match models (alter sync).');
-    } else {
-      logger.info('Database synchronized successfully.');
-    }
+    // await db.sequelize.sync({ force, alter });
+    // if (force) {
+    //   logger.warn('All tables dropped and recreated (force sync).');
+    // } else if (alter) {
+    //   logger.info('Database schema altered to match models (alter sync).');
+    // } else {
+    //   logger.info('Database synchronized successfully.');
+    // }
   } catch (error) {
     logger.error('Unable to sync database:', error);
     throw error;
