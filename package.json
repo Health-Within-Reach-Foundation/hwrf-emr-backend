@@ -12,6 +12,12 @@
   },
   "scripts": {
     "start": "pm2 start ecosystem.config.json --no-daemon",
+    "pm2:kill": "pm2 delete hwrf-emr-server || true",
+    "pm2:kill:all": "pm2 kill",
+    "pm2:save": "pm2 save",
+    "pm2:update": "pm2 update",
+    "pm2:logs": "pm2 logs hwrf-emr-server",
+    "pm2:ls": "pm2 list",
     "dev": "cross-env NODE_ENV=development nodemon --legacy-watch src/index.js",
     "test": "jest -i --colors --verbose --detectOpenHandles",
     "test:watch": "jest -i --watchAll",

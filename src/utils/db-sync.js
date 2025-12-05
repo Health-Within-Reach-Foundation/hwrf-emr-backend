@@ -8,7 +8,7 @@ const logger = require('../config/logger');
  * @param {boolean} options.force - If true, drops existing tables and recreates them.
  * @param {boolean} options.alter - If true, attempts to make schema changes without dropping tables.
  */
-const initializeDatabase = async ({ force = false, alter = true } = {}) => {
+const initializeDatabase = async ({ force = false, alter = false } = {}) => {
   try {
     logger.info('Starting database synchronization...');
     db.sequelize.authenticate().then(() => {
