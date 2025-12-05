@@ -29,7 +29,88 @@ const getPatientById = async (patientId) => {
 };
 
 /**
- * Get patients by clinic ID and optionally by camp ID.
+ * Calculate billing amounts for Dentistry specialty
+ * @param {string} patientId - The patient ID
+ * @returns {Promise<Object>} - { onlinePaid, offlinePaid }
+ */
+const calculateDentistryBilling = async (patientId) => {
+  const diagnoses = await Diagnosis.findAll({
+    where: { patientId },
+    include: [
+      {
+        model: Treatment,
+        as: 'treatment',
+        include: [
+          {
+            model: TreatmentSetting,
+            as: 'treatmentSettings',
+            attributes: ['onlineAmount', 'offlineAmount'],
+          },
+        ],
+      },
+    ],
+  });
+
+  let onlinePaid = 0;
+  let offlinePaid = 0;
+
+  diagnoses.forEach((diagnosis) => {
+    if (diagnosis.treatment && diagnosis.treatment.treatmentSettings) {
+      diagnosis.treatment.treatmentSettings.forEach((setting) => {
+        onlinePaid += Number(setting.onlineAmount) || 0;
+        offlinePaid += Number(setting.offlineAmount) || 0;
+      });
+    }
+  });
+
+  return { onlinePaid, offlinePaid };
+};
+
+/**
+ * Calculate billing amounts for GP specialty
+ * @param {string} patientId - The patient ID
+ * @returns {Promise<Object>} - { onlinePaid, offlinePaid }
+ */
+const calculateGPBilling = async (patientId) => {
+  const gpRecords = await GeneralPhysicianRecord.findAll({
+    where: { patientId },
+    attributes: ['onlineAmount', 'offlineAmount'],
+  });
+
+  let onlinePaid = 0;
+  let offlinePaid = 0;
+
+  gpRecords.forEach((record) => {
+    onlinePaid += Number(record.onlineAmount) || 0;
+    offlinePaid += Number(record.offlineAmount) || 0;
+  });
+
+  return { onlinePaid, offlinePaid };
+};
+
+/**
+ * Calculate billing amounts for Mammography specialty
+ * @param {string} patientId - The patient ID
+ * @returns {Promise<Object>} - { onlinePaid, offlinePaid }
+ */
+const calculateMammographyBilling = async (patientId) => {
+  const mammography = await Mammography.findOne({
+    where: { patientId },
+    attributes: ['onlineAmount', 'offlineAmount'],
+  });
+
+  if (!mammography) {
+    return { onlinePaid: 0, offlinePaid: 0 };
+  }
+
+  return {
+    onlinePaid: Number(mammography.onlineAmount) || 0,
+    offlinePaid: Number(mammography.offlineAmount) || 0,
+  };
+};
+
+/**
+ * Get patients by clinic ID with comprehensive billing information.
  * @param {string} clinicId - The clinic ID.
  * @returns {Promise<object>}
  */
@@ -43,13 +124,13 @@ const getPatientsByClinic = async (clinicId) => {
         model: Appointment,
         as: 'appointments',
         attributes: { exclude: ['createdAt', 'updatedAt'] },
-        required: false, // Use LEFT JOIN to ensure patient is returned even if no appointments exist
+        required: false,
       },
       {
         model: Queue,
         as: 'queues',
         attributes: { exclude: ['createdAt', 'updatedAt'] },
-        required: false, // Use LEFT JOIN to ensure patient is returned even if no queues exist
+        required: false,
       },
     ],
     order: [['createdAt', 'DESC']],
@@ -59,10 +140,30 @@ const getPatientsByClinic = async (clinicId) => {
     throw new ApiError(httpStatus.NOT_FOUND, 'No patients found for this clinic or camp.');
   }
 
-  const newPatients = patients.map((patient) => {
-    const serviceTaken = patient.queues.map((queue) => queue.queueType);
-    return { ...patient.dataValues, serviceTaken };
-  });
+  // Process each patient to calculate billing amounts
+  const newPatients = await Promise.all(
+    patients.map(async (patient) => {
+      const serviceTaken = patient.queues.map((queue) => queue.queueType);
+
+      // Calculate billing for each specialty
+      const dentistryBilling = await calculateDentistryBilling(patient.id);
+      const gpBilling = await calculateGPBilling(patient.id);
+      const mammographyBilling = await calculateMammographyBilling(patient.id);
+
+      // Calculate totals
+      const onlinePaid = dentistryBilling.onlinePaid + gpBilling.onlinePaid + mammographyBilling.onlinePaid;
+      const offlinePaid = dentistryBilling.offlinePaid + gpBilling.offlinePaid + mammographyBilling.offlinePaid;
+      const total = onlinePaid + offlinePaid;
+
+      return {
+        ...patient.dataValues,
+        serviceTaken,
+        onlinePaid,
+        offlinePaid,
+        total,
+      };
+    })
+  );
 
   return {
     success: true,
