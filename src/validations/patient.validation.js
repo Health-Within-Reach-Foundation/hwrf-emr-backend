@@ -14,6 +14,7 @@ const createPatient = {
       .pattern(/^[0-9]{10}$/) // Exactly 10 digits
       .required(),
     address: Joi.string().optional().allow(''), // Address is optional
+    referral_source: Joi.string().optional().allow(''),
   }),
 };
 
