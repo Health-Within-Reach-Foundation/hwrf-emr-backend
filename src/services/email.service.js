@@ -7,7 +7,7 @@ const { EmailClient } = require('@azure/communication-email');
 /**
  * Verify Azure Email Service Connection on initialization
  */
-if (config.env === 'development') {
+// if (config.env === 'development') {
   try {
     const emailClient = new EmailClient(config.azure_email_connection_string);
     logger.info('✅ Azure Email Service client initialized successfully');
@@ -15,7 +15,7 @@ if (config.env === 'development') {
     logger.warn(`⚠️  Unable to initialize Azure Email Service: ${error.message}`);
     logger.warn('Make sure AZURE_EMAIL_CONNECTION_STRING is configured correctly in .env');
   }
-}
+// }
 
 /**
  * Send reset password email
