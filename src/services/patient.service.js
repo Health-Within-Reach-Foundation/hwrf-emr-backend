@@ -295,7 +295,7 @@ const getPatientsByClinicForExport = async (clinicId, maxRecords = 10000) => {
   // Fetch all patients without pagination
   const patients = await Patient.findAll({
     where: whereClause,
-    attributes: ['id', 'regNo', 'name', 'age', 'sex', 'mobile', 'address', 'createdAt', 'clinicId', 'primaryDoctor'],
+    attributes: ['id', 'regNo', 'name', 'age', 'sex', 'mobile', 'address', 'createdAt', 'clinicId', 'primaryDoctor', 'referral_source'],
     include: [
       {
         model: Queue,
