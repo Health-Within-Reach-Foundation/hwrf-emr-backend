@@ -112,7 +112,7 @@ const calculateMammographyBilling = async (patientId) => {
 /**
  * Search patients by clinic ID with pagination and filtering.
  * Optimized for lazy loading with minimal data transfer.
- * 
+ *
  * @param {string} clinicId - The clinic ID
  * @param {string} searchTerm - Search term (name, mobile, email)
  * @param {number} limit - Number of records to return (default 10, max 100)
@@ -124,10 +124,7 @@ const searchPatientsByClinic = async (clinicId, searchTerm = '', limit = 10, off
     // Build search condition - search by name or mobile
     const searchCondition = searchTerm
       ? {
-          [Op.or]: [
-            { name: { [Op.iLike]: `%${searchTerm}%` } },
-            { mobile: { [Op.iLike]: `%${searchTerm}%` } },
-          ],
+          [Op.or]: [{ name: { [Op.iLike]: `%${searchTerm}%` } }, { mobile: { [Op.iLike]: `%${searchTerm}%` } }],
         }
       : {};
 
@@ -164,17 +161,14 @@ const searchPatientsByClinic = async (clinicId, searchTerm = '', limit = 10, off
     };
   } catch (error) {
     console.error('Error searching patients:', error);
-    throw new ApiError(
-      httpStatus.INTERNAL_SERVER_ERROR,
-      `Error searching patients: ${error.message}`
-    );
+    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, `Error searching patients: ${error.message}`);
   }
 };
 
 /**
  * Get patients by clinic ID with comprehensive billing information and server-side pagination.
  * Optimized for performance with lazy loading support.
- * 
+ *
  * @param {string} clinicId - The clinic ID.
  * @param {number} limit - Number of records per page (default 50, max 200).
  * @param {number} offset - Number of records to skip (default 0).
@@ -186,18 +180,7 @@ const getPatientsByClinic = async (clinicId, limit = 50, offset = 0) => {
   // Use findAndCountAll with pagination
   const { rows: patients, count: total } = await Patient.findAndCountAll({
     where: whereClause,
-    attributes: [
-      'id',
-      'regNo',
-      'name',
-      'age',
-      'sex',
-      'mobile',
-      'address',
-      'createdAt',
-      'clinicId',
-      'primaryDoctor',
-    ],
+    attributes: ['id', 'regNo', 'name', 'age', 'sex', 'mobile', 'address', 'createdAt', 'clinicId', 'primaryDoctor', 'referral_source'],
     include: [
       {
         model: Queue,
@@ -260,10 +243,37 @@ const getPatientsByClinic = async (clinicId, limit = 50, offset = 0) => {
   };
 };
 
+const getSimplePatientsByClinic = async (clinicId, limit = 50, offset = 0) => {
+  const whereClause = { clinicId };
+
+  const { rows: patients, count: total } = await Patient.findAndCountAll({
+    where: whereClause,
+    attributes: ['id', 'regNo', 'name', 'age', 'sex', 'mobile', 'address', 'createdAt', 'clinicId', 'primaryDoctor'],
+    include: [
+      {
+        model: Queue,
+        as: 'queues',
+        attributes: ['queueType'],
+        order: [['createdAt', 'DESC']],
+        required: false,
+      },
+    ],
+    order: [['regNo', 'DESC']],
+    limit: parseInt(limit, 10),
+    offset: parseInt(offset, 10),
+    subQuery: false,
+  });
+
+  if (!patients.length && offset === 0) {
+    throw new ApiError(httpStatus.NOT_FOUND, 'No patients found for this clinic.');
+  }
+  return patients;
+};
+
 /**
  * Get ALL patients for a clinic for export purposes (no pagination)
  * Fetches complete dataset with billing info for Excel/CSV export
- * 
+ *
  * @param {string} clinicId - The clinic ID
  * @param {number} maxRecords - Maximum records to fetch for safety (default 10000)
  * @returns {Promise<Object>} - { success, data: [all patients], meta: { total, exported } }
@@ -285,18 +295,7 @@ const getPatientsByClinicForExport = async (clinicId, maxRecords = 10000) => {
   // Fetch all patients without pagination
   const patients = await Patient.findAll({
     where: whereClause,
-    attributes: [
-      'id',
-      'regNo',
-      'name',
-      'age',
-      'sex',
-      'mobile',
-      'address',
-      'createdAt',
-      'clinicId',
-      'primaryDoctor',
-    ],
+    attributes: ['id', 'regNo', 'name', 'age', 'sex', 'mobile', 'address', 'createdAt', 'clinicId', 'primaryDoctor'],
     include: [
       {
         model: Queue,
@@ -1328,6 +1327,7 @@ module.exports = {
   deleteMammography,
   getPatientById,
   getPatientsByClinic,
+  getSimplePatientsByClinic,
   getPatientsByClinicForExport,
   searchPatientsByClinic,
   updatePatientById,

@@ -33,6 +33,13 @@ router
     patientController.getPatientsByClinic // Controller
   );
 
+router.get(
+  '/recent',
+  auth(),
+  validate(patientValidation.getPatientsByClinic), // Validate pagination query parameters
+  patientController.getSimplePatientsByClinic
+);
+
 // Export all patients for Excel/CSV download (no pagination)
 router.route('/export').get(
   auth(),
@@ -40,11 +47,9 @@ router.route('/export').get(
   patientController.getPatientsByClinicForExport
 );
 
-router.route('/search').get(
-  auth(),
-  validate(patientValidation.searchPatientsByClinic),
-  patientController.searchPatientsByClinic
-);
+router
+  .route('/search')
+  .get(auth(), validate(patientValidation.searchPatientsByClinic), patientController.searchPatientsByClinic);
 
 router.route('/follow-ups').get(auth(), patientController.getPatientFollowUps);
 

@@ -351,6 +351,18 @@ const getPatientsByClinic = catchAsync(async (req, res) => {
   res.status(httpStatus.OK).json(patients);
 });
 
+
+const getSimplePatientsByClinic = catchAsync(async (req, res) => {
+  const clinicId = req.user.clinicId;
+  const { limit = 50, offset = 0 } = req.query;
+  const patients = await patientService.getSimplePatientsByClinic(
+    clinicId,
+    parseInt(limit, 10),
+    parseInt(offset, 10)
+  );
+  res.status(httpStatus.OK).json(patients);
+});
+
 /**
  * Get all patients for a clinic for export (no pagination)
  * Used for Excel/CSV export functionality
@@ -995,6 +1007,7 @@ const getPatientFollowUps = catchAsync(async (req, res) => {
 module.exports = {
   createPatient,
   getPatientsByClinic,
+  getSimplePatientsByClinic,
   getPatientsByClinicForExport,
   searchPatientsByClinic,
   getPatientDetailsById,
