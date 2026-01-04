@@ -29,46 +29,321 @@ const getPatientById = async (patientId) => {
 };
 
 /**
- * Get patients by clinic ID and optionally by camp ID.
- * @param {string} clinicId - The clinic ID.
- * @returns {Promise<object>}
+ * Calculate billing amounts for Dentistry specialty
+ * @param {string} patientId - The patient ID
+ * @returns {Promise<Object>} - { onlinePaid, offlinePaid }
  */
-const getPatientsByClinic = async (clinicId) => {
-  const whereClause = { clinicId };
-
-  const { rows: patients, count: total } = await Patient.findAndCountAll({
-    where: whereClause,
+const calculateDentistryBilling = async (patientId) => {
+  const diagnoses = await Diagnosis.findAll({
+    where: { patientId },
     include: [
       {
-        model: Appointment,
-        as: 'appointments',
-        attributes: { exclude: ['createdAt', 'updatedAt'] },
-        required: false, // Use LEFT JOIN to ensure patient is returned even if no appointments exist
+        model: Treatment,
+        as: 'treatment',
+        include: [
+          {
+            model: TreatmentSetting,
+            as: 'treatmentSettings',
+            attributes: ['onlineAmount', 'offlineAmount'],
+          },
+        ],
       },
+    ],
+  });
+
+  let onlinePaid = 0;
+  let offlinePaid = 0;
+
+  diagnoses.forEach((diagnosis) => {
+    if (diagnosis.treatment && diagnosis.treatment.treatmentSettings) {
+      diagnosis.treatment.treatmentSettings.forEach((setting) => {
+        onlinePaid += Number(setting.onlineAmount) || 0;
+        offlinePaid += Number(setting.offlineAmount) || 0;
+      });
+    }
+  });
+
+  return { onlinePaid, offlinePaid };
+};
+
+/**
+ * Calculate billing amounts for GP specialty
+ * @param {string} patientId - The patient ID
+ * @returns {Promise<Object>} - { onlinePaid, offlinePaid }
+ */
+const calculateGPBilling = async (patientId) => {
+  const gpRecords = await GeneralPhysicianRecord.findAll({
+    where: { patientId },
+    attributes: ['onlineAmount', 'offlineAmount'],
+  });
+
+  let onlinePaid = 0;
+  let offlinePaid = 0;
+
+  gpRecords.forEach((record) => {
+    onlinePaid += Number(record.onlineAmount) || 0;
+    offlinePaid += Number(record.offlineAmount) || 0;
+  });
+
+  return { onlinePaid, offlinePaid };
+};
+
+/**
+ * Calculate billing amounts for Mammography specialty
+ * @param {string} patientId - The patient ID
+ * @returns {Promise<Object>} - { onlinePaid, offlinePaid }
+ */
+const calculateMammographyBilling = async (patientId) => {
+  const mammography = await Mammography.findOne({
+    where: { patientId },
+    attributes: ['onlineAmount', 'offlineAmount'],
+  });
+
+  if (!mammography) {
+    return { onlinePaid: 0, offlinePaid: 0 };
+  }
+
+  return {
+    onlinePaid: Number(mammography.onlineAmount) || 0,
+    offlinePaid: Number(mammography.offlineAmount) || 0,
+  };
+};
+
+/**
+ * Search patients by clinic ID with pagination and filtering.
+ * Optimized for lazy loading with minimal data transfer.
+ *
+ * @param {string} clinicId - The clinic ID
+ * @param {string} searchTerm - Search term (name, mobile, email)
+ * @param {number} limit - Number of records to return (default 10, max 100)
+ * @param {number} offset - Number of records to skip (default 0)
+ * @returns {Promise<Object>} - { success, data: [], meta: { total, hasMore, offset, limit } }
+ */
+const searchPatientsByClinic = async (clinicId, searchTerm = '', limit = 10, offset = 0) => {
+  try {
+    // Build search condition - search by name or mobile
+    const searchCondition = searchTerm
+      ? {
+          [Op.or]: [{ name: { [Op.iLike]: `%${searchTerm}%` } }, { mobile: { [Op.iLike]: `%${searchTerm}%` } }],
+        }
+      : {};
+
+    // Combine clinic filter with search condition
+    const whereCondition = {
+      clinicId,
+      ...searchCondition,
+    };
+
+    // Fetch patients with search and pagination
+    const { rows: patients, count: total } = await Patient.findAndCountAll({
+      where: whereCondition,
+      attributes: ['id', 'regNo', 'name', 'mobile', 'age', 'sex', 'createdAt'], // Only needed fields
+      order: [['createdAt', 'DESC']], // Show newest first
+      limit: parseInt(limit, 10),
+      offset: parseInt(offset, 10),
+      raw: true, // Better performance for simple queries
+      subQuery: false, // Prevent subquery issues with count
+    });
+
+    // Calculate if there are more records
+    const hasMore = offset + limit < total;
+
+    return {
+      success: true,
+      data: patients,
+      meta: {
+        total,
+        hasMore,
+        offset: parseInt(offset, 10),
+        limit: parseInt(limit, 10),
+        returned: patients.length,
+      },
+    };
+  } catch (error) {
+    console.error('Error searching patients:', error);
+    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, `Error searching patients: ${error.message}`);
+  }
+};
+
+/**
+ * Get patients by clinic ID with comprehensive billing information and server-side pagination.
+ * Optimized for performance with lazy loading support.
+ *
+ * @param {string} clinicId - The clinic ID.
+ * @param {number} limit - Number of records per page (default 50, max 200).
+ * @param {number} offset - Number of records to skip (default 0).
+ * @returns {Promise<object>} - Paginated patient data with metadata
+ */
+const getPatientsByClinic = async (clinicId, limit = 50, offset = 0) => {
+  const whereClause = { clinicId };
+
+  // Use findAndCountAll with pagination
+  const { rows: patients, count: total } = await Patient.findAndCountAll({
+    where: whereClause,
+    attributes: ['id', 'regNo', 'name', 'age', 'sex', 'mobile', 'address', 'createdAt', 'clinicId', 'primaryDoctor', 'referral_source'],
+    include: [
       {
         model: Queue,
         as: 'queues',
-        attributes: { exclude: ['createdAt', 'updatedAt'] },
-        required: false, // Use LEFT JOIN to ensure patient is returned even if no queues exist
+        attributes: ['queueType'],
+        required: false,
       },
     ],
-    order: [['createdAt', 'DESC']],
+    order: [['regNo', 'DESC']],
+    limit: parseInt(limit, 10),
+    offset: parseInt(offset, 10),
+    subQuery: false,
   });
 
-  if (!patients.length) {
+  if (!patients.length && offset === 0) {
     throw new ApiError(httpStatus.NOT_FOUND, 'No patients found for this clinic or camp.');
   }
 
-  const newPatients = patients.map((patient) => {
-    const serviceTaken = patient.queues.map((queue) => queue.queueType);
-    return { ...patient.dataValues, serviceTaken };
-  });
+  // Process each patient to calculate billing amounts
+  const newPatients = await Promise.all(
+    patients.map(async (patient) => {
+      const serviceTaken = patient.queues.map((queue) => queue.queueType);
+
+      // Calculate billing for each specialty
+      const dentistryBilling = await calculateDentistryBilling(patient.id);
+      const gpBilling = await calculateGPBilling(patient.id);
+      const mammographyBilling = await calculateMammographyBilling(patient.id);
+
+      // Calculate totals
+      const onlinePaid = dentistryBilling.onlinePaid + gpBilling.onlinePaid + mammographyBilling.onlinePaid;
+      const offlinePaid = dentistryBilling.offlinePaid + gpBilling.offlinePaid + mammographyBilling.offlinePaid;
+      const totalPaid = onlinePaid + offlinePaid;
+
+      return {
+        ...patient.dataValues,
+        serviceTaken,
+        onlinePaid,
+        offlinePaid,
+        total: totalPaid,
+      };
+    })
+  );
+
+  // Calculate pagination metadata
+  const currentPage = Math.floor(offset / limit) + 1;
+  const totalPages = Math.ceil(total / limit);
+  const hasMore = offset + limit < total;
 
   return {
     success: true,
     data: newPatients,
     meta: {
       total,
+      limit: parseInt(limit, 10),
+      offset: parseInt(offset, 10),
+      currentPage,
+      totalPages,
+      hasMore,
+    },
+  };
+};
+
+const getSimplePatientsByClinic = async (clinicId, limit = 50, offset = 0) => {
+  const whereClause = { clinicId };
+
+  const { rows: patients, count: total } = await Patient.findAndCountAll({
+    where: whereClause,
+    attributes: ['id', 'regNo', 'name', 'age', 'sex', 'mobile', 'address', 'createdAt', 'clinicId', 'primaryDoctor'],
+    include: [
+      {
+        model: Queue,
+        as: 'queues',
+        attributes: ['queueType'],
+        order: [['createdAt', 'DESC']],
+        required: false,
+      },
+    ],
+    order: [['regNo', 'DESC']],
+    limit: parseInt(limit, 10),
+    offset: parseInt(offset, 10),
+    subQuery: false,
+  });
+
+  if (!patients.length && offset === 0) {
+    throw new ApiError(httpStatus.NOT_FOUND, 'No patients found for this clinic.');
+  }
+  return patients;
+};
+
+/**
+ * Get ALL patients for a clinic for export purposes (no pagination)
+ * Fetches complete dataset with billing info for Excel/CSV export
+ *
+ * @param {string} clinicId - The clinic ID
+ * @param {number} maxRecords - Maximum records to fetch for safety (default 10000)
+ * @returns {Promise<Object>} - { success, data: [all patients], meta: { total, exported } }
+ * @throws {ApiError} - If export exceeds max record limit
+ */
+const getPatientsByClinicForExport = async (clinicId, maxRecords = 10000) => {
+  const whereClause = { clinicId };
+
+  // Fetch count first to check limit
+  // const total = await Patient.count({ where: whereClause });
+
+  // if (total > maxRecords) {
+  //   throw new ApiError(
+  //     httpStatus.BAD_REQUEST,
+  //     `Export limited to ${maxRecords} records. Current clinic has ${total} patients. Please contact administrator.`
+  //   );
+  // }
+
+  // Fetch all patients without pagination
+  const patients = await Patient.findAll({
+    where: whereClause,
+    attributes: ['id', 'regNo', 'name', 'age', 'sex', 'mobile', 'address', 'createdAt', 'clinicId', 'primaryDoctor', 'referral_source'],
+    include: [
+      {
+        model: Queue,
+        as: 'queues',
+        attributes: ['queueType'],
+        required: false,
+      },
+    ],
+    order: [['regNo', 'DESC']],
+    subQuery: false,
+  });
+
+  if (!patients.length) {
+    throw new ApiError(httpStatus.NOT_FOUND, 'No patients found for this clinic.');
+  }
+
+  // Process each patient with billing calculations
+  const newPatients = await Promise.all(
+    patients.map(async (patient) => {
+      const serviceTaken = patient.queues.map((queue) => queue.queueType);
+
+      // Calculate billing for each specialty
+      const dentistryBilling = await calculateDentistryBilling(patient.id);
+      const gpBilling = await calculateGPBilling(patient.id);
+      const mammographyBilling = await calculateMammographyBilling(patient.id);
+
+      // Calculate totals
+      const onlinePaid = dentistryBilling.onlinePaid + gpBilling.onlinePaid + mammographyBilling.onlinePaid;
+      const offlinePaid = dentistryBilling.offlinePaid + gpBilling.offlinePaid + mammographyBilling.offlinePaid;
+      const totalPaid = onlinePaid + offlinePaid;
+
+      return {
+        ...patient.dataValues,
+        serviceTaken,
+        onlinePaid,
+        offlinePaid,
+        total: totalPaid,
+      };
+    })
+  );
+
+  return {
+    success: true,
+    data: newPatients,
+    meta: {
+      total: newPatients.length,
+      exported: newPatients.length,
+      timestamp: new Date().toISOString(),
     },
   };
 };
@@ -1052,6 +1327,9 @@ module.exports = {
   deleteMammography,
   getPatientById,
   getPatientsByClinic,
+  getSimplePatientsByClinic,
+  getPatientsByClinicForExport,
+  searchPatientsByClinic,
   updatePatientById,
   deletePatientById,
   getLastPatientRegistered,

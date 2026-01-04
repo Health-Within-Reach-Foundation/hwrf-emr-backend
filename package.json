@@ -12,6 +12,12 @@
   },
   "scripts": {
     "start": "pm2 start ecosystem.config.json --no-daemon",
+    "pm2:kill": "pm2 delete hwrf-emr-server || true",
+    "pm2:kill:all": "pm2 kill",
+    "pm2:save": "pm2 save",
+    "pm2:update": "pm2 update",
+    "pm2:logs": "pm2 logs hwrf-emr-server",
+    "pm2:ls": "pm2 list",
     "dev": "cross-env NODE_ENV=development nodemon --legacy-watch src/index.js",
     "test": "jest -i --colors --verbose --detectOpenHandles",
     "test:watch": "jest -i --watchAll",
@@ -57,6 +63,7 @@
     "dotenv": "^10.0.0",
     "express": "^4.17.1",
     "express-rate-limit": "^5.0.0",
+    "file-saver": "^2.0.5",
     "helmet": "^4.1.0",
     "http-status": "^1.4.0",
     "joi": "^17.3.0",
@@ -78,6 +85,7 @@
     "swagger-ui-express": "^4.1.6",
     "validator": "^13.0.0",
     "winston": "^3.2.1",
+    "xlsx": "^0.18.5",
     "xss-clean": "^0.1.1"
   },
   "devDependencies": {

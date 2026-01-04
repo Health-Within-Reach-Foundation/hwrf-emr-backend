@@ -2,7 +2,6 @@ const httpStatus = require('http-status');
 const catchAsync = require('../utils/catchAsync');
 const { authService, tokenService, emailService, clinicService, userService } = require('../services');
 const { tokenTypes } = require('../config/tokens');
-const { sendEmail } = require('../services/email.service');
 const sendEmailAzure = require('../services/email.azure.service');
 const db = require('../models');
 

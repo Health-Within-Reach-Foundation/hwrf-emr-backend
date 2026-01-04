@@ -92,6 +92,10 @@ const initModel = (sequelize) => {
         type: DataTypes.JSON,
         allowNull: true, // Each patient must belong to a clinic
       },
+      referral_source: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
     },
     {
       sequelize,

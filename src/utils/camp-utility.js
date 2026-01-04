@@ -44,7 +44,7 @@ const calculateDentistryAnalytics = (patients) => {
     (p) => p?.diagnoses?.length > 0 && p.diagnoses.some((d) => d.treatment?.treatmentSettings.length > 0)
   ).length;
 
-  // Calculate total earnings from 
+  // Calculate total earnings from
   // const totalEarnings = dentistryPatients.reduce(
   //   (sum, p) => sum + p.diagnoses.reduce((dSum, d) => dSum + (d.treatment ? Number(d.treatment.paidAmount) : 0), 0),
   //   0
@@ -76,29 +76,33 @@ const calculateDentistryAnalytics = (patients) => {
     0
   );
 
-
   // calculate crownEarnings it can be calculated by checking the treatmentSettings.crownStatus is true or not if true then add the onlineAmount and offlineAmount of each treatmentSettings of which crownStatus is true
-const crownEarnings = dentistryPatients.reduce((sum, p) => {
-    return sum + p.diagnoses.reduce((dSum, d) => {
+  const crownEarnings = dentistryPatients.reduce((sum, p) => {
+    return (
+      sum +
+      p.diagnoses.reduce((dSum, d) => {
         if (d.treatment) {
-            return dSum + d.treatment.treatmentSettings.reduce((tSum, ts) => {
-                // console.log('crownStatus:', ts.crownStatus, ts);
-                if (ts.crownStatus) {
-                    // console.log('crownStatus true:', ts.crownStatus);
-                    // console.log('onlineAmount:', ts.onlineAmount);
-                    // console.log('offlineAmount:', ts.offlineAmount);
-                    tSum += Number(ts.onlineAmount || 0) + Number(ts.offlineAmount || 0);
-                }
-                // console.log('tSum:', tSum);
-                return tSum;
-            }, 0);
+          return (
+            dSum +
+            d.treatment.treatmentSettings.reduce((tSum, ts) => {
+              // console.log('crownStatus:', ts.crownStatus, ts);
+              if (ts.crownStatus) {
+                // console.log('crownStatus true:', ts.crownStatus);
+                // console.log('onlineAmount:', ts.onlineAmount);
+                // console.log('offlineAmount:', ts.offlineAmount);
+                tSum += Number(ts.onlineAmount || 0) + Number(ts.offlineAmount || 0);
+              }
+              // console.log('tSum:', tSum);
+              return tSum;
+            }, 0)
+          );
         }
         return dSum;
-    }, 0);
-}, 0);
+      }, 0)
+    );
+  }, 0);
 
-const totalEarnings = onlineEarnings + offlineEarnings;
-
+  const totalEarnings = onlineEarnings + offlineEarnings;
 
   // console.log("crownEarnings", crownEarnings);
 
@@ -180,7 +184,7 @@ const calculateGPAnalytics = (patients) => {
     onlineEarnings,
     offlineEarnings,
   };
-}
+};
 
 const calculateMammographyAnalytics = (patients) => {
   const mammographyPatients = patients?.filter((p) => p?.servicesTaken?.includes('Mammography'));
@@ -192,15 +196,9 @@ const calculateMammographyAnalytics = (patients) => {
 
   const missed = totalMammographyPatients - totalAttended;
 
-  const onlineEarnings = mammographyPatients?.reduce(
-    (sum, p) => sum + Number(p?.mammography?.onlineAmount || 0),
-    0
-  );
+  const onlineEarnings = mammographyPatients?.reduce((sum, p) => sum + Number(p?.mammography?.onlineAmount || 0), 0);
 
-  const offlineEarnings = mammographyPatients?.reduce(
-    (sum, p) => sum + Number(p?.mammography?.offlineAmount || 0),
-    0
-  );
+  const offlineEarnings = mammographyPatients?.reduce((sum, p) => sum + Number(p?.mammography?.offlineAmount || 0), 0);
 
   const totalEarnings = onlineEarnings + offlineEarnings;
 
@@ -212,7 +210,7 @@ const calculateMammographyAnalytics = (patients) => {
     onlineEarnings,
     offlineEarnings,
   };
-}
+};
 module.exports = {
   calculateCampAnalytics,
   calculateDentistryAnalytics,

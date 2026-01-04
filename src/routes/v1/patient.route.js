@@ -29,9 +29,27 @@ router
   )
   .get(
     auth(), // Authentication middleware
-    // roleAuthorization('admin', 'receptionist', 'doctor'),
+    validate(patientValidation.getPatientsByClinic), // Validate pagination query parameters
     patientController.getPatientsByClinic // Controller
   );
+
+router.get(
+  '/recent',
+  auth(),
+  validate(patientValidation.getPatientsByClinic), // Validate pagination query parameters
+  patientController.getSimplePatientsByClinic
+);
+
+// Export all patients for Excel/CSV download (no pagination)
+router.route('/export').get(
+  auth(),
+  // validate(patientValidation.getPatientsByClinicForExport),
+  patientController.getPatientsByClinicForExport
+);
+
+router
+  .route('/search')
+  .get(auth(), validate(patientValidation.searchPatientsByClinic), patientController.searchPatientsByClinic);
 
 router.route('/follow-ups').get(auth(), patientController.getPatientFollowUps);
 
