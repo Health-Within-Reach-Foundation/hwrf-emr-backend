@@ -3,6 +3,7 @@
 INSERT INTO public."permissions" ("id", "action", "created_at", "updated_at") VALUES (uuid_generate_v4(), 'administration:write', NOW(), NOW());
 INSERT INTO public."permissions" ("id", "action", "created_at", "updated_at") VALUES (uuid_generate_v4(), 'administration:read', NOW(), NOW());
 INSERT INTO public."permissions" ("id", "action", "created_at", "updated_at") VALUES (uuid_generate_v4(), 'administration:no access', NOW(), NOW());
+INSERT INTO public."permissions" ("id", "action", "created_at", "updated_at") VALUES (uuid_generate_v4(), 'administration:finance', NOW(), NOW());
 
 -- INSERT INTO public."permissions" ("id", "action", "created_at", "updated_at") VALUES (uuid_generate_v4(), 'clinics:read', NOW(), NOW());
 -- INSERT INTO public."permissions" ("id", "action", "created_at", "updated_at") VALUES (uuid_generate_v4(), 'clinics:write', NOW(), NOW());

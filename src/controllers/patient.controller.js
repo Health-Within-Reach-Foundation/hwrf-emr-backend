@@ -324,23 +324,103 @@ const updateMammography = catchAsync(async (req, res) => {
 });
 
 /**
- * Get patients by clinic.
+ * Get patients by clinic with pagination support.
  *
- * This function retrieves a list of patients associated with the clinic
- * specified by the clinicId in the request user's data.
+ * This function retrieves a paginated list of patients associated with the clinic
+ * specified by the clinicId in the request user's data. Supports server-side pagination
+ * for optimal performance with large datasets.
  *
  * @param {Object} req - The request object.
  * @param {Object} req.user - The user object attached to the request.
  * @param {string} req.user.clinicId - The ID of the clinic to retrieve patients for.
+ * @param {Object} req.query - Query parameters.
+ * @param {number} [req.query.limit=50] - Number of records per page.
+ * @param {number} [req.query.offset=0] - Number of records to skip.
  * @param {Object} res - The response object.
  * @returns {Promise<void>} - A promise that resolves when the response is sent.
  */
 const getPatientsByClinic = catchAsync(async (req, res) => {
-  // const currentCampId = req.user.currentCampId;
   const clinicId = req.user.clinicId;
+  const { limit = 50, offset = 0 } = req.query;
 
-  const patients = await patientService.getPatientsByClinic(clinicId);
+  const patients = await patientService.getPatientsByClinic(
+    clinicId,
+    parseInt(limit, 10),
+    parseInt(offset, 10)
+  );
   res.status(httpStatus.OK).json(patients);
+});
+
+
+const getSimplePatientsByClinic = catchAsync(async (req, res) => {
+  const clinicId = req.user.clinicId;
+  const { limit = 50, offset = 0 } = req.query;
+  const patients = await patientService.getSimplePatientsByClinic(
+    clinicId,
+    parseInt(limit, 10),
+    parseInt(offset, 10)
+  );
+  res.status(httpStatus.OK).json(patients);
+});
+
+/**
+ * Get all patients for a clinic for export (no pagination)
+ * Used for Excel/CSV export functionality
+ * 
+ * @param {Object} req - The request object
+ * @param {Object} req.user - User with clinicId
+ * @param {Object} req.query - Query parameters
+ * @param {number} [req.query.maxRecords=10000] - Maximum records allowed to export
+ * @param {Object} res - The response object
+ * @returns {Promise<void>} - JSON with all patients and metadata
+ */
+const getPatientsByClinicForExport = catchAsync(async (req, res) => {
+  const clinicId = req.user.clinicId;
+  // const { maxRecords = 10000 } = req.query;
+
+  const patients = await patientService.getPatientsByClinicForExport(
+    clinicId,
+    // parseInt(maxRecords, 10)
+  );
+  
+  // Set response headers for file download context
+  res.set({
+    'Content-Type': 'application/json',
+    'X-Export-Timestamp': new Date().toISOString(),
+    'X-Export-Records': patients.meta.exported,
+  });
+  
+  res.status(httpStatus.OK).json(patients);
+});
+
+/**
+ * Search patients by clinic with lazy loading support.
+ * 
+ * This function searches for patients by name or mobile number with
+ * pagination support for efficient data loading on the frontend.
+ *
+ * @param {Object} req - The request object.
+ * @param {Object} req.user - The user object attached to the request.
+ * @param {string} req.user.clinicId - The ID of the clinic.
+ * @param {Object} req.query - Query parameters.
+ * @param {string} [req.query.searchTerm] - Search term (name or mobile).
+ * @param {number} [req.query.limit=10] - Number of results to return.
+ * @param {number} [req.query.offset=0] - Number of results to skip.
+ * @param {Object} res - The response object.
+ * @returns {Promise<void>} - A promise that resolves when the response is sent.
+ */
+const searchPatientsByClinic = catchAsync(async (req, res) => {
+  const clinicId = req.user.clinicId;
+  const { searchTerm = '', limit = 10, offset = 0 } = req.query;
+
+  const result = await patientService.searchPatientsByClinic(
+    clinicId,
+    searchTerm,
+    parseInt(limit, 10),
+    parseInt(offset, 10)
+  );
+
+  res.status(httpStatus.OK).json(result);
 });
 
 /**
@@ -927,6 +1007,9 @@ const getPatientFollowUps = catchAsync(async (req, res) => {
 module.exports = {
   createPatient,
   getPatientsByClinic,
+  getSimplePatientsByClinic,
+  getPatientsByClinicForExport,
+  searchPatientsByClinic,
   getPatientDetailsById,
   updatePatientDetails,
   createDiagnosis,

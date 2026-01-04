@@ -14,6 +14,7 @@ const createPatient = {
       .pattern(/^[0-9]{10}$/) // Exactly 10 digits
       .required(),
     address: Joi.string().optional().allow(''), // Address is optional
+    referral_source: Joi.string().optional().allow(''),
   }),
 };
 
@@ -44,12 +45,22 @@ const updatePatient = {
 
 /**
  * Validation for getting a list of patients by clinic
+ * Supports server-side pagination for optimal performance
  */
 const getPatientsByClinic = {
   query: Joi.object().keys({
-    clinicId: Joi.string().uuid().required(), // Clinic ID is required
-    // page: Joi.number().integer().min(1).default(1),
-    // limit: Joi.number().integer().min(1).default(10),
+    limit: Joi.number().integer().min(1).max(200).default(50),
+    offset: Joi.number().integer().min(0).default(0),
+  }),
+};
+
+/**
+ * Validation for exporting all patients for a clinic (no pagination)
+ * Used for Excel/CSV exports
+ */
+const getPatientsByClinicForExport = {
+  query: Joi.object().keys({
+    maxRecords: Joi.number().integer().min(100).max(10000).default(10000),
   }),
 };
 
@@ -64,6 +75,17 @@ const getPatientById = {
     specialtyId: Joi.alternatives()
       .try(Joi.string().uuid(), Joi.allow(null)) // Allow either a UUID or null
       .optional(),
+  }),
+};
+
+/**
+ * Validation for searching patients by clinic
+ */
+const searchPatientsByClinic = {
+  query: Joi.object().keys({
+    searchTerm: Joi.string().optional().allow('').trim().max(100),
+    limit: Joi.number().integer().min(1).max(100).default(10),
+    offset: Joi.number().integer().min(0).default(0),
   }),
 };
 
@@ -744,6 +766,8 @@ module.exports = {
   updatePatient,
   addDentalPatientRecord,
   getPatientsByClinic,
+  getPatientsByClinicForExport,
+  searchPatientsByClinic,
   getPatientById,
   createDiagnosis,
   getDiagnoses,
