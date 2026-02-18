@@ -219,7 +219,7 @@ const verifyEmail = catchAsync(async (req, res) => {
 const getMe = catchAsync(async (req, res) => {
   console.log('Req from getMe function --> ', req.user.specialties);
   const user = await userService.getUserById(req.user.id); // Use service to fetch user data
-   
+
   res.status(httpStatus.OK).json({
     success: true,
     user,

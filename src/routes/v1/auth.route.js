@@ -27,7 +27,7 @@ router.post('/send-verification-email', auth(), authController.sendVerificationE
 
 router.post('/verify-email', validate(authValidation.verifyEmail), authController.verifyEmail);
 
-router.get('/verify-token',validate(authValidation.verifyEmail), authController.verifyToken);
+router.get('/verify-token', validate(authValidation.verifyEmail), authController.verifyToken);
 
 module.exports = router;
 

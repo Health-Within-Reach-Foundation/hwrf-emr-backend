@@ -180,7 +180,19 @@ const getPatientsByClinic = async (clinicId, limit = 50, offset = 0) => {
   // Use findAndCountAll with pagination
   const { rows: patients, count: total } = await Patient.findAndCountAll({
     where: whereClause,
-    attributes: ['id', 'regNo', 'name', 'age', 'sex', 'mobile', 'address', 'createdAt', 'clinicId', 'primaryDoctor', 'referral_source'],
+    attributes: [
+      'id',
+      'regNo',
+      'name',
+      'age',
+      'sex',
+      'mobile',
+      'address',
+      'createdAt',
+      'clinicId',
+      'primaryDoctor',
+      'referral_source',
+    ],
     include: [
       {
         model: Queue,
@@ -295,7 +307,19 @@ const getPatientsByClinicForExport = async (clinicId, maxRecords = 10000) => {
   // Fetch all patients without pagination
   const patients = await Patient.findAll({
     where: whereClause,
-    attributes: ['id', 'regNo', 'name', 'age', 'sex', 'mobile', 'address', 'createdAt', 'clinicId', 'primaryDoctor', 'referral_source'],
+    attributes: [
+      'id',
+      'regNo',
+      'name',
+      'age',
+      'sex',
+      'mobile',
+      'address',
+      'createdAt',
+      'clinicId',
+      'primaryDoctor',
+      'referral_source',
+    ],
     include: [
       {
         model: Queue,

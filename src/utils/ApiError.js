@@ -3,7 +3,6 @@
  * @extends Error
  */
 class ApiError extends Error {
-  
   /**
    * Create an API error.
    * @param {number} statusCode - The HTTP status code of the error.

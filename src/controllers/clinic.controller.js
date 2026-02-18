@@ -1,4 +1,5 @@
 const httpStatus = require('http-status');
+const { Op } = require('sequelize');
 const catchAsync = require('../utils/catchAsync');
 const {
   clinicService,
@@ -10,7 +11,6 @@ const {
 } = require('../services');
 const { getAllFormTemplates, createFormTemplate } = require('../services/form-template.service');
 const { bulkCreateRole } = require('../services/role-permission.service');
-const { Op } = require('sequelize');
 const { Permission } = require('../models/permission.model');
 const { tokenTypes } = require('../config/tokens');
 const config = require('../config/config');
@@ -176,7 +176,7 @@ The HWRF Team`;
  */
 const getUsersByClinic = catchAsync(async (req, res) => {
   // Extract clinicId from the logged-in admin's session or token
-  const clinicId = req.user.clinicId;
+  const { clinicId } = req.user;
   console.log('Checking the getUSersByClinic controller');
   // Fetch users from the service
   const users = await userService.getUsersByClinic(clinicId);
@@ -190,7 +190,7 @@ const getUsersByClinic = catchAsync(async (req, res) => {
 });
 
 const getSpecialtyDepartmentsByClinic = catchAsync(async (req, res) => {
-  const clinicId = req.user.clinicId;
+  const { clinicId } = req.user;
 
   const departments = await clinicService.getSpecialtyDepartmentsByClinic(clinicId);
 
@@ -220,7 +220,7 @@ const updateClinicById = catchAsync(async (req, res) => {
 });
 
 const getFileByKey = catchAsync(async (req, res) => {
-  const key = req.query.key;
+  const { key } = req.query;
 
   console.log('Key --.', key);
 
@@ -261,7 +261,11 @@ const sendBroadcastMessage = catchAsync(async (req, res) => {
       return res.status(400).json({ error: 'Template name is required' });
     }
 
-    const response = await whatsappCommunicationService.broadcastWhatsAppMessage(phoneNumbers, templateName, templateVariables);
+    const response = await whatsappCommunicationService.broadcastWhatsAppMessage(
+      phoneNumbers,
+      templateName,
+      templateVariables
+    );
     res.status(200).json({ success: true, response });
   } catch (error) {
     res.status(500).json({ error: error.message });

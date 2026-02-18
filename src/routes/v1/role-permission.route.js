@@ -29,17 +29,13 @@ router
     },
     validate(rolePermissionValidation.updateRole),
     rolePermissionController.updateRole
-  )
-  ;
+  );
 
-
-router
-  .route('/all-permissions')
-  .get(
-    auth(),
-    // roleAuthorization('administration:write'),
-    // validate(role)
-    rolePermissionController.getAllPermissions
-  )
+router.route('/all-permissions').get(
+  auth(),
+  // roleAuthorization('administration:write'),
+  // validate(role)
+  rolePermissionController.getAllPermissions
+);
 
 module.exports = router;

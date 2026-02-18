@@ -24,6 +24,4 @@ router.route('/approve-clinic/:clinicId').patch(
   clinicController.approveClinic
 );
 
-
-
 module.exports = router;

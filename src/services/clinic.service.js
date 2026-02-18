@@ -1,9 +1,9 @@
 const httpStatus = require('http-status');
+const { Op } = require('sequelize');
 const { userService, emailService } = require('.');
 const { Clinic } = require('../models/clinic.model');
 const ApiError = require('../utils/ApiError');
 const { Specialty } = require('../models/specialty.model');
-const { Op } = require('sequelize');
 const { User } = require('../models/user.model');
 const { Role } = require('../models/role.model');
 
@@ -368,7 +368,7 @@ const onboardClinic = async (clinicData, transaction = null) => {
     {
       name: adminName,
       email: adminEmail,
-      password: password,
+      password,
       clinicId: clinic.id, // Assign clinicId to user after clinic is created
       phoneNumber: adminPhoneNumber,
     },

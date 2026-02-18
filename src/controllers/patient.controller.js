@@ -343,30 +343,21 @@ const getPatientsByClinic = catchAsync(async (req, res) => {
   const clinicId = req.user.clinicId;
   const { limit = 50, offset = 0 } = req.query;
 
-  const patients = await patientService.getPatientsByClinic(
-    clinicId,
-    parseInt(limit, 10),
-    parseInt(offset, 10)
-  );
+  const patients = await patientService.getPatientsByClinic(clinicId, parseInt(limit, 10), parseInt(offset, 10));
   res.status(httpStatus.OK).json(patients);
 });
-
 
 const getSimplePatientsByClinic = catchAsync(async (req, res) => {
   const clinicId = req.user.clinicId;
   const { limit = 50, offset = 0 } = req.query;
-  const patients = await patientService.getSimplePatientsByClinic(
-    clinicId,
-    parseInt(limit, 10),
-    parseInt(offset, 10)
-  );
+  const patients = await patientService.getSimplePatientsByClinic(clinicId, parseInt(limit, 10), parseInt(offset, 10));
   res.status(httpStatus.OK).json(patients);
 });
 
 /**
  * Get all patients for a clinic for export (no pagination)
  * Used for Excel/CSV export functionality
- * 
+ *
  * @param {Object} req - The request object
  * @param {Object} req.user - User with clinicId
  * @param {Object} req.query - Query parameters
@@ -379,23 +370,23 @@ const getPatientsByClinicForExport = catchAsync(async (req, res) => {
   // const { maxRecords = 10000 } = req.query;
 
   const patients = await patientService.getPatientsByClinicForExport(
-    clinicId,
+    clinicId
     // parseInt(maxRecords, 10)
   );
-  
+
   // Set response headers for file download context
   res.set({
     'Content-Type': 'application/json',
     'X-Export-Timestamp': new Date().toISOString(),
     'X-Export-Records': patients.meta.exported,
   });
-  
+
   res.status(httpStatus.OK).json(patients);
 });
 
 /**
  * Search patients by clinic with lazy loading support.
- * 
+ *
  * This function searches for patients by name or mobile number with
  * pagination support for efficient data loading on the frontend.
  *

@@ -688,7 +688,6 @@ const getAllCampsAnalytics = async (clinicId, startDate, endDate) => {
       return clonedPatient;
     });
 
-
     campRow.totalPatients = filteredPatients.length;
 
     totalRegisteredPatients += filteredPatients.length;

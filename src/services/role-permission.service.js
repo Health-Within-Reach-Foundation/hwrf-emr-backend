@@ -1,7 +1,7 @@
 const { Op } = require('sequelize');
+const httpStatus = require('http-status');
 const { Permission } = require('../models/permission.model');
 const { Role } = require('../models/role.model');
-const httpStatus = require('http-status');
 const ApiError = require('../utils/ApiError');
 
 /**

@@ -58,7 +58,7 @@ const logout = async (refreshToken, userId) => {
  */
 const refreshAuth = async (refreshToken, accessToken) => {
   try {
-    //single renewal of access token after
+    // single renewal of access token after
     const accessTokenDocValidity = await tokenService.verifyAccessToken(accessToken);
     const refreshTokenDoc = await tokenService.verifyToken(refreshToken, tokenTypes.REFRESH);
     if (accessTokenDocValidity && refreshTokenDoc) {

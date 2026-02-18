@@ -18,7 +18,7 @@ const sendEmailAzure = async (receivers_email, subject, message, attachment) => 
   }
 
   // Construct the attachments array conditionally
-  const attachments = attachment ? attachment : [];
+  const attachments = attachment || [];
 
   // Ensure receivers_email is an array of objects for Azure SDK
   const recipients = Array.isArray(receivers_email)

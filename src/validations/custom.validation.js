@@ -1,7 +1,6 @@
 const { clinicStatus } = require('../config/constants');
 const { ermRoles } = require('../config/roles');
 
-
 /**
  * Validates a password based on specific criteria.
  *

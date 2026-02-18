@@ -6,7 +6,6 @@ class Queue extends Model {
    * @param {Object} models - All Sequelize models
    */
   static associate(models) {
-   
     // Queue belongs to a Patient
     Queue.belongsTo(models.Patient, { foreignKey: 'patientId', as: 'patient' });
 
@@ -15,7 +14,6 @@ class Queue extends Model {
 
     // One Queue belongs to one Clinic
     Queue.belongsTo(models.Clinic, { foreignKey: 'clinicId', as: 'clinic' });
-
   }
 }
 
@@ -73,7 +71,7 @@ const initModel = (sequelize) => {
         },
         onDelete: 'SET NULL',
         onUpdate: 'CASCADE',
-      },      
+      },
     },
     {
       sequelize,

@@ -87,21 +87,21 @@ const getAllCampsAnalytics = async (clinicId, startDate, endDate) => {
   let totalMissed = 0;
   let totalEarnings = 0;
 
-  let dentistryAnalytics = {
+  const dentistryAnalytics = {
     totalPatients: 0,
     totalAttended: 0,
     totalMissed: 0,
     totalEarnings: 0,
   };
 
-  let gpAnalytics = {
+  const gpAnalytics = {
     totalPatients: 0,
     totalAttended: 0,
     totalMissed: 0,
     totalEarnings: 0,
   };
 
-  let mammoAnalytics = {
+  const mammoAnalytics = {
     totalPatients: 0,
     totalAttended: 0,
     totalMissed: 0,

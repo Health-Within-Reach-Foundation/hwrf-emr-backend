@@ -8,7 +8,8 @@ const config = require('../config/config');
  * @returns {{subject: string, body: string}} An object containing the subject and body of the email.
  */
 const emailSubjectBodyForPassword = (type, token) => {
-  let subject, body;
+  let subject;
+  let body;
   const url = `${config.client_domain}/auth/set-password/${token}`;
   const expirationDays = config.jwt.refreshExpirationDays;
   const dayLabel = expirationDays === 1 ? 'day' : 'days';
@@ -41,7 +42,7 @@ const emailSubjectBodyForPassword = (type, token) => {
     `;
   }
 
-  console.log("returning subject and body", { subject, body });
+  console.log('returning subject and body', { subject, body });
   return { subject, body };
 };
 

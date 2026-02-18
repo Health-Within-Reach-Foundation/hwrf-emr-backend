@@ -1,6 +1,6 @@
+const httpStatus = require('http-status');
 const { FormTemplate } = require('../models/form-template.model');
 const ApiError = require('../utils/ApiError');
-const httpStatus = require('http-status');
 
 /**
  * Create a new form template

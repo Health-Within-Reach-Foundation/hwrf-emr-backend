@@ -190,12 +190,12 @@ const initModel = (sequelize) => {
         defaultValue: { frequency: null, quantity: null },
         allowNull: false,
       },
-      reportStatus:{
+      reportStatus: {
         type: DataTypes.ENUM('Normal', 'Abnormal'),
         allowNull: false,
         defaultValue: 'Normal',
       },
-      aiReportScore:{
+      aiReportScore: {
         type: DataTypes.FLOAT,
         allowNull: true,
       },

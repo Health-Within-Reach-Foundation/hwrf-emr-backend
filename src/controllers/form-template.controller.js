@@ -62,7 +62,7 @@ const getFormTemplateById = catchAsync(async (req, res) => {
  */
 const getAllFormTemplates = catchAsync(async (req, res) => {
   const clinicId = typeof req.user.clinicId === 'undefined' ? null : req.user.clinicId;
-  
+
   const formTemplates = await formTemplateService.getAllFormTemplates(clinicId);
 
   res.status(httpStatus.OK).json({

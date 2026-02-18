@@ -39,7 +39,6 @@ app.use(compression());
 app.use(cors({ origin: config.client_domain, credentials: true }));
 app.options('*', cors());
 
-
 // jwt authentication
 app.use(passport.initialize());
 passport.use('jwt', jwtStrategy);

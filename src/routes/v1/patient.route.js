@@ -1,10 +1,10 @@
 const express = require('express');
+const multer = require('multer');
 const auth = require('../../middlewares/auth');
 const validate = require('../../middlewares/validate');
 const roleAuthorization = require('../../middlewares/role-authorise');
 const { patientValidation, appointmentValidation } = require('../../validations');
 const { patientController } = require('../../controllers');
-const multer = require('multer');
 const parseArrayFields = require('../../middlewares/parser');
 const { storage } = require('../../utils/file-upload-to-storage');
 // Define custom multer instance in the route

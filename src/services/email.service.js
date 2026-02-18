@@ -1,20 +1,20 @@
+const { EmailClient } = require('@azure/communication-email');
 const config = require('../config/config');
 const logger = require('../config/logger');
 const emailSubjectBodyForPassword = require('../utils/email-template-password');
 const sendEmailAzure = require('./email.azure.service');
-const { EmailClient } = require('@azure/communication-email');
 
 /**
  * Verify Azure Email Service Connection on initialization
  */
 // if (config.env === 'development') {
-  try {
-    const emailClient = new EmailClient(config.azure_email_connection_string);
-    logger.info('✅ Azure Email Service client initialized successfully');
-  } catch (error) {
-    logger.warn(`⚠️  Unable to initialize Azure Email Service: ${error.message}`);
-    logger.warn('Make sure AZURE_EMAIL_CONNECTION_STRING is configured correctly in .env');
-  }
+try {
+  const emailClient = new EmailClient(config.azure_email_connection_string);
+  logger.info('✅ Azure Email Service client initialized successfully');
+} catch (error) {
+  logger.warn(`⚠️  Unable to initialize Azure Email Service: ${error.message}`);
+  logger.warn('Make sure AZURE_EMAIL_CONNECTION_STRING is configured correctly in .env');
+}
 // }
 
 /**
