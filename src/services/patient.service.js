@@ -174,10 +174,92 @@ const searchPatientsByClinic = async (clinicId, searchTerm = '', limit = 10, off
  * @param {number} offset - Number of records to skip (default 0).
  * @returns {Promise<object>} - Paginated patient data with metadata
  */
+// const getPatientsByClinic = async (clinicId, limit = 50, offset = 0) => {
+//   const whereClause = { clinicId };
+
+//   // Use findAndCountAll with pagination
+//   const { rows: patients, count: total } = await Patient.findAndCountAll({
+//     where: whereClause,
+//     attributes: [
+//       'id',
+//       'regNo',
+//       'name',
+//       'age',
+//       'sex',
+//       'mobile',
+//       'address',
+//       'createdAt',
+//       'clinicId',
+//       'primaryDoctor',
+//       'referral_source',
+//     ],
+//     include: [
+//       {
+//         model: Queue,
+//         as: 'queues',
+//         attributes: ['queueType'],
+//         required: false,
+//       },
+//     ],
+//     order: [['regNo', 'DESC']],
+//     limit: parseInt(limit, 10),
+//     offset: parseInt(offset, 10),
+//     subQuery: false,
+//     distinct: true,
+//   });
+
+//   if (!patients.length && offset === 0) {
+//     throw new ApiError(httpStatus.NOT_FOUND, 'No patients found for this clinic or camp.');
+//   }
+
+//   // Process each patient to calculate billing amounts
+//   const newPatients = await Promise.all(
+//     patients.map(async (patient) => {
+//       const serviceTaken = patient.queues.map((queue) => queue.queueType);
+
+//       // Calculate billing for each specialty
+//       const dentistryBilling = await calculateDentistryBilling(patient.id);
+//       const gpBilling = await calculateGPBilling(patient.id);
+//       const mammographyBilling = await calculateMammographyBilling(patient.id);
+
+//       // Calculate totals
+//       const onlinePaid = dentistryBilling.onlinePaid + gpBilling.onlinePaid + mammographyBilling.onlinePaid;
+//       const offlinePaid = dentistryBilling.offlinePaid + gpBilling.offlinePaid + mammographyBilling.offlinePaid;
+//       const totalPaid = onlinePaid + offlinePaid;
+
+//       return {
+//         ...patient.dataValues,
+//         serviceTaken,
+//         onlinePaid,
+//         offlinePaid,
+//         total: totalPaid,
+//       };
+//     })
+//   );
+
+//   // Calculate pagination metadata
+//   const currentPage = Math.floor(offset / limit) + 1;
+//   const totalPages = Math.ceil(total / limit);
+//   const hasMore = offset + limit < total;
+
+//   return {
+//     success: true,
+//     data: newPatients,
+//     meta: {
+//       total,
+//       limit: parseInt(limit, 10),
+//       offset: parseInt(offset, 10),
+//       currentPage,
+//       totalPages,
+//       hasMore,
+//     },
+//   };
+// };
+
 const getPatientsByClinic = async (clinicId, limit = 50, offset = 0) => {
   const whereClause = { clinicId };
 
-  // Use findAndCountAll with pagination
+  // Get paginated patients WITHOUT associations first
   const { rows: patients, count: total } = await Patient.findAndCountAll({
     where: whereClause,
     attributes: [
@@ -193,28 +275,36 @@ const getPatientsByClinic = async (clinicId, limit = 50, offset = 0) => {
       'primaryDoctor',
       'referral_source',
     ],
-    include: [
-      {
-        model: Queue,
-        as: 'queues',
-        attributes: ['queueType'],
-        required: false,
-      },
-    ],
     order: [['regNo', 'DESC']],
     limit: parseInt(limit, 10),
     offset: parseInt(offset, 10),
-    subQuery: false,
+    // NO include here - just get the patients
   });
 
-  if (!patients.length && offset === 0) {
-    throw new ApiError(httpStatus.NOT_FOUND, 'No patients found for this clinic or camp.');
-  }
+  // Now get queues for these specific patients
+  const patientIds = patients.map((p) => p.id);
+  const queuesData = await Queue.findAll({
+    where: {
+      patientId: patientIds, // Adjust this field name based on your Queue model
+    },
+    attributes: ['patientId', 'queueType'],
+    raw: true,
+  });
 
-  // Process each patient to calculate billing amounts
+  // Create a map of patientId -> queues
+  const queuesMap = {};
+  queuesData.forEach((queue) => {
+    if (!queuesMap[queue.patientId]) {
+      queuesMap[queue.patientId] = [];
+    }
+    queuesMap[queue.patientId].push(queue);
+  });
+
+  // Process each patient with their queues
   const newPatients = await Promise.all(
     patients.map(async (patient) => {
-      const serviceTaken = patient.queues.map((queue) => queue.queueType);
+      const queues = queuesMap[patient.id] || [];
+      const serviceTaken = queues.map((queue) => queue.queueType);
 
       // Calculate billing for each specialty
       const dentistryBilling = await calculateDentistryBilling(patient.id);
@@ -273,7 +363,8 @@ const getSimplePatientsByClinic = async (clinicId, limit = 50, offset = 0) => {
     order: [['regNo', 'DESC']],
     limit: parseInt(limit, 10),
     offset: parseInt(offset, 10),
-    subQuery: false,
+    subQuery: false, // Change to true
+    distinct: true,
   });
 
   if (!patients.length && offset === 0) {
