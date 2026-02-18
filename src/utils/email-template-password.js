@@ -10,6 +10,9 @@ const config = require('../config/config');
 const emailSubjectBodyForPassword = (type, token) => {
   let subject, body;
   const url = `${config.client_domain}/auth/set-password/${token}`;
+  const expirationDays = config.jwt.refreshExpirationDays;
+  const dayLabel = expirationDays === 1 ? 'day' : 'days';
+
   if (type === 'resetPassword') {
     subject = 'Password Reset Request';
     body = `
@@ -18,6 +21,7 @@ const emailSubjectBodyForPassword = (type, token) => {
         <p>Dear user,</p>
         <p>We received a request to reset your password. Click the button below to reset it:</p>
         <p><a href="${url}" style="display: inline-block; padding: 10px 20px; color: #fff; background-color: #0a58b8; text-decoration: none; border-radius: 5px;">Reset Password</a></p>
+        <p>This link will be valid for ${expirationDays} ${dayLabel}.</p>
         <p>If you did not request a password reset, please ignore this email.</p>
         <p>Thank you,<br>The Support Team</p>
       </div>
@@ -30,6 +34,7 @@ const emailSubjectBodyForPassword = (type, token) => {
         <p>Dear user,</p>
         <p>Welcome! Please click the button below to set your password:</p>
         <p><a href="${url}" style="display: inline-block; padding: 10px 20px; color: #fff; background-color: #0a58b8; text-decoration: none; border-radius: 5px;">Set Password</a></p>
+        <p>This link will be valid for ${expirationDays} ${dayLabel}.</p>
         <p>If you encounter any issues, please contact our support team.</p>
         <p>Thank you,<br>The Support Team</p>
       </div>
