@@ -1,11 +1,9 @@
 const httpStatus = require('http-status');
-const fs = require('fs');
+const { Op } = require('sequelize');
 const { Clinic } = require('../models/clinic.model');
 const ApiError = require('../utils/ApiError');
 const { Specialty } = require('../models/specialty.model');
-const { Op } = require('sequelize');
 const { User } = require('../models/user.model');
-const { Role } = require('../models/role.model');
 const { Camp } = require('../models/camp.model');
 const { Appointment } = require('../models/appointment.model');
 const { Patient } = require('../models/patient.model');
@@ -83,7 +81,7 @@ const createCamp = async (campData, transaction = null) => {
  * @returns {Promise<Array>} A promise that resolves to an array of camp objects.
  */
 const getCamps = async (clinicId, status = null) => {
-  let where = { clinicId };
+  const where = { clinicId };
   if (status) {
     where.status = status;
   }
@@ -225,15 +223,13 @@ const updateCampById = async (campId, campData, transaction = null) => {
       camp.status = 'inactive';
       console.log('❌ Setting camp as INACTIVE');
     }
-  } else {
+  } else if (camp.status !== 'active' && formattedEndDate >= today) {
     // 🔹 If endDate remains the same but status is incorrect, fix it
-    if (camp.status !== 'active' && formattedEndDate >= today) {
-      camp.status = 'active';
-      console.log('✅ Setting camp as ACTIVE (fallback)');
-    } else if (camp.status !== 'inactive' && formattedEndDate < today) {
-      camp.status = 'inactive';
-      console.log('❌ Setting camp as INACTIVE (fallback)');
-    }
+    camp.status = 'active';
+    console.log('✅ Setting camp as ACTIVE (fallback)');
+  } else if (camp.status !== 'inactive' && formattedEndDate < today) {
+    camp.status = 'inactive';
+    console.log('❌ Setting camp as INACTIVE (fallback)');
   }
 
   await camp.save({ transaction });
@@ -410,11 +406,11 @@ const getCampDetails = async (campId) => {
       }, 0);
 
       const collectedGPOnlineAmount = patient.gpRecords.reduce((sum, record) => {
-        return sum + (record ? (record.onlineAmount ? Number(record.onlineAmount) : 0) : 0);
+        return sum + (record && record.onlineAmount ? Number(record.onlineAmount) : 0);
       }, 0);
 
       const collectedGPCash = patient.gpRecords.reduce((sum, record) => {
-        return sum + (record ? (record.offlineAmount ? Number(record.offlineAmount) : 0) : 0);
+        return sum + (record && record.offlineAmount ? Number(record.offlineAmount) : 0);
       }, 0);
 
       const totalGPPaidAmount = patient.gpRecords.reduce((sum, record) => {
@@ -427,17 +423,11 @@ const getCampDetails = async (campId) => {
         );
       }, 0);
 
-      const collectedMammoOnlineAmount = patient.mammography
-        ? patient.mammography.onlineAmount
-          ? Number(patient.mammography.onlineAmount)
-          : 0
-        : 0;
+      const collectedMammoOnlineAmount =
+        patient.mammography && patient.mammography.onlineAmount ? Number(patient.mammography.onlineAmount) : 0;
 
-      const collectedMammoCash = patient.mammography
-        ? patient.mammography.offlineAmount
-          ? Number(patient.mammography.offlineAmount)
-          : 0
-        : 0;
+      const collectedMammoCash =
+        patient.mammography && patient.mammography.offlineAmount ? Number(patient.mammography.offlineAmount) : 0;
 
       const totalMammoPaidAmount = patient.mammography
         ? (patient.mammography.onlineAmount ? Number(patient.mammography.onlineAmount) : 0) +
@@ -457,23 +447,22 @@ const getCampDetails = async (campId) => {
         treatmentDate: appointment ? appointment.appointmentDate : null,
         tokenNumber: queue ? queue.tokenNumber : null,
         serviceTaken: queue ? queue.queueType : null,
-        paidAmount:
-          queue && queue.queueType === 'Dentistry'
-            ? totalPaidAmount
-            : queue && queue.queueType === 'GP'
-            ? totalGPPaidAmount
-            : queue && queue.queueType === 'Mammography'
-            ? totalMammoPaidAmount
-            : null,
+        paidAmount: (() => {
+          if (queue && queue.queueType === 'Dentistry') return totalPaidAmount;
+          if (queue && queue.queueType === 'GP') return totalGPPaidAmount;
+          if (queue && queue.queueType === 'Mammography') return totalMammoPaidAmount;
+          return null;
+        })(),
         treatingDoctors: queue && queue.queueType === 'Dentistry' ? treatingDoctors : null,
-        collectedAmount:
-          queue && queue.queueType === 'Dentistry'
-            ? { onlineAmount: collectedDenistryOnlineAmount, offlineAmount: collectedDenistryCash }
-            : queue && queue.queueType === 'GP'
-            ? { onlineAmount: collectedGPOnlineAmount, offlineAmount: collectedGPCash }
-            : queue && queue.queueType === 'Mammography'
-            ? { onlineAmount: collectedMammoOnlineAmount, offlineAmount: collectedMammoCash }
-            : null,
+        collectedAmount: (() => {
+          if (queue && queue.queueType === 'Dentistry')
+            return { onlineAmount: collectedDenistryOnlineAmount, offlineAmount: collectedDenistryCash };
+          if (queue && queue.queueType === 'GP')
+            return { onlineAmount: collectedGPOnlineAmount, offlineAmount: collectedGPCash };
+          if (queue && queue.queueType === 'Mammography')
+            return { onlineAmount: collectedMammoOnlineAmount, offlineAmount: collectedMammoCash };
+          return null;
+        })(),
       };
     });
   });
@@ -611,7 +600,7 @@ const getAllCampsAnalytics = async (clinicId, startDate, endDate) => {
   let totalAttended = 0;
   let totalEarnings = 0;
 
-  let dentistryAnalytics = {
+  const dentistryAnalytics = {
     totalPatients: 0,
     totalAttended: 0,
     onlineEarnings: 0,
@@ -621,7 +610,7 @@ const getAllCampsAnalytics = async (clinicId, startDate, endDate) => {
     doctorWiseData: {},
   };
 
-  let gpAnalytics = {
+  const gpAnalytics = {
     totalPatients: 0,
     totalAttended: 0,
     onlineEarnings: 0,
@@ -629,7 +618,7 @@ const getAllCampsAnalytics = async (clinicId, startDate, endDate) => {
     totalEarnings: 0,
   };
 
-  let mammoAnalytics = {
+  const mammoAnalytics = {
     totalPatients: 0,
     totalAttended: 0,
     onlineEarnings: 0,
@@ -641,7 +630,7 @@ const getAllCampsAnalytics = async (clinicId, startDate, endDate) => {
   const campsTable = [];
 
   camps.forEach((camp) => {
-    let campRow = {
+    const campRow = {
       date: camp.startDate, // Format date as YYYY-MM-DD
       campName: camp.name,
       totalPatients: 0,
@@ -712,7 +701,7 @@ const getAllCampsAnalytics = async (clinicId, startDate, endDate) => {
 
     // Update doctorWiseData keys
     if (campDentistry.doctorWiseData) {
-      for (const [doctorName, doctorStats] of Object.entries(campDentistry.doctorWiseData)) {
+      Object.entries(campDentistry.doctorWiseData).forEach(([doctorName, doctorStats]) => {
         if (!dentistryAnalytics.doctorWiseData[doctorName]) {
           dentistryAnalytics.doctorWiseData[doctorName] = {
             patientsTreated: 0,
@@ -723,7 +712,7 @@ const getAllCampsAnalytics = async (clinicId, startDate, endDate) => {
         dentistryAnalytics.doctorWiseData[doctorName].patientsTreated += doctorStats?.patientsTreated || 0;
         dentistryAnalytics.doctorWiseData[doctorName].onlineEarnings += doctorStats?.onlineEarnings || 0;
         dentistryAnalytics.doctorWiseData[doctorName].offlineEarnings += doctorStats?.offlineEarnings || 0;
-      }
+      });
     }
 
     gpAnalytics.totalPatients += campGP.totalGPPatients;

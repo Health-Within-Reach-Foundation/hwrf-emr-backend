@@ -149,7 +149,8 @@ const generateAccessTokenOnly = async (user) => {
  * @param {string} email
  * @returns {Promise<string>}
  */
-const generatePasswordToken = async (user, type, transaction = null) => {
+const generatePasswordToken = async (userParam, type, transaction = null) => {
+  let user = userParam;
   console.log('User and typeof user-->', user.id, typeof user);
   if (typeof user === 'string') {
     // user param act as email

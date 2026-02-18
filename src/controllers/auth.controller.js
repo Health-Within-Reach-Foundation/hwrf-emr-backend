@@ -4,6 +4,7 @@ const { authService, tokenService, emailService, clinicService, userService } = 
 const { tokenTypes } = require('../config/tokens');
 const sendEmailAzure = require('../services/email.azure.service');
 const db = require('../models');
+const ApiError = require('../utils/ApiError');
 
 /**
  * Registers a new user and sends a password setup email.
@@ -217,7 +218,6 @@ const verifyEmail = catchAsync(async (req, res) => {
  * @returns {Promise<void>} - A promise that resolves when the response is sent.
  */
 const getMe = catchAsync(async (req, res) => {
-  console.log('Req from getMe function --> ', req.user.specialties);
   const user = await userService.getUserById(req.user.id); // Use service to fetch user data
 
   res.status(httpStatus.OK).json({

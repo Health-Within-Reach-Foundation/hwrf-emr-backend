@@ -9,6 +9,7 @@ const sendEmailAzure = require('./email.azure.service');
  */
 // if (config.env === 'development') {
 try {
+  // eslint-disable-next-line no-unused-vars
   const emailClient = new EmailClient(config.azure_email_connection_string);
   logger.info('✅ Azure Email Service client initialized successfully');
 } catch (error) {

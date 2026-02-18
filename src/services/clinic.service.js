@@ -1,6 +1,6 @@
 const httpStatus = require('http-status');
 const { Op } = require('sequelize');
-const { userService, emailService } = require('.');
+const { userService } = require('.');
 const { Clinic } = require('../models/clinic.model');
 const ApiError = require('../utils/ApiError');
 const { Specialty } = require('../models/specialty.model');
@@ -323,7 +323,6 @@ const onboardClinic = async (clinicData, transaction = null) => {
     state = '',
     phoneNumber = '',
     contactEmail = '',
-    website,
     specialties,
     adminName,
     adminEmail,

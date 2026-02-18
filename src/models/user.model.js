@@ -1,7 +1,5 @@
 const { DataTypes, Model, Op } = require('sequelize');
 const bcrypt = require('bcryptjs');
-const { roles, ermRoles } = require('../config/roles');
-const { Role } = require('./role.model');
 const { clinicStatus } = require('../config/constants');
 
 class User extends Model {
@@ -161,14 +159,16 @@ const initModel = (sequelize) => {
         /**
          * Hash the password before saving the user to the database
          */
-        beforeCreate: async (user) => {
-          if (user.password) {
-            user.password = await bcrypt.hash(user.password, 8);
+        beforeCreate: async (userInstance) => {
+          if (userInstance.password) {
+            // eslint-disable-next-line no-param-reassign
+            userInstance.password = await bcrypt.hash(userInstance.password, 8);
           }
         },
-        beforeUpdate: async (user) => {
-          if (user.changed('password')) {
-            user.password = await bcrypt.hash(user.password, 8);
+        beforeUpdate: async (userInstance) => {
+          if (userInstance.changed('password')) {
+            // eslint-disable-next-line no-param-reassign
+            userInstance.password = await bcrypt.hash(userInstance.password, 8);
           }
         },
       },

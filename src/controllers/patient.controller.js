@@ -1,9 +1,8 @@
 const httpStatus = require('http-status');
-const catchAsync = require('../utils/catchAsync');
-const { patientService, clinicService, appointmentService, campService } = require('../services');
-const generateRegNo = require('../utils/generate-regNo');
-const { uploadFile } = require('../utils/azure-service');
 const fs = require('fs');
+const catchAsync = require('../utils/catchAsync');
+const { patientService, clinicService, campService } = require('../services');
+const { uploadFile } = require('../utils/azure-service');
 const ApiError = require('../utils/ApiError');
 const db = require('../models');
 
@@ -27,7 +26,7 @@ const createPatient = catchAsync(async (req, res) => {
     }
 
     const lastPatient = await patientService.getLastPatientRegistered(req.user.clinicId);
-    const currentCampId = req.user.currentCampId;
+    const { currentCampId } = req.user;
 
     console.log(lastPatient);
     const registrationNumber = lastPatient?.regNo ? lastPatient?.regNo + 1 : 1;
@@ -305,7 +304,7 @@ const updateMammography = catchAsync(async (req, res) => {
     }
   }
 
-  let mammographyBody = { ...body };
+  const mammographyBody = { ...body };
 
   if (Object.keys(screeningImageFilePath).length > 0) {
     mammographyBody.screeningImage = screeningImageFilePath;
@@ -340,7 +339,7 @@ const updateMammography = catchAsync(async (req, res) => {
  * @returns {Promise<void>} - A promise that resolves when the response is sent.
  */
 const getPatientsByClinic = catchAsync(async (req, res) => {
-  const clinicId = req.user.clinicId;
+  const { clinicId } = req.user;
   const { limit = 50, offset = 0 } = req.query;
 
   const patients = await patientService.getPatientsByClinic(clinicId, parseInt(limit, 10), parseInt(offset, 10));
@@ -348,7 +347,7 @@ const getPatientsByClinic = catchAsync(async (req, res) => {
 });
 
 const getSimplePatientsByClinic = catchAsync(async (req, res) => {
-  const clinicId = req.user.clinicId;
+  const { clinicId } = req.user;
   const { limit = 50, offset = 0 } = req.query;
   const patients = await patientService.getSimplePatientsByClinic(clinicId, parseInt(limit, 10), parseInt(offset, 10));
   res.status(httpStatus.OK).json(patients);
@@ -366,7 +365,7 @@ const getSimplePatientsByClinic = catchAsync(async (req, res) => {
  * @returns {Promise<void>} - JSON with all patients and metadata
  */
 const getPatientsByClinicForExport = catchAsync(async (req, res) => {
-  const clinicId = req.user.clinicId;
+  const { clinicId } = req.user;
   // const { maxRecords = 10000 } = req.query;
 
   const patients = await patientService.getPatientsByClinicForExport(
@@ -401,7 +400,7 @@ const getPatientsByClinicForExport = catchAsync(async (req, res) => {
  * @returns {Promise<void>} - A promise that resolves when the response is sent.
  */
 const searchPatientsByClinic = catchAsync(async (req, res) => {
-  const clinicId = req.user.clinicId;
+  const { clinicId } = req.user;
   const { searchTerm = '', limit = 10, offset = 0 } = req.query;
 
   const result = await patientService.searchPatientsByClinic(
@@ -427,7 +426,7 @@ const searchPatientsByClinic = catchAsync(async (req, res) => {
  */
 const getPatientDetailsById = catchAsync(async (req, res) => {
   // console.log('user speciality ->', req.user.specialties[0]);
-  const patientId = req.params.patientId;
+  const { patientId } = req.params;
   const { specialtyId = null } = req.query;
   // const { specialtyId } = req.query;
   const patient = await patientService.getPatientDetailsById(patientId, specialtyId);
@@ -449,7 +448,7 @@ const getPatientDetailsById = catchAsync(async (req, res) => {
  * @returns {Promise<void>} - A promise that resolves when the patient details are updated.
  */
 const updatePatientDetails = catchAsync(async (req, res) => {
-  const patientId = req.params.patientId;
+  const { patientId } = req.params;
   const patientData = req.body;
 
   await patientService.updatePatientById(patientId, patientData);
@@ -484,15 +483,17 @@ const createDiagnosis = catchAsync(async (req, res) => {
   const transaction = await db.sequelize.transaction();
   try {
     const { files, body } = req;
-    // const campId = req?.user?.currentCampId || null;
+    // const { currentCampId } = req.user;
     // Extract file URLs from uploaded files, if any
     // const xrayFilePaths = files?.map((file) => file.path) || [];
     const xrayFilePaths = [];
 
     if (files && files.length > 0) {
+      // eslint-disable-next-line no-restricted-syntax
       for (const file of files) {
         try {
           const fileKey = `clinics/${req?.user?.clinicId}/xray/${body.patientId}/${Date.now()}_${file.originalname}`; // Generate unique key
+          // eslint-disable-next-line no-await-in-loop
           const uploadResult = await uploadFile(file, fileKey);
 
           if (!uploadResult.success) {
@@ -577,8 +578,6 @@ const getDiagnoses = catchAsync(async (req, res) => {
  * @returns {Promise<void>} - Returns a promise that resolves to void.
  */
 const getDiagnosis = catchAsync(async (req, res) => {
-  const { files, body } = req;
-
   const diagnosis = await patientService.getDiagnosisById(req.params.diagnosisId);
   res.status(httpStatus.OK).json({
     success: true,
@@ -614,9 +613,11 @@ const updateDiagnosis = catchAsync(async (req, res) => {
     const xrayFilePaths = [];
 
     if (files && files.length > 0) {
+      // eslint-disable-next-line no-restricted-syntax
       for (const file of files) {
         try {
           const fileKey = `clinics/${req?.user?.clinicId}/xray/${body.patientId}/${Date.now()}_${file.originalname}`; // Generate unique key
+          // eslint-disable-next-line no-await-in-loop
           const uploadResult = await uploadFile(file, fileKey);
 
           if (!uploadResult.success) {
@@ -708,9 +709,11 @@ const createTreatment = catchAsync(async (req, res) => {
   const xrayFilePaths = [];
 
   if (files && files.length > 0) {
+    // eslint-disable-next-line no-restricted-syntax
     for (const file of files) {
       try {
         const fileKey = `clinics/${req?.user?.clinicId}/xray/${body.patientId}/${Date.now()}_${file.originalname}`; // Generate unique key
+        // eslint-disable-next-line no-await-in-loop
         const uploadResult = await uploadFile(file, fileKey);
 
         if (!uploadResult.success) {
@@ -808,9 +811,11 @@ const updateTreatment = catchAsync(async (req, res) => {
     const xrayFilePaths = [];
 
     if (files && files.length > 0) {
+      // eslint-disable-next-line no-restricted-syntax
       for (const file of files) {
         try {
           const fileKey = `clinics/${req?.user?.clinicId}/xray/${body.patientId}/${Date.now()}_${file.originalname}`; // Generate unique key
+          // eslint-disable-next-line no-await-in-loop
           const uploadResult = await uploadFile(file, fileKey);
 
           if (!uploadResult.success) {

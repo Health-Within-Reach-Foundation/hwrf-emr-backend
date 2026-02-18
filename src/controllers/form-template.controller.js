@@ -119,5 +119,4 @@ module.exports = {
   getAllFormTemplates,
   updateFormTemplate,
   deleteFormTemplate,
-  getAllFormTemplates,
 };

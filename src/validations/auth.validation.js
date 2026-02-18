@@ -1,5 +1,5 @@
 const Joi = require('joi');
-const { password, role } = require('./custom.validation');
+const { password } = require('./custom.validation');
 
 /**
  * Joi validation schema for register (Superadmin register)

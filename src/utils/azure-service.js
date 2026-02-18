@@ -63,7 +63,7 @@ const uploadFile = async (file, key) => {
     const ContentType = mime.lookup(file.originalname) || 'application/octet-stream';
 
     // Upload file directly to Azure Blob Storage
-    const uploadResponse = await blockBlobClient.uploadFile(file.path, {
+    await blockBlobClient.uploadFile(file.path, {
       blobHTTPHeaders: { blobContentType: ContentType },
     });
 
@@ -146,6 +146,7 @@ const getFilesList = async (keyPath) => {
     // List blobs (non-hierarchical, flat listing)
     const blobsIterator = containerClient.listBlobsFlat({ prefix: keyPath });
 
+    // eslint-disable-next-line no-restricted-syntax
     for await (const blob of blobsIterator) {
       const name = blob.name.split('/').pop(); // Get the file name
       const type = name.split('.').pop(); // Get the file extension (type)

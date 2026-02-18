@@ -144,6 +144,7 @@ const createDiagnosis = {
   files: (files) => {
     if (!files.length) return null; // No files, validation passes
 
+    // eslint-disable-next-line no-restricted-syntax
     for (const file of files) {
       if (!['image/jpeg', 'image/png', 'application/pdf'].includes(file.mimetype)) {
         return `Invalid file type for file: ${file.originalname}. Only JPEG, PNG, or PDF files are allowed.`;
@@ -205,6 +206,7 @@ const updateDiagnosis = {
   files: (files) => {
     if (!files.length) return null; // No files, validation passes
 
+    // eslint-disable-next-line no-restricted-syntax
     for (const file of files) {
       if (!['image/jpeg', 'image/png', 'application/pdf', 'image/avif'].includes(file.mimetype)) {
         return `Invalid file type for file: ${file.originalname}. Only JPEG, PNG, or PDF files are allowed.`;
@@ -261,6 +263,7 @@ const createTreatment = {
   files: (files) => {
     if (!files.length) return null; // No files, validation passes
 
+    // eslint-disable-next-line no-restricted-syntax
     for (const file of files) {
       if (!['image/jpeg', 'image/png', 'application/pdf', 'image/avif'].includes(file.mimetype)) {
         return `Invalid file type for file: ${file.originalname}. Only JPEG, PNG, or PDF files are allowed.`;
@@ -338,6 +341,7 @@ const updateTreatment = {
   files: (files) => {
     if (!files.length) return null; // No files, validation passes
 
+    // eslint-disable-next-line no-restricted-syntax
     for (const file of files) {
       if (!['image/jpeg', 'image/png', 'application/pdf', 'image/avif'].includes(file.mimetype)) {
         return `Invalid file type for file: ${file.originalname}. Only JPEG, PNG, or PDF files are allowed.`;
@@ -459,6 +463,7 @@ const createMammography = {
   files: (files) => {
     if (!files.length) return null; // No files, validation passes
 
+    // eslint-disable-next-line no-restricted-syntax
     for (const file of files) {
       // Check if the file is of an allowed type
       if (
@@ -589,6 +594,7 @@ const updateMammography = {
   files: (files) => {
     if (!files.length) return null; // No files, validation passes
 
+    // eslint-disable-next-line no-restricted-syntax
     for (const file of files) {
       // Check if the file is of an allowed type
       if (

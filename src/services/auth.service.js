@@ -69,16 +69,14 @@ const refreshAuth = async (refreshToken, accessToken) => {
       }
       const res = await tokenService.generateAccessTokenOnly(user, refreshToken);
       return res;
-    } else {
-      const refreshTokenDoc = await tokenService.verifyToken(refreshToken, tokenTypes.REFRESH);
-      console.group('*Expired refresh token');
-      const user = await userService.getSimpleUserById(refreshTokenDoc.userId);
-      user.currentCampId = null;
-      await user.save();
-      await refreshTokenDoc.destroy({ force: true });
-      // const res = await tokenService.generateAuthTokens(user);
-      return { access: { token: null }, refresh: { token: null } };
     }
+    console.group('*Expired refresh token');
+    const user = await userService.getSimpleUserById(refreshTokenDoc.userId);
+    user.currentCampId = null;
+    await user.save();
+    await refreshTokenDoc.destroy({ force: true });
+    // const res = await tokenService.generateAuthTokens(user);
+    return { access: { token: null }, refresh: { token: null } };
   } catch (error) {
     console.error('error in auth service line 65: ', error);
     // throw new ApiError(httpStatus.UNAUTHORIZED, 'Please authenticate');

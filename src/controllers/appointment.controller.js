@@ -74,7 +74,7 @@ const updateAppointment = catchAsync(async (req, res) => {
 const getAppointments = catchAsync(async (req, res) => {
   const queryOptions = req.query; // Query parameters from request
   const campId = req.user.currentCampId;
-  const clinicId = req.user.clinicId;
+  const { clinicId } = req.user;
   const appointments = await appointmentService.getAppointments(queryOptions, clinicId, campId);
 
   res.status(httpStatus.OK).json({

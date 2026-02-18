@@ -1,5 +1,4 @@
-const config = require('../config/config.js');
-const transporter = require('../config/mail.js');
+const transporter = require('../config/mail');
 
 /**
  * Sends an email using Azure's email service.
@@ -10,9 +9,9 @@ const transporter = require('../config/mail.js');
  * @param {Object[]} [attachment] - An optional array of attachment objects.
  * @returns {Promise<boolean>} - Returns a promise that resolves to true if the email was sent successfully, otherwise false.
  */
-const sendEmailAzure = async (receivers_email, subject, message, attachment) => {
-  // Validate the receivers_email to ensure it's not empty
-  if (!receivers_email || (Array.isArray(receivers_email) && receivers_email.length === 0)) {
+const sendEmailAzure = async (receiversEmail, subject, message, attachment) => {
+  // Validate the receiversEmail to ensure it's not empty
+  if (!receiversEmail || (Array.isArray(receiversEmail) && receiversEmail.length === 0)) {
     console.error('Invalid receiver email address');
     return false;
   }
@@ -20,10 +19,10 @@ const sendEmailAzure = async (receivers_email, subject, message, attachment) => 
   // Construct the attachments array conditionally
   const attachments = attachment || [];
 
-  // Ensure receivers_email is an array of objects for Azure SDK
-  const recipients = Array.isArray(receivers_email)
-    ? receivers_email.map((email) => ({ address: email })) // Multiple recipients
-    : [{ address: receivers_email }]; // Single recipient
+  // Ensure receiversEmail is an array of objects for Azure SDK
+  const recipients = Array.isArray(receiversEmail)
+    ? receiversEmail.map((email) => ({ address: email })) // Multiple recipients
+    : [{ address: receiversEmail }]; // Single recipient
 
   // Construct the email message using Azure's email service
   const emailMessage = {
@@ -42,7 +41,7 @@ const sendEmailAzure = async (receivers_email, subject, message, attachment) => 
   try {
     // Send the email using the Azure SDK's beginSend method
     const sendResult = await transporter.beginSend(emailMessage); // Using beginSend
-    console.log('Mail sent to', receivers_email, 'as', message);
+    console.log('Mail sent to', receiversEmail, 'as', message);
     console.log('Mail sent API function call completed', new Date());
     return !!sendResult; // Check if messageId exists in the response
   } catch (error) {

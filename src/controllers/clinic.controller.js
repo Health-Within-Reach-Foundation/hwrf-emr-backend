@@ -1,14 +1,7 @@
 const httpStatus = require('http-status');
 const { Op } = require('sequelize');
 const catchAsync = require('../utils/catchAsync');
-const {
-  clinicService,
-  userService,
-  tokenService,
-  emailService,
-  formFieldsService,
-  whatsappCommunicationService,
-} = require('../services');
+const { clinicService, userService, tokenService, formFieldsService, whatsappCommunicationService } = require('../services');
 const { getAllFormTemplates, createFormTemplate } = require('../services/form-template.service');
 const { bulkCreateRole } = require('../services/role-permission.service');
 const { Permission } = require('../models/permission.model');
@@ -67,10 +60,12 @@ const approveClinic = catchAsync(async (req, res) => {
     const predefinedTemplates = await getAllFormTemplates(null);
 
     if (predefinedTemplates && Array.isArray(predefinedTemplates)) {
+      // eslint-disable-next-line no-restricted-syntax
       for (const formTemplate of predefinedTemplates) {
         const { dataValues } = formTemplate; // Extract the actual data
         const { id, clinicId, createdAt, updatedAt, ...templateData } = dataValues; // Remove clinicId from dataValues
         console.log('Replicating template with new clinicId...');
+        // eslint-disable-next-line no-await-in-loop
         await createFormTemplate({ ...templateData, clinicId: clinicResponse.id }, transaction);
       }
     } else {
@@ -82,10 +77,12 @@ const approveClinic = catchAsync(async (req, res) => {
     const preDefinedFormFields = await formFieldsService.getAllFormFields(null);
 
     if (preDefinedFormFields && Array.isArray(preDefinedFormFields)) {
+      // eslint-disable-next-line no-restricted-syntax
       for (const formField of preDefinedFormFields) {
         const { dataValues } = formField;
         const { id, clinicId, createdAt, updatedAt, ...fieldData } = dataValues;
         console.log('Replicating form field with new clinicId...');
+        // eslint-disable-next-line no-await-in-loop
         await formFieldsService.createFormFields(clinicResponse.id, { ...fieldData }, transaction);
       }
     }
