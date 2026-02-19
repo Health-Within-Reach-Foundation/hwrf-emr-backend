@@ -1,10 +1,12 @@
 const httpStatus = require('http-status');
 const fs = require('fs');
+const XLSX = require('xlsx');
 const catchAsync = require('../utils/catchAsync');
-const { patientService, clinicService, campService } = require('../services');
+const { patientService, clinicService, campService, emailService } = require('../services');
 const { uploadFile } = require('../utils/azure-service');
 const ApiError = require('../utils/ApiError');
 const db = require('../models');
+const logger = require('../config/logger');
 
 /**
  * Create a new patient.
@@ -365,22 +367,91 @@ const getSimplePatientsByClinic = catchAsync(async (req, res) => {
  * @returns {Promise<void>} - JSON with all patients and metadata
  */
 const getPatientsByClinicForExport = catchAsync(async (req, res) => {
-  const { clinicId } = req.user;
-  // const { maxRecords = 10000 } = req.query;
+  const { clinicId, email } = req.user;
 
-  const patients = await patientService.getPatientsByClinicForExport(
-    clinicId
-    // parseInt(maxRecords, 10)
-  );
-
-  // Set response headers for file download context
-  res.set({
-    'Content-Type': 'application/json',
-    'X-Export-Timestamp': new Date().toISOString(),
-    'X-Export-Records': patients.meta.exported,
+  // ── Respond immediately so the client is not left waiting ──────────────────
+  res.status(httpStatus.ACCEPTED).json({
+    success: true,
+    message: `Your export is being prepared. You will receive an email at ${email} with the Excel attachment shortly.`,
   });
 
-  res.status(httpStatus.OK).json(patients);
+  // ── All heavy work runs in the background after the response is flushed ────
+  setImmediate(async () => {
+    const timestamp = new Date().toISOString().split('T')[0];
+    const filename = `patients_export_${timestamp}.xlsx`;
+
+    try {
+      logger.info(`[Export] Starting background export for clinicId=${clinicId}, recipient=${email}`);
+
+      // 1. Fetch all patients
+      const patients = await patientService.getPatientsByClinicForExport(clinicId);
+
+      // 2. Helper: format registration number
+      const getFormattedRegNo = (patient) => {
+        if (!patient?.createdAt) return `HWRF/--/${patient.regNo}`;
+        const createdAt = new Date(patient.createdAt);
+        const year = createdAt.getFullYear() % 100;
+        const month = createdAt.getMonth() + 1;
+        let financialYear;
+        if (month > 3) {
+          financialYear = `${String(year).padStart(2, '0')}-${String(year + 1).padStart(2, '0')}`;
+        } else {
+          financialYear = `${String(year - 1).padStart(2, '0')}-${String(year).padStart(2, '0')}`;
+        }
+        return `HWRF/${financialYear}/${patient.regNo}`;
+      };
+
+      // 3. Build Excel rows
+      const headers = [
+        'Register No',
+        'Name',
+        'Age',
+        'Gender',
+        'Mobile',
+        'Address',
+        'Service Taken',
+        'Cash Paid (In \u20b9)',
+        'Online Paid Amount (In \u20b9)',
+        'Total Paid Amount (In \u20b9)',
+        'Referral Source',
+      ];
+
+      const rows = patients.data.map((p) => [
+        getFormattedRegNo(p),
+        p.name || '',
+        p.age || '',
+        p.sex || '',
+        p.mobile || '',
+        p.address || '',
+        Array.isArray(p.serviceTaken) ? p.serviceTaken.join(', ') : '-',
+        p.onlinePaid || 0,
+        p.offlinePaid || 0,
+        p.total || 0,
+        p.referral_source || '',
+      ]);
+
+      // 4. Generate Excel workbook
+      const worksheet = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Patients');
+      const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'buffer' });
+
+      logger.info(`[Export] Excel generated: ${rows.length} rows, ${excelBuffer.length} bytes — sending to ${email}`);
+
+      // 5. Email the file
+      const sent = await emailService.sendExcelExportEmail(email, excelBuffer, filename);
+
+      if (sent) {
+        logger.info(`[Export] ✅ Excel emailed successfully to ${email}`);
+      } else {
+        logger.warn(`[Export] ⚠️  Email delivery failed for ${email}. The file was generated but not delivered.`);
+      }
+    } catch (err) {
+      logger.error(`[Export] ❌ Background export failed for clinicId=${clinicId}, recipient=${email}: ${err.message}`, {
+        stack: err.stack,
+      });
+    }
+  });
 });
 
 /**

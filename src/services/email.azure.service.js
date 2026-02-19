@@ -1,53 +1,114 @@
 const transporter = require('../config/mail');
+const logger = require('../config/logger');
+
+const MAX_RETRIES = 3;
+
+/**
+ * Internal recursive helper — attempts to send via Azure and retries on transient failures.
+ *
+ * @param {Object} emailMessage - The Azure email message payload.
+ * @param {string|string[]} receiversEmail - For logging purposes.
+ * @param {number} attempt - Current attempt number (1-based).
+ * @returns {Promise<boolean>}
+ */
+const attemptSend = async (emailMessage, receiversEmail, attempt) => {
+  logger.info(`sendEmailAzure: Attempt ${attempt}/${MAX_RETRIES} — sending to ${JSON.stringify(receiversEmail)}`);
+
+  try {
+    // beginSend returns a poller; pollUntilDone() drives it to completion.
+    const poller = await transporter.beginSend(emailMessage);
+    const result = await poller.pollUntilDone();
+
+    logger.info(`sendEmailAzure: Delivery status = ${result?.status}, messageId = ${result?.id}`);
+
+    if (result?.error) {
+      const errCode = result.error?.code || '';
+      const errMsg = result.error?.message || String(result.error);
+
+      // Suppression — Azure has blocked this recipient. Retrying won't help.
+      if (errCode.includes('Suppressed') || errMsg.includes('Suppressed')) {
+        logger.warn(
+          `sendEmailAzure: Recipient suppressed by Azure (${errCode}). ` +
+            `Remove the address from the Azure Communication Services suppression list ` +
+            `in the portal. Recipient: ${JSON.stringify(receiversEmail)}`
+        );
+        return false;
+      }
+
+      // Transient delivery error — retry if attempts remain.
+      logger.error(`sendEmailAzure: Delivery error on attempt ${attempt}: [${errCode}] ${errMsg}`);
+      if (attempt < MAX_RETRIES) {
+        await new Promise((resolve) => {
+          setTimeout(resolve, 1500 * attempt);
+        });
+        return attemptSend(emailMessage, receiversEmail, attempt + 1);
+      }
+      return false;
+    }
+
+    logger.info(
+      `sendEmailAzure: Email successfully sent to ${JSON.stringify(receiversEmail)} at ${new Date().toISOString()}`
+    );
+    return true;
+  } catch (error) {
+    const errMsg = error?.message || String(error);
+
+    // Suppression surfaces as a thrown exception too.
+    if (errMsg.includes('Suppressed')) {
+      logger.warn(
+        `sendEmailAzure: Recipient suppressed by Azure. ` +
+          `Remove the address from the Azure Communication Services suppression list ` +
+          `in the portal. Recipient: ${JSON.stringify(receiversEmail)} | Error: ${errMsg}`
+      );
+      return false;
+    }
+
+    logger.error(`sendEmailAzure: Exception on attempt ${attempt}: ${errMsg}`);
+    if (attempt < MAX_RETRIES) {
+      await new Promise((resolve) => {
+        setTimeout(resolve, 1500 * attempt);
+      });
+      return attemptSend(emailMessage, receiversEmail, attempt + 1);
+    }
+  }
+
+  logger.error(`sendEmailAzure: All ${MAX_RETRIES} attempts failed for ${JSON.stringify(receiversEmail)}`);
+  return false;
+};
 
 /**
  * Sends an email using Azure's email service.
  *
- * @param {string|string[]} receivers_email - The email address or an array of email addresses of the recipients.
- * @param {string} subject - The subject of the email.
- * @param {string} message - The plain text or HTML body of the email.
- * @param {Object[]} [attachment] - An optional array of attachment objects.
- * @returns {Promise<boolean>} - Returns a promise that resolves to true if the email was sent successfully, otherwise false.
+ * @param {string|string[]} receiversEmail - Recipient email address(es).
+ * @param {string} subject - Email subject.
+ * @param {string} message - Plain text / HTML body.
+ * @param {Object[]} [attachment] - Optional attachments array.
+ * @returns {Promise<boolean>} - true if delivered successfully, false otherwise.
  */
 const sendEmailAzure = async (receiversEmail, subject, message, attachment) => {
-  // Validate the receiversEmail to ensure it's not empty
   if (!receiversEmail || (Array.isArray(receiversEmail) && receiversEmail.length === 0)) {
-    console.error('Invalid receiver email address');
+    logger.error('sendEmailAzure: Invalid or empty receiver email address');
     return false;
   }
 
-  // Construct the attachments array conditionally
   const attachments = attachment || [];
 
-  // Ensure receiversEmail is an array of objects for Azure SDK
   const recipients = Array.isArray(receiversEmail)
-    ? receiversEmail.map((email) => ({ address: email })) // Multiple recipients
-    : [{ address: receiversEmail }]; // Single recipient
+    ? receiversEmail.map((email) => ({ address: email }))
+    : [{ address: receiversEmail }];
 
-  // Construct the email message using Azure's email service
   const emailMessage = {
-    senderAddress: process.env.MAIL_ALIAS_USER, // The sender email address
+    senderAddress: process.env.MAIL_ALIAS_USER,
     content: {
-      subject: subject || 'No Subject', // Email subject (fallback to "No Subject")
-      plainText: message || ' ', // Plain text body of the email
-      html: message || '<p>No message provided</p>', // HTML body of the email (fallback message)
+      subject: subject || 'No Subject',
+      plainText: message || ' ',
+      html: message || '<p>No message provided</p>',
     },
-    recipients: {
-      to: recipients, // Ensure the recipients are formatted correctly
-    },
-    attachments: attachments.length > 0 ? attachments : undefined, // Attachments if any
+    recipients: { to: recipients },
+    attachments: attachments.length > 0 ? attachments : undefined,
   };
 
-  try {
-    // Send the email using the Azure SDK's beginSend method
-    const sendResult = await transporter.beginSend(emailMessage); // Using beginSend
-    console.log('Mail sent to', receiversEmail, 'as', message);
-    console.log('Mail sent API function call completed', new Date());
-    return !!sendResult; // Check if messageId exists in the response
-  } catch (error) {
-    console.error('Error sending email:', error);
-    return false; // Return false in case of error
-  }
+  return attemptSend(emailMessage, receiversEmail, 1);
 };
 
 module.exports = sendEmailAzure;

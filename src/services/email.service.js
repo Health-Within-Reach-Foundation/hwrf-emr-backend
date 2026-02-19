@@ -97,8 +97,38 @@ const sendClinicOnboardingNotification = async (clinicDetails) => {
   await sendEmailAzure(config.superadmin_email, subject, text);
 };
 
+/**
+ * Send patient export Excel file via email
+ * @param {string} to - Recipient email address
+ * @param {Buffer} excelBuffer - Excel file buffer
+ * @param {string} filename - Name for the attachment file
+ * @returns {Promise}
+ */
+const sendExcelExportEmail = async (to, excelBuffer, filename) => {
+  const subject = 'Patient Export Report';
+  const body = `
+    <p>Dear User,</p>
+    <p>Your patient export report has been generated successfully.</p>
+    <p>Please find the attached Excel file: <strong>${filename}</strong></p>
+    <p>This report was generated on ${new Date().toLocaleString()}.</p>
+    <br/>
+    <p>Regards,<br/>HWRF EMR Team</p>
+  `;
+
+  const attachment = [
+    {
+      name: filename,
+      contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      contentInBase64: excelBuffer.toString('base64'),
+    },
+  ];
+
+  return sendEmailAzure(to, subject, body, attachment);
+};
+
 module.exports = {
   sendPasswordEmail,
   sendVerificationEmail,
   sendClinicOnboardingNotification,
+  sendExcelExportEmail,
 };
