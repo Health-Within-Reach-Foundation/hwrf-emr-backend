@@ -577,14 +577,14 @@ const getAllCampsAnalytics = async (clinicId, startDate, endDate) => {
             model: Mammography,
             where: { campId: { [Op.in]: campIds } }, // Filter appointments by camp IDs
             as: 'mammography',
-            attributes: ['id', 'createdAt', 'onlineAmount', 'offlineAmount'],
+            attributes: ['id', 'createdAt', 'onlineAmount', 'offlineAmount', 'campId'],
             required: false,
           },
           {
             model: GeneralPhysicianRecord,
             where: { campId: { [Op.in]: campIds } }, // Filter appointments by camp IDs
             as: 'gpRecords',
-            attributes: ['id', 'createdAt', 'onlineAmount', 'offlineAmount'],
+            attributes: ['id', 'createdAt', 'onlineAmount', 'offlineAmount', 'campId'],
             required: false,
           },
         ],
