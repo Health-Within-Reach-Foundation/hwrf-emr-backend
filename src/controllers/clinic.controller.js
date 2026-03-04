@@ -1,16 +1,9 @@
 const httpStatus = require('http-status');
+const { Op } = require('sequelize');
 const catchAsync = require('../utils/catchAsync');
-const {
-  clinicService,
-  userService,
-  tokenService,
-  emailService,
-  formFieldsService,
-  whatsappCommunicationService,
-} = require('../services');
+const { clinicService, userService, tokenService, formFieldsService, whatsappCommunicationService } = require('../services');
 const { getAllFormTemplates, createFormTemplate } = require('../services/form-template.service');
 const { bulkCreateRole } = require('../services/role-permission.service');
-const { Op } = require('sequelize');
 const { Permission } = require('../models/permission.model');
 const { tokenTypes } = require('../config/tokens');
 const config = require('../config/config');
@@ -67,10 +60,12 @@ const approveClinic = catchAsync(async (req, res) => {
     const predefinedTemplates = await getAllFormTemplates(null);
 
     if (predefinedTemplates && Array.isArray(predefinedTemplates)) {
+      // eslint-disable-next-line no-restricted-syntax
       for (const formTemplate of predefinedTemplates) {
         const { dataValues } = formTemplate; // Extract the actual data
         const { id, clinicId, createdAt, updatedAt, ...templateData } = dataValues; // Remove clinicId from dataValues
         console.log('Replicating template with new clinicId...');
+        // eslint-disable-next-line no-await-in-loop
         await createFormTemplate({ ...templateData, clinicId: clinicResponse.id }, transaction);
       }
     } else {
@@ -82,10 +77,12 @@ const approveClinic = catchAsync(async (req, res) => {
     const preDefinedFormFields = await formFieldsService.getAllFormFields(null);
 
     if (preDefinedFormFields && Array.isArray(preDefinedFormFields)) {
+      // eslint-disable-next-line no-restricted-syntax
       for (const formField of preDefinedFormFields) {
         const { dataValues } = formField;
         const { id, clinicId, createdAt, updatedAt, ...fieldData } = dataValues;
         console.log('Replicating form field with new clinicId...');
+        // eslint-disable-next-line no-await-in-loop
         await formFieldsService.createFormFields(clinicResponse.id, { ...fieldData }, transaction);
       }
     }
@@ -176,7 +173,7 @@ The HWRF Team`;
  */
 const getUsersByClinic = catchAsync(async (req, res) => {
   // Extract clinicId from the logged-in admin's session or token
-  const clinicId = req.user.clinicId;
+  const { clinicId } = req.user;
   console.log('Checking the getUSersByClinic controller');
   // Fetch users from the service
   const users = await userService.getUsersByClinic(clinicId);
@@ -190,7 +187,7 @@ const getUsersByClinic = catchAsync(async (req, res) => {
 });
 
 const getSpecialtyDepartmentsByClinic = catchAsync(async (req, res) => {
-  const clinicId = req.user.clinicId;
+  const { clinicId } = req.user;
 
   const departments = await clinicService.getSpecialtyDepartmentsByClinic(clinicId);
 
@@ -220,7 +217,7 @@ const updateClinicById = catchAsync(async (req, res) => {
 });
 
 const getFileByKey = catchAsync(async (req, res) => {
-  const key = req.query.key;
+  const { key } = req.query;
 
   console.log('Key --.', key);
 
@@ -261,7 +258,11 @@ const sendBroadcastMessage = catchAsync(async (req, res) => {
       return res.status(400).json({ error: 'Template name is required' });
     }
 
-    const response = await whatsappCommunicationService.broadcastWhatsAppMessage(phoneNumbers, templateName, templateVariables);
+    const response = await whatsappCommunicationService.broadcastWhatsAppMessage(
+      phoneNumbers,
+      templateName,
+      templateVariables
+    );
     res.status(200).json({ success: true, response });
   } catch (error) {
     res.status(500).json({ error: error.message });

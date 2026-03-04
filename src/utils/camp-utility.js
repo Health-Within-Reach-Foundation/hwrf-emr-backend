@@ -90,7 +90,7 @@ const calculateDentistryAnalytics = (patients) => {
                 // console.log('crownStatus true:', ts.crownStatus);
                 // console.log('onlineAmount:', ts.onlineAmount);
                 // console.log('offlineAmount:', ts.offlineAmount);
-                tSum += Number(ts.onlineAmount || 0) + Number(ts.offlineAmount || 0);
+                return tSum + Number(ts.onlineAmount || 0) + Number(ts.offlineAmount || 0);
               }
               // console.log('tSum:', tSum);
               return tSum;

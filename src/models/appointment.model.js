@@ -9,21 +9,18 @@ class Appointment extends Model {
     // Each Appointment belongs to a Patient
     Appointment.belongsTo(models.Patient, { foreignKey: 'patientId', as: 'patient' });
 
-  
     // Each Appointment belongs to a Clinic
     Appointment.belongsTo(models.Clinic, { foreignKey: 'clinicId', as: 'clinic' });
 
-     
     //  Appointment.hasMany(models.Diagnosis, { foreignKey: 'appointmentId', as: 'diagnoses' });
-     
-     // An appointment belongs to one specialty
+
+    // An appointment belongs to one specialty
     Appointment.belongsTo(models.Specialty, { foreignKey: 'specialtyId', as: 'specialty' });
 
     Appointment.belongsTo(models.Camp, {
       foreignKey: 'campId',
       as: 'camp',
     });
-
   }
 }
 

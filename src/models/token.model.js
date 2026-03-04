@@ -1,7 +1,6 @@
 const { DataTypes, Model } = require('sequelize');
 const { tokenTypes } = require('../config/tokens');
 
-
 class Token extends Model {
   static associate(models) {
     Token.belongsTo(models.User, {

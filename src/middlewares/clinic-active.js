@@ -27,23 +27,24 @@ const isClinicActive = async (req, res, next) => {
     // Check if the user's clinic exists and is active
     if (user.clinic.status === 'active' && user.status === 'active') {
       return next();
-    } else if (user.clinic.status === 'pending') {
+    }
+    if (user.clinic.status === 'pending') {
       console.log('inside pending condition -->');
       return res.status(httpStatus.UNAUTHORIZED).json({
         success: false,
         message: 'Unable to access your account. The clinic is awaiting approval',
       });
-    } else if (user.status !== 'active') {
+    }
+    if (user.status !== 'active') {
       return res.status(httpStatus.UNAUTHORIZED).json({
         success: false,
         message: 'Unable to access your account. Your account is inactive',
       });
-    } else {
-      return res.status(httpStatus.UNAUTHORIZED).json({
-        success: false,
-        message: 'Unauthorized or account inactive',
-      });
     }
+    return res.status(httpStatus.UNAUTHORIZED).json({
+      success: false,
+      message: 'Unauthorized or account inactive',
+    });
   } catch (err) {
     console.error('/auth/login - middleware - isClinicActive - error: ', err);
     return next(new ApiError(httpStatus.UNAUTHORIZED, err.message));

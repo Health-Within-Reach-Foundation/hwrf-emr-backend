@@ -48,7 +48,7 @@ const initModel = (sequelize) => {
       departmentName: {
         type: DataTypes.STRING,
         allowNull: true,
-      }
+      },
     },
     {
       sequelize,

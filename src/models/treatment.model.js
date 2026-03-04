@@ -58,7 +58,7 @@ const initModel = (sequelize) => {
         defaultValue: 'pending',
       },
       status: {
-        type: DataTypes.ENUM('started', 'completed','not started'),
+        type: DataTypes.ENUM('started', 'completed', 'not started'),
         defaultValue: 'started',
       },
       diagnosisId: {

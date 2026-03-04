@@ -106,10 +106,10 @@ const verifyAccessToken = async (token) => {
  * @returns {Promise<Object>}
  */
 const generateAuthTokens = async (user) => {
-  const accessTokenExpires = moment().add(config.jwt.accessExpirationMinutes, 'hours');
+  const accessTokenExpires = moment().add(config.jwt.accessExpirationMinutes, 'minutes');
   const accessToken = generateToken(user.id, accessTokenExpires, tokenTypes.ACCESS);
 
-  const refreshTokenExpires = moment().add(config.jwt.refreshExpirationDays, 'minutes');
+  const refreshTokenExpires = moment().add(config.jwt.refreshExpirationDays, 'days');
   const refreshToken = generateToken(user.id, refreshTokenExpires, tokenTypes.REFRESH);
   await saveToken(refreshToken, user.id, refreshTokenExpires, tokenTypes.REFRESH);
 
@@ -149,7 +149,8 @@ const generateAccessTokenOnly = async (user) => {
  * @param {string} email
  * @returns {Promise<string>}
  */
-const generatePasswordToken = async (user, type, transaction = null) => {
+const generatePasswordToken = async (userParam, type, transaction = null) => {
+  let user = userParam;
   console.log('User and typeof user-->', user.id, typeof user);
   if (typeof user === 'string') {
     // user param act as email
@@ -159,7 +160,7 @@ const generatePasswordToken = async (user, type, transaction = null) => {
   if (!user && typeof user !== 'string') {
     throw new ApiError(httpStatus.NOT_FOUND, 'No users found with this email');
   }
-  const expires = moment().add(config.jwt.accessExpirationMinutes, 'days');
+  const expires = moment().add(config.jwt.refreshExpirationDays, 'days');
   console.log('Expired in -->', expires);
   const passwordToken = generateToken(user.id, expires, type);
   await saveToken(passwordToken, user.id, expires, type, false, transaction);

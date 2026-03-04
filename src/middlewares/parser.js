@@ -16,7 +16,7 @@
 const parseArrayFields = (fields) => (req, res, next) => {
   try {
     fields.forEach((field) => {
-      console.log("parsing key --> ", field);
+      console.log('parsing key --> ', field);
       if (req.body[field] && typeof req.body[field] === 'string') {
         req.body[field] = JSON.parse(req.body[field]);
       }

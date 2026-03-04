@@ -1,5 +1,5 @@
 const Joi = require('joi');
-const { password, clinicStatusValidation } = require('./custom.validation');
+const { clinicStatusValidation } = require('./custom.validation');
 
 /**
  * Validation schema for onboarding a clinic.

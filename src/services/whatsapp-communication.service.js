@@ -1,4 +1,5 @@
 // whatsappService.js - Service to send WhatsApp messages
+// eslint-disable-next-line import/no-extraneous-dependencies
 const axios = require('axios');
 const config = require('../config/config');
 

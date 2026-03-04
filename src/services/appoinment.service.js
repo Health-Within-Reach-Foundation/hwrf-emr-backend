@@ -8,100 +8,6 @@ const { Camp } = require('../models/camp.model');
 const { patientService } = require('.');
 
 /**
- * Books an appointment for a patient.
- *
- * @param {Object} appointmentBody - The body of the appointment request.
- * @param {string} appointmentBody.patientId - The ID of the patient.
- * @param {Array<number>} appointmentBody.specialties - The list of specialty IDs for the appointment.
- * @param {Date} appointmentBody.appointmentDate - The date of the appointment.
- * @param {string} appointmentBody.status - The status of the appointment.
- * @param {string} [appointmentBody.clinicId] - The ID of the clinic.
- * @param {string} [appointmentBody.campId] - The ID of the camp (optional).
- * @returns {Promise<Array<Object>>} - A promise that resolves to an array of created appointment objects.
- * @throws {ApiError} - Throws an error if the patient is not found or if an appointment already exists.
- */
-const bookAppointment = async (appointmentBody, transaction = null) => {
-  const { patientId, specialties, appointmentDate, status, clinicId, campId } = appointmentBody;
-
-  if (campId) {
-    // Step 1: Check if the patient is already associated with the camp
-    const camp = await Camp.findByPk(campId, {
-      include: {
-        model: Patient,
-        as: 'patients',
-        where: { id: patientId },
-        required: false, // Do not enforce join condition
-      },
-    });
-
-    if (!camp || camp.patients.length === 0) {
-      console.log(`⛺ Patient ${patientId} is NOT associated with Camp ${campId}, adding now...`);
-
-      const patient = await patientService.getPatientById(patientId);
-
-      if (!patient) {
-        throw new ApiError(httpStatus.NOT_FOUND, 'Patient not found');
-      }
-
-      // Step 2: Associate the patient with the camp
-      await camp.addPatient(patient, { transaction });
-      console.log(`✅ Patient ${patientId} successfully associated with Camp ${campId}`);
-    }
-  }
-
-  console.log('Received appointmentDate (Raw) -->', appointmentDate, typeof appointmentDate);
-
-  const formattedDate = appointmentDate.toISOString().split('T')[0]; // No need to format, it's already "YYYY-MM-DD"
-
-  console.log('Formatted appointmentDate for DB -->', formattedDate);
-
-  const createdAppointments = [];
-
-  for (const specialty of specialties) {
-    const existingAppointment = await Appointment.findOne({
-      where: { patientId, specialtyId: specialty, appointmentDate: formattedDate, campId },
-    });
-
-    if (existingAppointment) {
-      throw new ApiError(httpStatus.BAD_REQUEST, `Already added into queue.`);
-    }
-
-    // Create a new appointment
-    const appointment = await Appointment.create(
-      {
-        patientId,
-        specialtyId: specialty,
-        clinicId,
-        appointmentDate: formattedDate, // Store formatted date
-        status,
-        campId: campId || null, // Handle null campId explicitly
-      },
-      { transaction }
-    );
-
-    createdAppointments.push(appointment);
-
-    // Compare dates correctly
-    const today = new Date().toLocaleDateString('en-CA'); // Ensure today's date is correct
-
-    console.log(
-      today,
-      'today date is matching with formateed Date -->',
-      today === formattedDate,
-      typeof formattedDate,
-      typeof today,
-      today
-    );
-    if (formattedDate == today) {
-      console.log(`Adding to queue for specialty (${specialty}) and camp (${campId || 'No Camp'})`);
-      await addToQueue(patientId, specialty, formattedDate, clinicId, campId, transaction);
-    }
-  }
-
-  return createdAppointments;
-};
-
-/**
  * Adds a patient to the queue for a specific specialty, clinic, and camp on a given date.
  *
  * @async
@@ -160,6 +66,104 @@ const addToQueue = async (patientId, specialtyId, queueDate, clinicId, campId, t
 };
 
 /**
+ * Books an appointment for a patient.
+ *
+ * @param {Object} appointmentBody - The body of the appointment request.
+ * @param {string} appointmentBody.patientId - The ID of the patient.
+ * @param {Array<number>} appointmentBody.specialties - The list of specialty IDs for the appointment.
+ * @param {Date} appointmentBody.appointmentDate - The date of the appointment.
+ * @param {string} appointmentBody.status - The status of the appointment.
+ * @param {string} [appointmentBody.clinicId] - The ID of the clinic.
+ * @param {string} [appointmentBody.campId] - The ID of the camp (optional).
+ * @returns {Promise<Array<Object>>} - A promise that resolves to an array of created appointment objects.
+ * @throws {ApiError} - Throws an error if the patient is not found or if an appointment already exists.
+ */
+const bookAppointment = async (appointmentBody, transaction = null) => {
+  const { patientId, specialties, appointmentDate, status, clinicId, campId } = appointmentBody;
+
+  if (campId) {
+    // Step 1: Check if the patient is already associated with the camp
+    const camp = await Camp.findByPk(campId, {
+      include: {
+        model: Patient,
+        as: 'patients',
+        where: { id: patientId },
+        required: false, // Do not enforce join condition
+      },
+    });
+
+    if (!camp || camp.patients.length === 0) {
+      console.log(`⛺ Patient ${patientId} is NOT associated with Camp ${campId}, adding now...`);
+
+      const patient = await patientService.getPatientById(patientId);
+
+      if (!patient) {
+        throw new ApiError(httpStatus.NOT_FOUND, 'Patient not found');
+      }
+
+      // Step 2: Associate the patient with the camp
+      await camp.addPatient(patient, { transaction });
+      console.log(`✅ Patient ${patientId} successfully associated with Camp ${campId}`);
+    }
+  }
+
+  console.log('Received appointmentDate (Raw) -->', appointmentDate, typeof appointmentDate);
+
+  const formattedDate = appointmentDate.toISOString().split('T')[0]; // No need to format, it's already "YYYY-MM-DD"
+
+  console.log('Formatted appointmentDate for DB -->', formattedDate);
+
+  const createdAppointments = [];
+
+  // eslint-disable-next-line no-restricted-syntax
+  for (const specialty of specialties) {
+    // eslint-disable-next-line no-await-in-loop
+    const existingAppointment = await Appointment.findOne({
+      where: { patientId, specialtyId: specialty, appointmentDate: formattedDate, campId },
+    });
+
+    if (existingAppointment) {
+      throw new ApiError(httpStatus.BAD_REQUEST, `Already added into queue.`);
+    }
+
+    // Create a new appointment
+    // eslint-disable-next-line no-await-in-loop
+    const appointment = await Appointment.create(
+      {
+        patientId,
+        specialtyId: specialty,
+        clinicId,
+        appointmentDate: formattedDate, // Store formatted date
+        status,
+        campId: campId || null, // Handle null campId explicitly
+      },
+      { transaction }
+    );
+
+    createdAppointments.push(appointment);
+
+    // Compare dates correctly
+    const today = new Date().toLocaleDateString('en-CA'); // Ensure today's date is correct
+
+    console.log(
+      today,
+      'today date is matching with formateed Date -->',
+      today === formattedDate,
+      typeof formattedDate,
+      typeof today,
+      today
+    );
+    if (formattedDate === today) {
+      console.log(`Adding to queue for specialty (${specialty}) and camp (${campId || 'No Camp'})`);
+      // eslint-disable-next-line no-await-in-loop
+      await addToQueue(patientId, specialty, formattedDate, clinicId, campId, transaction);
+    }
+  }
+
+  return createdAppointments;
+};
+
+/**
  * Updates the status of an appointment.
  *
  * @param {number} appointmentId - The ID of the appointment to update.
@@ -200,7 +204,7 @@ const updateAppointment = async (appointmentId, updateBody) => {
 const getAppointments = async (queryOptions, clinicId, campId) => {
   console.log('ClinicId -->', clinicId);
 
-  const { appointmentDate, status, specialtyId, sortBy = 'createdAt', order = 'desc', page = 1, limit } = queryOptions;
+  const { appointmentDate, status, specialtyId, sortBy = 'createdAt', order = 'desc' } = queryOptions;
 
   console.log('appointmentDate -->', appointmentDate);
 
@@ -223,7 +227,7 @@ const getAppointments = async (queryOptions, clinicId, campId) => {
   // const offset = (page - 1) * limit;
 
   // Fetch appointments with relations and pagination
-  const { rows: appointments, count: total } = await Appointment.findAndCountAll({
+  const { rows: appointments } = await Appointment.findAndCountAll({
     where,
     // limit: parseInt(limit, 10),
     // offset: parseInt(offset, 10),
@@ -256,7 +260,7 @@ const getAppointments = async (queryOptions, clinicId, campId) => {
   });
 
   // **Flatten Response** to remove nesting
-  const flattenedAppointments = appointments.map((appointment, index) => {
+  const flattenedAppointments = appointments.map((appointment) => {
     const { patient, specialty, records } = appointment;
 
     return {

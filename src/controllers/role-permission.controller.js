@@ -21,7 +21,7 @@ const createRole = catchAsync(async (req, res) => {
   const transaction = await db.sequelize.transaction();
   try {
     const { roleName, permissions, roleDescription } = req.body;
-    const clinicId = req.user.clinicId;
+    const { clinicId } = req.user;
     const roleBody = { roleName, roleDescription, clinicId };
     const role = await rolePermissionService.createRoleWithPermissions(roleBody, permissions, transaction);
     await transaction.commit();
@@ -51,7 +51,7 @@ const createRole = catchAsync(async (req, res) => {
  */
 const getRolesByClinic = catchAsync(async (req, res) => {
   console.log(req.user);
-  const clinicId = req.user.clinicId;
+  const { clinicId } = req.user;
 
   const roles = await rolePermissionService.getRolesByClinic(clinicId);
 
@@ -93,7 +93,7 @@ const getAllPermissions = catchAsync(async (req, res) => {
 const updateRole = catchAsync(async (req, res) => {
   const transaction = await db.sequelize.transaction();
   try {
-    const roleId = req.query.roleId;
+    const { roleId } = req.query;
     const roleData = req.body;
     // const { name, permissions } = req.body;
     console.group('Role Data', roleData, roleId);

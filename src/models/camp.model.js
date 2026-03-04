@@ -98,16 +98,16 @@ const initModel = (sequelize) => {
       },
       startDate: {
         type: DataTypes.DATEONLY,
-        allowNull: true
+        allowNull: true,
       },
       endDate: {
         type: DataTypes.DATEONLY,
-        allowNull: true
+        allowNull: true,
       },
       vans: {
         type: DataTypes.ARRAY(DataTypes.STRING),
         allowNull: true,
-      }
+      },
     },
     {
       sequelize,
