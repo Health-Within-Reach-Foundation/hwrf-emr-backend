@@ -1,3 +1,5 @@
+const httpStatus = require('http-status');
+const ApiError = require('../utils/ApiError');
 /**
  * Middleware to parse specified fields in the request body as JSON arrays.
  *
@@ -23,7 +25,7 @@ const parseArrayFields = (fields) => (req, res, next) => {
     });
     next();
   } catch (error) {
-    next(new Error(`Failed to parse fields: ${error.message}`));
+    next(new ApiError(httpStatus.BAD_REQUEST, `Failed to parse fields: ${error.message}`));
   }
 };
 

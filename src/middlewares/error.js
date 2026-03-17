@@ -14,7 +14,7 @@ const ApiError = require('../utils/ApiError');
 const errorConverter = (err, req, res, next) => {
   let error = err;
   if (!(error instanceof ApiError)) {
-    const { statusCode } = error;
+    const statusCode = error.statusCode || httpStatus.INTERNAL_SERVER_ERROR;
     const message = error.message || httpStatus[statusCode];
     error = new ApiError(statusCode, message, false, err.stack);
   }
@@ -31,8 +31,10 @@ const errorConverter = (err, req, res, next) => {
  * @param {Object} req - The request object.
  * @param {Object} res - The response object.
  */
-const errorHandler = (err, req, res) => {
+const errorHandler = (err, req, res, next) => {
   let { statusCode, message } = err;
+  statusCode = statusCode || httpStatus.INTERNAL_SERVER_ERROR;
+  message = message || httpStatus[statusCode];
   if (config.env === 'production' && !err.isOperational) {
     statusCode = httpStatus.INTERNAL_SERVER_ERROR;
     message = httpStatus[httpStatus.INTERNAL_SERVER_ERROR];
