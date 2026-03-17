@@ -179,6 +179,33 @@ const generateVerifyEmailToken = async (user) => {
   return verifyEmailToken;
 };
 
+/**
+ * Generate a 6-digit numeric OTP
+ * @returns {string}
+ */
+const generateOtp = () => Math.floor(100000 + Math.random() * 900000).toString();
+
+/**
+ * Generate OTP and a pre-auth token for 2-step login
+ * @param {Object} user
+ * @returns {Promise<{ otp: string, preAuthToken: string }>}
+ */
+const generateOtpAndPreAuthToken = async (user) => {
+  // Invalidate any existing OTP / preAuth tokens for this user (prevent accumulation)
+  await Token.destroy({ where: { userId: user.id, type: tokenTypes.OTP }, force: true });
+  await Token.destroy({ where: { userId: user.id, type: tokenTypes.PRE_AUTH }, force: true });
+
+  const otp = generateOtp();
+  const otpExpires = moment().add(10, 'minutes');
+  await saveToken(otp, user.id, otpExpires, tokenTypes.OTP);
+
+  const preAuthExpires = moment().add(15, 'minutes');
+  const preAuthToken = generateToken(user.id, preAuthExpires, tokenTypes.PRE_AUTH);
+  await saveToken(preAuthToken, user.id, preAuthExpires, tokenTypes.PRE_AUTH);
+
+  return { otp, preAuthToken };
+};
+
 module.exports = {
   generateToken,
   saveToken,
@@ -188,4 +215,5 @@ module.exports = {
   generateVerifyEmailToken,
   generateAccessTokenOnly,
   verifyAccessToken,
+  generateOtpAndPreAuthToken,
 };
