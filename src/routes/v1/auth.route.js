@@ -29,6 +29,7 @@ router.post('/verify-email', validate(authValidation.verifyEmail), authControlle
 
 router.get('/verify-token', validate(authValidation.verifyEmail), authController.verifyToken);
 
+router.post('/verify-otp', validate(authValidation.verifyOtp), authController.verifyOtp); // NEW
 module.exports = router;
 
 /**

@@ -126,9 +126,22 @@ const sendExcelExportEmail = async (to, excelBuffer, filename) => {
   return sendEmailAzure(to, subject, body, attachment);
 };
 
+/**
+ * Send OTP email for 2-step login verification
+ * @param {string} to
+ * @param {string} otp
+ * @returns {Promise}
+ */
+const sendOtpEmail = async (to, otp) => {
+  const subject = 'Your Login OTP - HWRF';
+  const text = `Dear user,\n\nYour one-time password (OTP) for login is:\n\n${otp}\n\nThis OTP is valid for 10 minutes. Do not share it with anyone.\n\nIf you did not attempt to log in, please ignore this email.\n\nBest regards,\nThe HWRF Team`;
+  await sendEmailAzure(to, subject, text);
+};
+
 module.exports = {
   sendPasswordEmail,
   sendVerificationEmail,
   sendClinicOnboardingNotification,
   sendExcelExportEmail,
+  sendOtpEmail,
 };

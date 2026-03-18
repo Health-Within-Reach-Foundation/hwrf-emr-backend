@@ -35,7 +35,9 @@ const initModel = (sequelize) => {
           tokenTypes.REFRESH,
           tokenTypes.RESET_PASSWORD,
           tokenTypes.VERIFY_EMAIL,
-          tokenTypes.SET_PASSWORD
+          tokenTypes.SET_PASSWORD,
+          tokenTypes.OTP,
+          tokenTypes.PRE_AUTH
         ),
         allowNull: false,
       },
