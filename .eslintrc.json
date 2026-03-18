@@ -21,6 +21,12 @@
     "rules": {
       "strict": "off"
     }
+  },
+  {
+    "files": ["src/middlewares/error.js"],
+    "rules": {
+      "no-unused-vars": ["error", { "argsIgnorePattern": "^next$" }]
+    }
   }
 ]
 }

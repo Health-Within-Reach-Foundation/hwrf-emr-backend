@@ -58,7 +58,8 @@ const verifyToken = async (token, type) => {
   const payload = jwt.verify(token, config.jwt.secret);
   const tokenDoc = await Token.findOne({ where: { token, type, userId: payload.sub, blacklisted: false } });
   if (!tokenDoc) {
-    throw new Error('Token not found');
+    // throw new Error('Token not found');
+    throw new ApiError(httpStatus.NOT_FOUND, 'Token not found');
   }
   return tokenDoc;
 };
@@ -76,7 +77,7 @@ const verifyAccessToken = async (token) => {
     console.log('Payload -->', payload);
 
     if (!payload) {
-      throw new Error('Access Token Invalid');
+      throw new ApiError(httpStatus.UNAUTHORIZED, 'Access Token Invalid');
     }
 
     // Check if the user exists
@@ -96,7 +97,7 @@ const verifyAccessToken = async (token) => {
     return false; // Token is still valid, or some other condition fails
   } catch (error) {
     console.log('Error in verifyAccessToken -->', error);
-    throw new Error('Access Token Invalid');
+    throw new ApiError(httpStatus.UNAUTHORIZED, 'Access Token Invalid');
   }
 };
 
