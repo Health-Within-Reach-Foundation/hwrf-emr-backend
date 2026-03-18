@@ -6,45 +6,27 @@ const { patientValidation } = require('../../validations');
 const { patientController } = require('../../controllers');
 const parseArrayFields = require('../../middlewares/parser');
 const { storage } = require('../../utils/file-upload-to-storage');
+
 // Define custom multer instance in the route
 const upload = multer({
   storage,
-  // fileFilter,
-  // limits: {
-  //   fileSize: 10 * 1024 * 1024, // Custom file size limit for this route
-  // },
 });
 
 const router = express.Router();
 
-/* **************************** Pateint crud route ******************************** */
+/* **************************** Patient crud route ******************************** */
 router
   .route('/')
-  .post(
-    auth(),
-    // roleAuthorization('admin', 'receptionist', 'doctor'),
-    validate(patientValidation.createPatient),
-    patientController.createPatient
-  )
-  .get(
-    auth(), // Authentication middleware
-    validate(patientValidation.getPatientsByClinic), // Validate pagination query parameters
-    patientController.getPatientsByClinic // Controller
-  );
+  .post(auth(), validate(patientValidation.createPatient), patientController.createPatient)
+  .get(auth(), validate(patientValidation.getPatientsByClinic), patientController.getPatientsByClinic);
 
-router.get(
-  '/recent',
-  auth(),
-  validate(patientValidation.getPatientsByClinic), // Validate pagination query parameters
-  patientController.getSimplePatientsByClinic
-);
+router.get('/recent', auth(), validate(patientValidation.getPatientsByClinic), patientController.getSimplePatientsByClinic);
 
-// Export all patients for Excel/CSV download (no pagination)
-router.route('/export').get(
-  auth(),
-  // validate(patientValidation.getPatientsByClinicForExport),
-  patientController.getPatientsByClinicForExport
-);
+// ✅ EXISTING EXPORT (EMAIL / OLD)
+router.route('/export').get(auth(), patientController.getPatientsByClinicForExport);
+
+// ✅ ✅ NEW EXPORT (DOWNLOAD FILE)
+router.get('/export-download', auth(), patientController.exportPatientsDownload);
 
 router
   .route('/search')
@@ -52,9 +34,7 @@ router
 
 router.route('/follow-ups').get(auth(), patientController.getPatientFollowUps);
 
-/* **************************** Pateint crud route ******************************** */
-
-/* **************************** Pateint dental crud routes ******************************** */
+/* **************************** Patient dental crud routes ******************************** */
 
 router
   .route('/diagnosis')
@@ -73,7 +53,6 @@ router
       console.log('req body --------', req.body, req.files);
       next();
     },
-
     validate(patientValidation.createDiagnosis),
     patientController.createDiagnosis
   )
@@ -81,18 +60,11 @@ router
 
 router
   .route('/diagnosis/:diagnosisId')
-  .get(
-    auth(),
-    // roleAuthorization('diagnosis:read'),
-    validate(patientValidation.getDiagnosis),
-    patientController.getDiagnosis
-  )
+  .get(auth(), validate(patientValidation.getDiagnosis), patientController.getDiagnosis)
   .patch(
     auth(),
     upload.array('xrayFiles'),
-
     parseArrayFields([
-      // 'diagnosisDate',
       'complaints',
       'treatmentsSuggested',
       'currentStatus',
@@ -101,33 +73,21 @@ router
       'childSelectedTeeth',
       'adultSelectedTeeth',
     ]),
-
     (req, res, next) => {
       console.log('req body --------', req.body, req.files);
       next();
     },
-    // roleAuthorization('diagnosis:write'),
     validate(patientValidation.updateDiagnosis),
     patientController.updateDiagnosis
   )
-  .delete(
-    auth(),
-    // roleAuthorization('diagnosis:delete'),
-    validate(patientValidation.deleteDiagnosis),
-    patientController.deleteDiagnosis
-  );
+  .delete(auth(), validate(patientValidation.deleteDiagnosis), patientController.deleteDiagnosis);
 
 router
   .route('/treatment')
   .post(
     auth(),
     upload.array('xrayFiles'),
-    parseArrayFields([
-      'treatmentStatus',
-      'treatingDoctor',
-      // 'treatmentDate',
-      // 'nextDate'
-    ]),
+    parseArrayFields(['treatmentStatus', 'treatingDoctor']),
     (req, res, next) => {
       console.log('req body --------', req.body, req.files);
       next();
@@ -147,25 +107,18 @@ router
       console.log('req body --------', req.body, req.files);
       next();
     },
-    parseArrayFields([
-      'treatmentStatus',
-      'treatingDoctor',
-      // 'nextDate'
-    ]),
+    parseArrayFields(['treatmentStatus', 'treatingDoctor']),
     validate(patientValidation.updateTreatment),
     patientController.updateTreatment
   )
   .delete(auth(), validate(patientValidation.deleteTreatment), patientController.deleteTreatment);
 
-/* **************************** Pateint dental crud routes ******************************** */
-
-/* **************************** Pateint mammography crud routes ******************************** */
+/* **************************** Patient mammography crud routes ******************************** */
 
 router
   .route('/mammography/:patientId')
   .post(
     auth(),
-    // There are two files sepratly comming from the front end for this api 1. screeningFile 2. aiReport, how to handle this in multer
     validate(patientValidation.createMammography),
     upload.fields([{ name: 'screeningFile' }, { name: 'aiReport' }]),
     parseArrayFields([
@@ -181,7 +134,6 @@ router
   )
   .patch(
     auth(),
-    // upload.single('screeningFile'),
     validate(patientValidation.updateMammography),
     upload.fields([{ name: 'screeningFile' }, { name: 'aiReport' }]),
     (req, res, next) => {
@@ -201,9 +153,7 @@ router
   .get(auth(), validate(patientValidation.getMammography), patientController.getMammography)
   .delete(auth(), validate(patientValidation.getMammography), patientController.deleteMammography);
 
-/* **************************** Pateint mammography crud routes ******************************** */
-
-/* **************************** Pateint GP crud routes ******************************** */
+/* **************************** Patient GP crud routes ******************************** */
 
 router
   .route('/gp-records')
@@ -224,16 +174,10 @@ router
   .get(auth(), validate(patientValidation.getGPRecord), patientController.getGPRecordById)
   .delete(auth(), validate(patientValidation.getGPRecord), patientController.deleteGPRecord);
 
-/* **************************** Pateint GP crud routes ******************************** */
-
-/* **************************** Pateint crud routes ******************************** */
+/* **************************** Patient crud routes ******************************** */
 router
   .route('/:patientId')
   .get(auth(), validate(patientValidation.getPatientById), patientController.getPatientDetailsById)
-  .patch(
-    auth(),
-    // roleAuthorization('admin', 'receptionist', 'doctor'),
-    validate(patientValidation.updatePatient),
-    patientController.updatePatientDetails
-  );
+  .patch(auth(), validate(patientValidation.updatePatient), patientController.updatePatientDetails);
+
 module.exports = router;

@@ -5,20 +5,28 @@ const { clinicStatusValidation } = require('./custom.validation');
  * Validation schema for onboarding a clinic.
  */
 const onboardClinic = {
-  body: Joi.object().keys({
+  body: Joi.object({
     clinicName: Joi.string().required(),
-    // address: Joi.string().allow('', null).optional(), // Allow empty string or null
-    // city: Joi.string().allow('', null).optional(), // Allow empty string or null
-    // state: Joi.string().allow('', null).optional(), // Allow empty string or null
+
+    address: Joi.string().allow('', null).optional(),
+    city: Joi.string().allow('', null).optional(),
+    state: Joi.string().allow('', null).optional(),
+
     phoneNumber: Joi.string()
       .pattern(/^[0-9]{10,15}$/)
       .allow('', null)
-      .optional(), // Allow empty string or null
-    contactEmail: Joi.string().email().allow('', null).optional(), // Allow empty string or null
-    website: Joi.string().uri().optional(),
+      .optional(),
+
+    contactEmail: Joi.string().email().allow('', null).optional(),
+
+    website: Joi.string().uri().allow('', null).optional(),
+
     specialties: Joi.array().items(Joi.string()).optional(),
+
     adminName: Joi.string().required(),
+
     adminEmail: Joi.string().required().email(),
+
     adminPhoneNumber: Joi.string()
       .required()
       .pattern(/^[0-9]{10,15}$/),
@@ -29,29 +37,16 @@ const onboardClinic = {
  * Validation schema for querying clinics.
  */
 const queryOptionsValidation = {
-  query: Joi.object().keys({
-    status: Joi.string()
-      .valid('active', 'pending', 'inactive') // Add valid statuses
-      .optional()
-      .description('Filter clinics by status.'),
-    // page: Joi.number()
-    //   .integer()
-    //   .positive()
-    //   .default(1)
-    //   .description('The page number for pagination. Default is 1.'),
-    // limit: Joi.number()
-    //   .integer()
-    //   .positive()
-    //   .default(10)
-    //   .description('The number of records per page. Default is 10.'),
-    sortBy: Joi.string()
-      .valid('createdAt', 'updatedAt', 'clinicName')
-      .default('createdAt')
-      .description('The column to sort by. Default is createdAt.'),
-    order: Joi.string()
-      .valid('asc', 'desc')
-      .default('desc')
-      .description('The order of sorting (asc or desc). Default is desc.'),
+  query: Joi.object({
+    status: Joi.string().valid('active', 'pending', 'inactive').optional(),
+
+    page: Joi.number().integer().positive().default(1),
+
+    limit: Joi.number().integer().positive().default(10),
+
+    sortBy: Joi.string().valid('createdAt', 'updatedAt', 'clinicName').default('createdAt'),
+
+    order: Joi.string().valid('asc', 'desc').default('desc'),
   }),
 };
 
@@ -59,8 +54,8 @@ const queryOptionsValidation = {
  * Validation schema for getting a clinic by ID.
  */
 const getClinic = {
-  params: Joi.object().keys({
-    clinicId: Joi.string().uuid(),
+  params: Joi.object({
+    clinicId: Joi.string().uuid().required(),
   }),
 };
 
@@ -68,8 +63,8 @@ const getClinic = {
  * Validation schema for getting a file by key.
  */
 const getFileByKey = {
-  query: Joi.object().keys({
-    key: Joi.string(),
+  query: Joi.object({
+    key: Joi.string().required(),
   }),
 };
 
@@ -77,11 +72,12 @@ const getFileByKey = {
  * Validation schema for approving a clinic.
  */
 const approveClinic = {
-  params: Joi.object().keys({
-    clinicId: Joi.string(),
+  params: Joi.object({
+    clinicId: Joi.string().uuid().required(),
   }),
-  body: Joi.object().keys({
-    status: Joi.string().custom(clinicStatusValidation),
+
+  body: Joi.object({
+    status: Joi.string().custom(clinicStatusValidation).required(),
   }),
 };
 
@@ -89,9 +85,9 @@ const approveClinic = {
  * Validation schema for creating a role.
  */
 const createRole = {
-  body: Joi.object().keys({
+  body: Joi.object({
     roleName: Joi.string().required(),
-    roleDescription: Joi.string().optional(),
+    roleDescription: Joi.string().allow('', null).optional(),
   }),
 };
 
@@ -99,20 +95,28 @@ const createRole = {
  * Validation schema for updating a clinic by ID.
  */
 const updateClinicById = {
-  params: Joi.object().keys({
-    clinicId: Joi.string().uuid().required(), // Clinic ID must be a valid UUID
+  params: Joi.object({
+    clinicId: Joi.string().uuid().required(),
   }),
-  body: Joi.object().keys({
+
+  body: Joi.object({
     clinicName: Joi.string().optional(),
+
     address: Joi.string().allow('', null).optional(),
     city: Joi.string().allow('', null).optional(),
     state: Joi.string().allow('', null).optional(),
+
     phoneNumber: Joi.string()
       .pattern(/^[0-9]{10,15}$/)
       .allow('', null)
       .optional(),
+
     contactEmail: Joi.string().email().allow('', null).optional(),
+
+    website: Joi.string().uri().allow('', null).optional(),
+
     status: Joi.string().valid('pending', 'active', 'inactive').optional(),
+
     specialties: Joi.array().items(Joi.string().uuid()).optional(),
   }),
 };
