@@ -89,6 +89,16 @@ const getMe = {
     .unknown(true), // Allow other headers to pass through
 };
 
+const verifyOtp = {
+  body: Joi.object().keys({
+    preAuthToken: Joi.string().required(),
+    otp: Joi.string()
+      .length(6)
+      .pattern(/^[0-9]{6}$/)
+      .required(),
+  }),
+};
+
 module.exports = {
   register,
   login,
@@ -98,4 +108,5 @@ module.exports = {
   resetPassword,
   verifyEmail,
   getMe,
+  verifyOtp,
 };

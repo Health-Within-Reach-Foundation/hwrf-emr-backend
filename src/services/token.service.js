@@ -58,7 +58,8 @@ const verifyToken = async (token, type) => {
   const payload = jwt.verify(token, config.jwt.secret);
   const tokenDoc = await Token.findOne({ where: { token, type, userId: payload.sub, blacklisted: false } });
   if (!tokenDoc) {
-    throw new Error('Token not found');
+    // throw new Error('Token not found');
+    throw new ApiError(httpStatus.NOT_FOUND, 'Token not found');
   }
   return tokenDoc;
 };
@@ -76,7 +77,7 @@ const verifyAccessToken = async (token) => {
     console.log('Payload -->', payload);
 
     if (!payload) {
-      throw new Error('Access Token Invalid');
+      throw new ApiError(httpStatus.UNAUTHORIZED, 'Access Token Invalid');
     }
 
     // Check if the user exists
@@ -96,7 +97,7 @@ const verifyAccessToken = async (token) => {
     return false; // Token is still valid, or some other condition fails
   } catch (error) {
     console.log('Error in verifyAccessToken -->', error);
-    throw new Error('Access Token Invalid');
+    throw new ApiError(httpStatus.UNAUTHORIZED, 'Access Token Invalid');
   }
 };
 
@@ -179,6 +180,33 @@ const generateVerifyEmailToken = async (user) => {
   return verifyEmailToken;
 };
 
+/**
+ * Generate a 6-digit numeric OTP
+ * @returns {string}
+ */
+const generateOtp = () => Math.floor(100000 + Math.random() * 900000).toString();
+
+/**
+ * Generate OTP and a pre-auth token for 2-step login
+ * @param {Object} user
+ * @returns {Promise<{ otp: string, preAuthToken: string }>}
+ */
+const generateOtpAndPreAuthToken = async (user) => {
+  // Invalidate any existing OTP / preAuth tokens for this user (prevent accumulation)
+  await Token.destroy({ where: { userId: user.id, type: tokenTypes.OTP }, force: true });
+  await Token.destroy({ where: { userId: user.id, type: tokenTypes.PRE_AUTH }, force: true });
+
+  const otp = generateOtp();
+  const otpExpires = moment().add(10, 'minutes');
+  await saveToken(otp, user.id, otpExpires, tokenTypes.OTP);
+
+  const preAuthExpires = moment().add(15, 'minutes');
+  const preAuthToken = generateToken(user.id, preAuthExpires, tokenTypes.PRE_AUTH);
+  await saveToken(preAuthToken, user.id, preAuthExpires, tokenTypes.PRE_AUTH);
+
+  return { otp, preAuthToken };
+};
+
 module.exports = {
   generateToken,
   saveToken,
@@ -188,4 +216,5 @@ module.exports = {
   generateVerifyEmailToken,
   generateAccessTokenOnly,
   verifyAccessToken,
+  generateOtpAndPreAuthToken,
 };
