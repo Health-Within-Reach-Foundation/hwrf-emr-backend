@@ -137,7 +137,7 @@ const searchPatientsByClinic = async (clinicId, searchTerm = '', limit = 10, off
     // Fetch patients with search and pagination
     const { rows: patients, count: total } = await Patient.findAndCountAll({
       where: whereCondition,
-      attributes: ['id', 'regNo', 'name', 'mobile', 'age', 'sex', 'createdAt'], // Only needed fields
+      attributes: ['id', 'regNo', 'name', 'mobile', 'age', 'sex', 'createdAt', 'address'], // Only needed fields
       order: [['createdAt', 'DESC']], // Show newest first
       limit: parseInt(limit, 10),
       offset: parseInt(offset, 10),
@@ -256,97 +256,155 @@ const searchPatientsByClinic = async (clinicId, searchTerm = '', limit = 10, off
 //   };
 // };
 
-const getPatientsByClinic = async (clinicId, limit = 50, offset = 0) => {
-  const whereClause = { clinicId };
+const getPatientsByClinic = async (query) => {
+  try {
+    const { clinicId, limit = 50, offset = 0, name, address, service } = query;
 
-  // Get paginated patients WITHOUT associations first
-  const { rows: patients, count: total } = await Patient.findAndCountAll({
-    where: whereClause,
-    attributes: [
-      'id',
-      'regNo',
-      'name',
-      'age',
-      'sex',
-      'mobile',
-      'address',
-      'createdAt',
-      'clinicId',
-      'primaryDoctor',
-      'referral_source',
-    ],
-    order: [['regNo', 'DESC']],
-    limit: parseInt(limit, 10),
-    offset: parseInt(offset, 10),
-    // NO include here - just get the patients
-  });
-
-  // Now get queues for these specific patients
-  const patientIds = patients.map((p) => p.id);
-  const queuesData = await Queue.findAll({
-    where: {
-      patientId: patientIds, // Adjust this field name based on your Queue model
-    },
-    attributes: ['patientId', 'queueType'],
-    raw: true,
-  });
-
-  // Create a map of patientId -> queues
-  const queuesMap = {};
-  queuesData.forEach((queue) => {
-    if (!queuesMap[queue.patientId]) {
-      queuesMap[queue.patientId] = [];
+    // 🚨 ADD THIS CHECK (CRITICAL FIX)
+    if (!clinicId) {
+      throw new ApiError(httpStatus.BAD_REQUEST, 'clinicId is required but missing');
     }
-    queuesMap[queue.patientId].push(queue);
-  });
 
-  // Process each patient with their queues
-  const newPatients = await Promise.all(
-    patients.map(async (patient) => {
-      const queues = queuesMap[patient.id] || [];
-      const serviceTaken = queues.map((queue) => queue.queueType);
+    const whereClause = {};
 
-      // Calculate billing for each specialty
-      const dentistryBilling = await calculateDentistryBilling(patient.id);
-      const gpBilling = await calculateGPBilling(patient.id);
-      const mammographyBilling = await calculateMammographyBilling(patient.id);
+    if (clinicId) {
+      whereClause.clinicId = clinicId;
+    }
 
-      // Calculate totals
-      const onlinePaid = dentistryBilling.onlinePaid + gpBilling.onlinePaid + mammographyBilling.onlinePaid;
-      const offlinePaid = dentistryBilling.offlinePaid + gpBilling.offlinePaid + mammographyBilling.offlinePaid;
-      const totalPaid = onlinePaid + offlinePaid;
-
-      return {
-        ...patient.dataValues,
-        serviceTaken,
-        onlinePaid,
-        offlinePaid,
-        total: totalPaid,
+    // NAME FILTER
+    if (name && name.trim() !== '') {
+      whereClause.name = {
+        [Op.iLike]: `%${name}%`,
       };
-    })
-  );
+    }
 
-  // Calculate pagination metadata
-  const currentPage = Math.floor(offset / limit) + 1;
-  const totalPages = Math.ceil(total / limit);
-  const hasMore = offset + limit < total;
+    // ADDRESS FILTER
+    if (address && address.trim() !== '') {
+      whereClause.address = {
+        [Op.iLike]: `%${address}%`,
+      };
+    }
 
-  return {
-    success: true,
-    data: newPatients,
-    meta: {
-      total,
+    // FETCH PATIENTS
+    const { rows: patients, count: total } = await Patient.findAndCountAll({
+      where: whereClause,
+      attributes: [
+        'id',
+        'regNo',
+        'name',
+        'age',
+        'sex',
+        'mobile',
+        'address',
+        'createdAt',
+        'clinicId',
+        'primaryDoctor',
+        'referral_source',
+      ],
+      order: [['regNo', 'DESC']],
       limit: parseInt(limit, 10),
       offset: parseInt(offset, 10),
-      currentPage,
-      totalPages,
-      hasMore,
-    },
-  };
+    });
+
+    if (!patients.length) {
+      return {
+        success: true,
+        data: [],
+        meta: {
+          total: 0,
+          limit: parseInt(limit, 10),
+          offset: parseInt(offset, 10),
+          currentPage: 1,
+          totalPages: 0,
+          hasMore: false,
+        },
+      };
+    }
+
+    // GET QUEUES
+    const patientIds = patients.map((p) => p.id);
+
+    const queuesData = await Queue.findAll({
+      where: { patientId: patientIds },
+      attributes: ['patientId', 'queueType'],
+      raw: true,
+    });
+
+    const queuesMap = {};
+    queuesData.forEach((q) => {
+      if (!queuesMap[q.patientId]) {
+        queuesMap[q.patientId] = [];
+      }
+      queuesMap[q.patientId].push(q.queueType);
+    });
+
+    // PROCESS PATIENTS
+    const processedPatients = await Promise.all(
+      patients.map(async (patient) => {
+        const serviceTaken = queuesMap[patient.id] || [];
+
+        // SERVICE FILTER (FIXED)
+        if (service && service.trim() !== '') {
+          const match = serviceTaken.join(',').toLowerCase().includes(service.toLowerCase());
+
+          if (!match) return null;
+        }
+
+        // BILLING
+        const dentistryBilling = await calculateDentistryBilling(patient.id);
+        const gpBilling = await calculateGPBilling(patient.id);
+        const mammographyBilling = await calculateMammographyBilling(patient.id);
+
+        const onlinePaid = dentistryBilling.onlinePaid + gpBilling.onlinePaid + mammographyBilling.onlinePaid;
+
+        const offlinePaid = dentistryBilling.offlinePaid + gpBilling.offlinePaid + mammographyBilling.offlinePaid;
+
+        return {
+          ...patient.toJSON(),
+          serviceTaken,
+          onlinePaid,
+          offlinePaid,
+          total: onlinePaid + offlinePaid,
+        };
+      })
+    );
+
+    const filteredPatients = processedPatients.filter(Boolean);
+
+    return {
+      success: true,
+      data: filteredPatients,
+      meta: {
+        total,
+        limit: parseInt(limit, 10),
+        offset: parseInt(offset, 10),
+        currentPage: Math.floor(offset / limit) + 1,
+        totalPages: Math.ceil(total / limit),
+        hasMore: offset + limit < total,
+      },
+    };
+  } catch (error) {
+    console.error('GET PATIENT ERROR:', error);
+    throw error;
+  }
 };
 
-const getSimplePatientsByClinic = async (clinicId, limit = 50, offset = 0) => {
+const getSimplePatientsByClinic = async (clinicId, limit = 50, offset = 0, filters = {}) => {
   const whereClause = { clinicId };
+
+  // NAME FILTER
+  if (filters.name) {
+    whereClause.name = {
+      [Op.iLike]: `%${filters.name}%`,
+    };
+  }
+
+  // ADDRESS FILTER
+  if (filters.address) {
+    whereClause.address = {
+      [Op.iLike]: `%${filters.address}%`,
+    };
+  }
 
   const { rows: patients } = await Patient.findAndCountAll({
     where: whereClause,
@@ -382,20 +440,24 @@ const getSimplePatientsByClinic = async (clinicId, limit = 50, offset = 0) => {
  * @returns {Promise<Object>} - { success, data: [all patients], meta: { total, exported } }
  * @throws {ApiError} - If export exceeds max record limit
  */
-const getPatientsByClinicForExport = async (clinicId) => {
+const getPatientsByClinicForExport = async (clinicId, filters = {}) => {
   const whereClause = { clinicId };
 
-  // Fetch count first to check limit
-  // const total = await Patient.count({ where: whereClause });
+  // NAME FILTER
+  if (filters.name) {
+    whereClause.name = {
+      [Op.iLike]: `%${filters.name}%`,
+    };
+  }
 
-  // if (total > maxRecords) {
-  //   throw new ApiError(
-  //     httpStatus.BAD_REQUEST,
-  //     `Export limited to ${maxRecords} records. Current clinic has ${total} patients. Please contact administrator.`
-  //   );
-  // }
+  // ADDRESS FILTER
+  if (filters.address) {
+    whereClause.address = {
+      [Op.iLike]: `%${filters.address}%`,
+    };
+  }
 
-  // Fetch all patients without pagination
+  // ✅ STEP 1: Get ALL patients (NO pagination)
   const patients = await Patient.findAll({
     where: whereClause,
     attributes: [
@@ -411,53 +473,69 @@ const getPatientsByClinicForExport = async (clinicId) => {
       'primaryDoctor',
       'referral_source',
     ],
-    include: [
-      {
-        model: Queue,
-        as: 'queues',
-        attributes: ['queueType'],
-        required: false,
-      },
-    ],
     order: [['regNo', 'DESC']],
-    subQuery: false,
+    raw: true,
   });
 
   if (!patients.length) {
     throw new ApiError(httpStatus.NOT_FOUND, 'No patients found for this clinic.');
   }
 
-  // Process each patient with billing calculations
-  const newPatients = await Promise.all(
-    patients.map(async (patient) => {
-      const serviceTaken = patient.queues.map((queue) => queue.queueType);
+  // ✅ STEP 2: Get queues separately (FAST)
+  const patientIds = patients.map((p) => p.id);
 
-      // Calculate billing for each specialty
+  const queues = await Queue.findAll({
+    where: { patientId: patientIds },
+    attributes: ['patientId', 'queueType'],
+    raw: true,
+  });
+
+  const queueMap = {};
+  queues.forEach((q) => {
+    if (!queueMap[q.patientId]) {
+      queueMap[q.patientId] = [];
+    }
+    queueMap[q.patientId].push(q.queueType);
+  });
+
+  // ✅ STEP 3: Process patients
+  const result = await Promise.all(
+    patients.map(async (patient) => {
+      const serviceTaken = queueMap[patient.id] || [];
+
+      // SERVICE FILTER
+      if (filters.service && filters.service.trim() !== '') {
+        const match = serviceTaken.join(',').toLowerCase().includes(filters.service.toLowerCase());
+
+        if (!match) return null;
+      }
+
       const dentistryBilling = await calculateDentistryBilling(patient.id);
       const gpBilling = await calculateGPBilling(patient.id);
       const mammographyBilling = await calculateMammographyBilling(patient.id);
 
-      // Calculate totals
       const onlinePaid = dentistryBilling.onlinePaid + gpBilling.onlinePaid + mammographyBilling.onlinePaid;
+
       const offlinePaid = dentistryBilling.offlinePaid + gpBilling.offlinePaid + mammographyBilling.offlinePaid;
-      const totalPaid = onlinePaid + offlinePaid;
 
       return {
-        ...patient.dataValues,
+        ...patient,
         serviceTaken,
         onlinePaid,
         offlinePaid,
-        total: totalPaid,
+        total: onlinePaid + offlinePaid,
       };
     })
   );
 
+  const filteredPatients = result.filter(Boolean);
+
   return {
     success: true,
-    data: newPatients,
+    data: filteredPatients,
     meta: {
-      total: newPatients.length,
-      exported: newPatients.length,
+      total: filteredPatients.length,
+      exported: filteredPatients.length,
       timestamp: new Date().toISOString(),
     },
   };
