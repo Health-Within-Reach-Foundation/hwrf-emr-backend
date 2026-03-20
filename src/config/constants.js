@@ -1,6 +1,5 @@
-const clinicStatus = ['active', 'inactive', 'suspended','pending'];
-
+const clinicStatus = ['active', 'inactive', 'suspended', 'pending'];
 
 module.exports = {
-    clinicStatus,
-}
+  clinicStatus,
+};

@@ -1,20 +1,21 @@
+const { EmailClient } = require('@azure/communication-email');
 const config = require('../config/config');
 const logger = require('../config/logger');
 const emailSubjectBodyForPassword = require('../utils/email-template-password');
 const sendEmailAzure = require('./email.azure.service');
-const { EmailClient } = require('@azure/communication-email');
 
 /**
  * Verify Azure Email Service Connection on initialization
  */
 // if (config.env === 'development') {
-  try {
-    const emailClient = new EmailClient(config.azure_email_connection_string);
-    logger.info('✅ Azure Email Service client initialized successfully');
-  } catch (error) {
-    logger.warn(`⚠️  Unable to initialize Azure Email Service: ${error.message}`);
-    logger.warn('Make sure AZURE_EMAIL_CONNECTION_STRING is configured correctly in .env');
-  }
+try {
+  // eslint-disable-next-line no-unused-vars
+  const emailClient = new EmailClient(config.azure_email_connection_string);
+  logger.info('✅ Azure Email Service client initialized successfully');
+} catch (error) {
+  logger.warn(`⚠️  Unable to initialize Azure Email Service: ${error.message}`);
+  logger.warn('Make sure AZURE_EMAIL_CONNECTION_STRING is configured correctly in .env');
+}
 // }
 
 /**
@@ -96,8 +97,51 @@ const sendClinicOnboardingNotification = async (clinicDetails) => {
   await sendEmailAzure(config.superadmin_email, subject, text);
 };
 
+/**
+ * Send patient export Excel file via email
+ * @param {string} to - Recipient email address
+ * @param {Buffer} excelBuffer - Excel file buffer
+ * @param {string} filename - Name for the attachment file
+ * @returns {Promise}
+ */
+const sendExcelExportEmail = async (to, excelBuffer, filename) => {
+  const subject = 'Patient Export Report';
+  const body = `
+    <p>Dear User,</p>
+    <p>Your patient export report has been generated successfully.</p>
+    <p>Please find the attached Excel file: <strong>${filename}</strong></p>
+    <p>This report was generated on ${new Date().toLocaleString()}.</p>
+    <br/>
+    <p>Regards,<br/>HWRF EMR Team</p>
+  `;
+
+  const attachment = [
+    {
+      name: filename,
+      contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      contentInBase64: excelBuffer.toString('base64'),
+    },
+  ];
+
+  return sendEmailAzure(to, subject, body, attachment);
+};
+
+/**
+ * Send OTP email for 2-step login verification
+ * @param {string} to
+ * @param {string} otp
+ * @returns {Promise}
+ */
+const sendOtpEmail = async (to, otp) => {
+  const subject = 'Your Login OTP - HWRF';
+  const text = `Dear user,\n\nYour one-time password (OTP) for login is:\n\n${otp}\n\nThis OTP is valid for 10 minutes. Do not share it with anyone.\n\nIf you did not attempt to log in, please ignore this email.\n\nBest regards,\nThe HWRF Team`;
+  await sendEmailAzure(to, subject, text);
+};
+
 module.exports = {
   sendPasswordEmail,
   sendVerificationEmail,
   sendClinicOnboardingNotification,
+  sendExcelExportEmail,
+  sendOtpEmail,
 };

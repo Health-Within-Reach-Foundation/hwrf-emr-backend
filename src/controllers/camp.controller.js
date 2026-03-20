@@ -83,7 +83,7 @@ const getCampById = catchAsync(async (req, res) => {
  * @returns {Promise<void>} - A promise that resolves when the operation is complete.
  */
 const setCurrentCamp = catchAsync(async (req, res) => {
-  const campId = req.body.campId;
+  const { campId } = req.body;
   const userId = req.user.id;
 
   const response = await campService.setCurrentCamp(campId, userId);

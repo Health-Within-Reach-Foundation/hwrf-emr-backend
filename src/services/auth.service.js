@@ -1,4 +1,5 @@
 const httpStatus = require('http-status');
+const crypto = require('crypto');
 const tokenService = require('./token.service');
 const userService = require('./user.service');
 const { Token } = require('../models/token.model');
@@ -58,7 +59,7 @@ const logout = async (refreshToken, userId) => {
  */
 const refreshAuth = async (refreshToken, accessToken) => {
   try {
-    //single renewal of access token after
+    // single renewal of access token after
     const accessTokenDocValidity = await tokenService.verifyAccessToken(accessToken);
     const refreshTokenDoc = await tokenService.verifyToken(refreshToken, tokenTypes.REFRESH);
     if (accessTokenDocValidity && refreshTokenDoc) {
@@ -69,16 +70,14 @@ const refreshAuth = async (refreshToken, accessToken) => {
       }
       const res = await tokenService.generateAccessTokenOnly(user, refreshToken);
       return res;
-    } else {
-      const refreshTokenDoc = await tokenService.verifyToken(refreshToken, tokenTypes.REFRESH);
-      console.group('*Expired refresh token');
-      const user = await userService.getSimpleUserById(refreshTokenDoc.userId);
-      user.currentCampId = null;
-      await user.save();
-      await refreshTokenDoc.destroy({ force: true });
-      // const res = await tokenService.generateAuthTokens(user);
-      return { access: { token: null }, refresh: { token: null } };
     }
+    console.group('*Expired refresh token');
+    const user = await userService.getSimpleUserById(refreshTokenDoc.userId);
+    user.currentCampId = null;
+    await user.save();
+    await refreshTokenDoc.destroy({ force: true });
+    // const res = await tokenService.generateAuthTokens(user);
+    return { access: { token: null }, refresh: { token: null } };
   } catch (error) {
     console.error('error in auth service line 65: ', error);
     // throw new ApiError(httpStatus.UNAUTHORIZED, 'Please authenticate');
@@ -174,6 +173,44 @@ const register = async (userBody, transaction = null) => {
   return superadmin;
 };
 
+const verifyOtpAndLogin = async (preAuthToken, otp) => {
+  // 1. Verify the preAuth JWT and find its DB record
+  const preAuthDoc = await tokenService.verifyToken(preAuthToken, tokenTypes.PRE_AUTH);
+
+  // 2. Find the matching OTP record for this user
+  const otpDoc = await Token.findOne({
+    where: { userId: preAuthDoc.userId, type: tokenTypes.OTP, blacklisted: false },
+    order: [['created_at', 'DESC']],
+  });
+
+  if (!otpDoc) {
+    throw new ApiError(httpStatus.UNAUTHORIZED, 'OTP not found or already used');
+  }
+
+  // 3. Check OTP expiry
+  if (new Date() > new Date(otpDoc.expires)) {
+    await otpDoc.destroy({ force: true });
+    throw new ApiError(httpStatus.UNAUTHORIZED, 'OTP has expired. Please login again');
+  }
+
+  // 4. Check OTP value (constant-time compare to avoid timing attacks)
+  const isMatch = crypto.timingSafeEqual(Buffer.from(otpDoc.token), Buffer.from(otp));
+  if (!isMatch) {
+    throw new ApiError(httpStatus.UNAUTHORIZED, 'Invalid OTP');
+  }
+
+  // 5. Consume both tokens (prevent reuse)
+  await otpDoc.destroy({ force: true });
+  await preAuthDoc.destroy({ force: true });
+
+  // 6. Return the user
+  const user = await userService.getSimpleUserById(preAuthDoc.userId);
+  if (!user) {
+    throw new ApiError(httpStatus.NOT_FOUND, 'User not found');
+  }
+  return user;
+};
+
 module.exports = {
   loginUserWithEmailAndPassword,
   logout,
@@ -181,4 +218,5 @@ module.exports = {
   resetPassword,
   verifyEmail,
   register,
+  verifyOtpAndLogin,
 };

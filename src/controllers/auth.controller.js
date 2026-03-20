@@ -4,6 +4,8 @@ const { authService, tokenService, emailService, clinicService, userService } = 
 const { tokenTypes } = require('../config/tokens');
 const sendEmailAzure = require('../services/email.azure.service');
 const db = require('../models');
+const ApiError = require('../utils/ApiError');
+const config = require('../config/config');
 
 /**
  * Registers a new user and sends a password setup email.
@@ -94,9 +96,35 @@ The HWRF Team`;
 const login = catchAsync(async (req, res) => {
   const { email, password } = req.body;
   const user = await authService.loginUserWithEmailAndPassword(email, password);
-  const tokens = await tokenService.generateAuthTokens(user);
+  // const tokens = await tokenService.generateAuthTokens(user);
+  // Skip OTP in development for easier testing
+  if (config.env === 'development') {
+    const tokens = await tokenService.generateAuthTokens(user);
+    return res.status(httpStatus.OK).send({ user, tokens });
+  }
+  const { otp, preAuthToken } = await tokenService.generateOtpAndPreAuthToken(user);
 
-  res.send({ user, tokens });
+  await emailService.sendOtpEmail(user.email, otp);
+  res.status(httpStatus.OK).json({
+    otpRequired: true,
+    preAuthToken,
+    message: 'OTP sent to your registered email address',
+  });
+});
+
+/**
+ * Verify OTP for 2-step login
+ *
+ * @param {Object} req - Express request object
+ * @param {Object} req.body.preAuthToken - Temporary pre-auth token from login step
+ * @param {Object} req.body.otp - 6-digit OTP from email
+ * @param {Object} res - Express response object
+ */
+const verifyOtp = catchAsync(async (req, res) => {
+  const { preAuthToken, otp } = req.body;
+  const user = await authService.verifyOtpAndLogin(preAuthToken, otp);
+  const tokens = await tokenService.generateAuthTokens(user);
+  res.status(httpStatus.OK).send({ user, tokens });
 });
 
 /**
@@ -217,9 +245,8 @@ const verifyEmail = catchAsync(async (req, res) => {
  * @returns {Promise<void>} - A promise that resolves when the response is sent.
  */
 const getMe = catchAsync(async (req, res) => {
-  console.log('Req from getMe function --> ', req.user.specialties);
   const user = await userService.getUserById(req.user.id); // Use service to fetch user data
-   
+
   res.status(httpStatus.OK).json({
     success: true,
     user,
@@ -264,4 +291,5 @@ module.exports = {
   onboardClinic,
   getMe,
   verifyToken,
+  verifyOtp,
 };

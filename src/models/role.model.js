@@ -1,4 +1,5 @@
 const { DataTypes, Model } = require('sequelize');
+
 class Role extends Model {
   static associate(models) {
     // Many-to-Many: Roles and Users

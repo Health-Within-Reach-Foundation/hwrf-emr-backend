@@ -1,7 +1,6 @@
 const { DataTypes, Model } = require('sequelize');
 const { tokenTypes } = require('../config/tokens');
 
-
 class Token extends Model {
   static associate(models) {
     Token.belongsTo(models.User, {
@@ -36,7 +35,9 @@ const initModel = (sequelize) => {
           tokenTypes.REFRESH,
           tokenTypes.RESET_PASSWORD,
           tokenTypes.VERIFY_EMAIL,
-          tokenTypes.SET_PASSWORD
+          tokenTypes.SET_PASSWORD,
+          tokenTypes.OTP,
+          tokenTypes.PRE_AUTH
         ),
         allowNull: false,
       },

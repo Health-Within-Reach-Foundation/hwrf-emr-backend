@@ -1,9 +1,9 @@
 const { Op } = require('sequelize');
+const httpStatus = require('http-status');
 const { Patient } = require('../models/patient.model');
 const { Appointment } = require('../models/appointment.model');
 const { Queue } = require('../models/queue.model');
 const ApiError = require('../utils/ApiError');
-const httpStatus = require('http-status');
 const { Diagnosis } = require('../models/diagnosis.model');
 const { Treatment } = require('../models/treatment.model');
 const { Mammography } = require('../models/mammography.model');
@@ -174,35 +174,137 @@ const searchPatientsByClinic = async (clinicId, searchTerm = '', limit = 10, off
  * @param {number} offset - Number of records to skip (default 0).
  * @returns {Promise<object>} - Paginated patient data with metadata
  */
+// const getPatientsByClinic = async (clinicId, limit = 50, offset = 0) => {
+//   const whereClause = { clinicId };
+
+//   // Use findAndCountAll with pagination
+//   const { rows: patients, count: total } = await Patient.findAndCountAll({
+//     where: whereClause,
+//     attributes: [
+//       'id',
+//       'regNo',
+//       'name',
+//       'age',
+//       'sex',
+//       'mobile',
+//       'address',
+//       'createdAt',
+//       'clinicId',
+//       'primaryDoctor',
+//       'referral_source',
+//     ],
+//     include: [
+//       {
+//         model: Queue,
+//         as: 'queues',
+//         attributes: ['queueType'],
+//         required: false,
+//       },
+//     ],
+//     order: [['regNo', 'DESC']],
+//     limit: parseInt(limit, 10),
+//     offset: parseInt(offset, 10),
+//     subQuery: false,
+//     distinct: true,
+//   });
+
+//   if (!patients.length && offset === 0) {
+//     throw new ApiError(httpStatus.NOT_FOUND, 'No patients found for this clinic or camp.');
+//   }
+
+//   // Process each patient to calculate billing amounts
+//   const newPatients = await Promise.all(
+//     patients.map(async (patient) => {
+//       const serviceTaken = patient.queues.map((queue) => queue.queueType);
+
+//       // Calculate billing for each specialty
+//       const dentistryBilling = await calculateDentistryBilling(patient.id);
+//       const gpBilling = await calculateGPBilling(patient.id);
+//       const mammographyBilling = await calculateMammographyBilling(patient.id);
+
+//       // Calculate totals
+//       const onlinePaid = dentistryBilling.onlinePaid + gpBilling.onlinePaid + mammographyBilling.onlinePaid;
+//       const offlinePaid = dentistryBilling.offlinePaid + gpBilling.offlinePaid + mammographyBilling.offlinePaid;
+//       const totalPaid = onlinePaid + offlinePaid;
+
+//       return {
+//         ...patient.dataValues,
+//         serviceTaken,
+//         onlinePaid,
+//         offlinePaid,
+//         total: totalPaid,
+//       };
+//     })
+//   );
+
+//   // Calculate pagination metadata
+//   const currentPage = Math.floor(offset / limit) + 1;
+//   const totalPages = Math.ceil(total / limit);
+//   const hasMore = offset + limit < total;
+
+//   return {
+//     success: true,
+//     data: newPatients,
+//     meta: {
+//       total,
+//       limit: parseInt(limit, 10),
+//       offset: parseInt(offset, 10),
+//       currentPage,
+//       totalPages,
+//       hasMore,
+//     },
+//   };
+// };
+
 const getPatientsByClinic = async (clinicId, limit = 50, offset = 0) => {
   const whereClause = { clinicId };
 
-  // Use findAndCountAll with pagination
+  // Get paginated patients WITHOUT associations first
   const { rows: patients, count: total } = await Patient.findAndCountAll({
     where: whereClause,
-    attributes: ['id', 'regNo', 'name', 'age', 'sex', 'mobile', 'address', 'createdAt', 'clinicId', 'primaryDoctor', 'referral_source'],
-    include: [
-      {
-        model: Queue,
-        as: 'queues',
-        attributes: ['queueType'],
-        required: false,
-      },
+    attributes: [
+      'id',
+      'regNo',
+      'name',
+      'age',
+      'sex',
+      'mobile',
+      'address',
+      'createdAt',
+      'clinicId',
+      'primaryDoctor',
+      'referral_source',
     ],
     order: [['regNo', 'DESC']],
     limit: parseInt(limit, 10),
     offset: parseInt(offset, 10),
-    subQuery: false,
+    // NO include here - just get the patients
   });
 
-  if (!patients.length && offset === 0) {
-    throw new ApiError(httpStatus.NOT_FOUND, 'No patients found for this clinic or camp.');
-  }
+  // Now get queues for these specific patients
+  const patientIds = patients.map((p) => p.id);
+  const queuesData = await Queue.findAll({
+    where: {
+      patientId: patientIds, // Adjust this field name based on your Queue model
+    },
+    attributes: ['patientId', 'queueType'],
+    raw: true,
+  });
 
-  // Process each patient to calculate billing amounts
+  // Create a map of patientId -> queues
+  const queuesMap = {};
+  queuesData.forEach((queue) => {
+    if (!queuesMap[queue.patientId]) {
+      queuesMap[queue.patientId] = [];
+    }
+    queuesMap[queue.patientId].push(queue);
+  });
+
+  // Process each patient with their queues
   const newPatients = await Promise.all(
     patients.map(async (patient) => {
-      const serviceTaken = patient.queues.map((queue) => queue.queueType);
+      const queues = queuesMap[patient.id] || [];
+      const serviceTaken = queues.map((queue) => queue.queueType);
 
       // Calculate billing for each specialty
       const dentistryBilling = await calculateDentistryBilling(patient.id);
@@ -246,7 +348,7 @@ const getPatientsByClinic = async (clinicId, limit = 50, offset = 0) => {
 const getSimplePatientsByClinic = async (clinicId, limit = 50, offset = 0) => {
   const whereClause = { clinicId };
 
-  const { rows: patients, count: total } = await Patient.findAndCountAll({
+  const { rows: patients } = await Patient.findAndCountAll({
     where: whereClause,
     attributes: ['id', 'regNo', 'name', 'age', 'sex', 'mobile', 'address', 'createdAt', 'clinicId', 'primaryDoctor'],
     include: [
@@ -261,7 +363,8 @@ const getSimplePatientsByClinic = async (clinicId, limit = 50, offset = 0) => {
     order: [['regNo', 'DESC']],
     limit: parseInt(limit, 10),
     offset: parseInt(offset, 10),
-    subQuery: false,
+    subQuery: false, // Change to true
+    distinct: true,
   });
 
   if (!patients.length && offset === 0) {
@@ -279,7 +382,7 @@ const getSimplePatientsByClinic = async (clinicId, limit = 50, offset = 0) => {
  * @returns {Promise<Object>} - { success, data: [all patients], meta: { total, exported } }
  * @throws {ApiError} - If export exceeds max record limit
  */
-const getPatientsByClinicForExport = async (clinicId, maxRecords = 10000) => {
+const getPatientsByClinicForExport = async (clinicId) => {
   const whereClause = { clinicId };
 
   // Fetch count first to check limit
@@ -295,7 +398,19 @@ const getPatientsByClinicForExport = async (clinicId, maxRecords = 10000) => {
   // Fetch all patients without pagination
   const patients = await Patient.findAll({
     where: whereClause,
-    attributes: ['id', 'regNo', 'name', 'age', 'sex', 'mobile', 'address', 'createdAt', 'clinicId', 'primaryDoctor', 'referral_source'],
+    attributes: [
+      'id',
+      'regNo',
+      'name',
+      'age',
+      'sex',
+      'mobile',
+      'address',
+      'createdAt',
+      'clinicId',
+      'primaryDoctor',
+      'referral_source',
+    ],
     include: [
       {
         model: Queue,
@@ -515,7 +630,6 @@ const getPatientDetailsById = async (patientId, specialtyId) => {
 const createDiagnosis = async (diagnosisBody, transaction = null) => {
   const {
     diagnosisDate,
-    selectedTeeth,
     childSelectedTeeth,
     adultSelectedTeeth,
     complaints,
@@ -570,14 +684,18 @@ const createDiagnosis = async (diagnosisBody, transaction = null) => {
 
   // Handle child selected teeth
   if (childSelectedTeeth.length > 0) {
+    // eslint-disable-next-line no-restricted-syntax
     for (const tooth of childSelectedTeeth) {
+      // eslint-disable-next-line no-await-in-loop
       await createDiagnosisAndTreatment(tooth, 'child');
     }
   }
 
   // Handle adult selected teeth
   if (adultSelectedTeeth.length > 0) {
+    // eslint-disable-next-line no-restricted-syntax
     for (const tooth of adultSelectedTeeth) {
+      // eslint-disable-next-line no-await-in-loop
       await createDiagnosisAndTreatment(tooth, 'adult');
     }
   }
@@ -794,7 +912,7 @@ const createTreatment = async (treatmentBody) => {
         diagnosisId,
       });
     } else {
-      let oldPaidAmount = treatment.paidAmount;
+      const oldPaidAmount = treatment.paidAmount;
       treatment.paidAmount = Number(oldPaidAmount) + (Number(onlineAmount) + Number(offlineAmount));
       console.log(
         'treatment.paidAmount -->',
@@ -957,9 +1075,9 @@ const updateTreatment = async (treatmentId, updateBody, transaction = null) => {
       }
     });
 
-    console.info("validTreatmentFields['totalAmount'] -->", validTreatmentFields['totalAmount']);
-    console.info("validTreatmentFields['paidAmount'] -->", validTreatmentFields['paidAmount']);
-    console.info("validTreatmentFields['remainingAmount'] -->", validTreatmentFields['remainingAmount']);
+    console.info("validTreatmentFields['totalAmount'] -->", validTreatmentFields.totalAmount);
+    console.info("validTreatmentFields['paidAmount'] -->", validTreatmentFields.paidAmount);
+    console.info("validTreatmentFields['remainingAmount'] -->", validTreatmentFields.remainingAmount);
     Object.assign(treatment, validTreatmentFields);
     await treatment.save({ transaction });
   }
@@ -1034,6 +1152,53 @@ const deleteTreatment = async (treatmentId) => {
 };
 
 /**
+ * Updates the mammography record for a given patient.
+ *
+ * @param {string} patientId - The ID of the patient whose mammography record is to be updated.
+ * @param {Object} updateBody - The body containing the updated mammography details.
+ * @param {number|string|null} [updateBody.menstrualAge=null] - The menstrual age of the patient.
+ * @param {number|string|null} [updateBody.numberOfPregnancies=null] - The number of pregnancies the patient has had.
+ * @param {number|string|null} [updateBody.numberOfDeliveries=null] - The number of deliveries the patient has had.
+ * @param {number|string|null} [updateBody.numberOfLivingChildren=null] - The number of living children the patient has.
+ * @param {Object} [updateBody.otherUpdatedBody] - Any other fields to be updated in the mammography record.
+ * @returns {Promise<Object>} The updated mammography record.
+ * @throws {ApiError} If the mammography record is not found or if there is an error while updating the record.
+ */
+const updateMammography = async (patientId, updateBody) => {
+  try {
+    const mammography = await Mammography.findOne({ where: { patientId } });
+    if (!mammography) {
+      throw new ApiError(httpStatus.NOT_FOUND, 'Mammography record not found');
+    }
+
+    const {
+      lastMenstrualDate = null,
+      menstrualAge = null,
+      numberOfPregnancies = null,
+      numberOfDeliveries = null,
+      numberOfLivingChildren = null,
+      ...otherUpdatedBody
+    } = updateBody;
+
+    const newMammographyBody = {
+      lastMenstrualDate: lastMenstrualDate !== 'null' && lastMenstrualDate !== null ? new Date(lastMenstrualDate) : null,
+      menstrualAge: menstrualAge !== 'null' ? Number(menstrualAge) : null,
+      numberOfPregnancies: numberOfPregnancies !== 'null' ? Number(numberOfPregnancies) : null,
+      numberOfDeliveries: numberOfDeliveries !== 'null' ? Number(numberOfDeliveries) : null,
+      numberOfLivingChildren: numberOfLivingChildren !== 'null' ? Number(numberOfLivingChildren) : null,
+      ...otherUpdatedBody,
+    };
+
+    Object.assign(mammography, newMammographyBody);
+    await mammography.save();
+    return mammography;
+  } catch (error) {
+    console.error(error);
+    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, 'Error While Updating Mammography Details');
+  }
+};
+
+/**
  * Creates a new mammography record for a patient or updates an existing one.
  *
  * @param {string} patientId - The ID of the patient.
@@ -1105,53 +1270,6 @@ const getMammographyById = async (patientId) => {
   } catch (error) {
     console.error(error);
     throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, 'Error While Fetching Mammography Details');
-  }
-};
-
-/**
- * Updates the mammography record for a given patient.
- *
- * @param {string} patientId - The ID of the patient whose mammography record is to be updated.
- * @param {Object} updateBody - The body containing the updated mammography details.
- * @param {number|string|null} [updateBody.menstrualAge=null] - The menstrual age of the patient.
- * @param {number|string|null} [updateBody.numberOfPregnancies=null] - The number of pregnancies the patient has had.
- * @param {number|string|null} [updateBody.numberOfDeliveries=null] - The number of deliveries the patient has had.
- * @param {number|string|null} [updateBody.numberOfLivingChildren=null] - The number of living children the patient has.
- * @param {Object} [updateBody.otherUpdatedBody] - Any other fields to be updated in the mammography record.
- * @returns {Promise<Object>} The updated mammography record.
- * @throws {ApiError} If the mammography record is not found or if there is an error while updating the record.
- */
-const updateMammography = async (patientId, updateBody) => {
-  try {
-    const mammography = await Mammography.findOne({ where: { patientId } });
-    if (!mammography) {
-      throw new ApiError(httpStatus.NOT_FOUND, 'Mammography record not found');
-    }
-
-    const {
-      lastMenstrualDate = null,
-      menstrualAge = null,
-      numberOfPregnancies = null,
-      numberOfDeliveries = null,
-      numberOfLivingChildren = null,
-      ...otherUpdatedBody
-    } = updateBody;
-
-    const newMammographyBody = {
-      lastMenstrualDate: lastMenstrualDate !== 'null' && lastMenstrualDate !== null ? new Date(lastMenstrualDate) : null,
-      menstrualAge: menstrualAge !== 'null' ? Number(menstrualAge) : null,
-      numberOfPregnancies: numberOfPregnancies !== 'null' ? Number(numberOfPregnancies) : null,
-      numberOfDeliveries: numberOfDeliveries !== 'null' ? Number(numberOfDeliveries) : null,
-      numberOfLivingChildren: numberOfLivingChildren !== 'null' ? Number(numberOfLivingChildren) : null,
-      ...otherUpdatedBody,
-    };
-
-    Object.assign(mammography, newMammographyBody);
-    await mammography.save();
-    return mammography;
-  } catch (error) {
-    console.error(error);
-    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, 'Error While Updating Mammography Details');
   }
 };
 

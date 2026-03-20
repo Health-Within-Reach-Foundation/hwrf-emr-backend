@@ -6,14 +6,27 @@
   "extends": ["airbnb-base", "plugin:jest/recommended", "plugin:security/recommended", "plugin:prettier/recommended"],
   "plugins": ["jest", "security", "prettier"],
   "parserOptions": {
-    "ecmaVersion": 2018
+    "ecmaVersion": 2020
   },
   "rules": {
-    "no-console": "error",
-    "func-names": "off",
+    "no-console": "off",  // OR if you want warnings: 'warn'
     "no-underscore-dangle": "off",
     "consistent-return": "off",
     "jest/expect-expect": "off",
     "security/detect-object-injection": "off"
+  },
+  "overrides": [
+  {
+    "files": ["migrations/*.js"],
+    "rules": {
+      "strict": "off"
+    }
+  },
+  {
+    "files": ["src/middlewares/error.js"],
+    "rules": {
+      "no-unused-vars": ["error", { "argsIgnorePattern": "^next$" }]
+    }
   }
+]
 }

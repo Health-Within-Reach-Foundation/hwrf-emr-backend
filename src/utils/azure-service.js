@@ -63,7 +63,7 @@ const uploadFile = async (file, key) => {
     const ContentType = mime.lookup(file.originalname) || 'application/octet-stream';
 
     // Upload file directly to Azure Blob Storage
-    const uploadResponse = await blockBlobClient.uploadFile(file.path, {
+    await blockBlobClient.uploadFile(file.path, {
       blobHTTPHeaders: { blobContentType: ContentType },
     });
 
@@ -129,7 +129,6 @@ const getFile = async (key, res) => {
     readableStream.pipe(res).on('finish', () => {
       console.log('File streaming completed successfully');
     });
-
   } catch (error) {
     console.error('Error fetching file:', error);
     if (!res.headersSent) {
@@ -139,7 +138,6 @@ const getFile = async (key, res) => {
   }
 };
 
-
 // Get a list of files from Azure Blob Storage (list blobs in a container or folder)
 const getFilesList = async (keyPath) => {
   const files = [];
@@ -148,13 +146,14 @@ const getFilesList = async (keyPath) => {
     // List blobs (non-hierarchical, flat listing)
     const blobsIterator = containerClient.listBlobsFlat({ prefix: keyPath });
 
+    // eslint-disable-next-line no-restricted-syntax
     for await (const blob of blobsIterator) {
       const name = blob.name.split('/').pop(); // Get the file name
       const type = name.split('.').pop(); // Get the file extension (type)
 
       files.push({
-        name: name,
-        type: type,
+        name,
+        type,
         size: blob.properties.contentLength,
         lastModifiedDate: blob.properties.lastModified,
         id: blob.name,

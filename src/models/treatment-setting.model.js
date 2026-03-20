@@ -60,7 +60,7 @@ const initModel = (sequelize) => {
       },
       treatingDoctor: {
         type: DataTypes.JSON,
-        allowNull: true, // Each patient must belong to a clinic
+        allowNull: true, // Each patient must belong to a clinic
       },
       nextDate: {
         type: DataTypes.DATEONLY,

@@ -3,8 +3,6 @@ const { Op } = require('sequelize');
 const { Token } = require('../../models/token.model');
 const logger = require('../../config/logger');
 
-
-
 const cleanupTokens = async () => {
   try {
     const now = new Date();
@@ -28,7 +26,7 @@ const scheduleTokenCleanup = () => {
     logger.warn('[CRON] Running daily deleting expired tokens...');
     await cleanupTokens();
   });
-  
+
   // For testing purpose
   // cron.schedule('* * * * *', async () => {
   //   logger.warn('[CRON] Running daily deleting expired tokens...');

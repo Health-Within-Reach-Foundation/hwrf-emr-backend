@@ -1,3 +1,6 @@
+const httpStatus = require('http-status');
+const ApiError = require('../utils/ApiError');
+
 /**
  * Middleware to authorize user roles based on required permissions.
  *
