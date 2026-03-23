@@ -192,17 +192,24 @@ const generateOtp = () => Math.floor(100000 + Math.random() * 900000).toString()
  * @returns {Promise<{ otp: string, preAuthToken: string }>}
  */
 const generateOtpAndPreAuthToken = async (user) => {
-  // Invalidate any existing OTP / preAuth tokens for this user (prevent accumulation)
-  await Token.destroy({ where: { userId: user.id, type: tokenTypes.OTP }, force: true });
-  await Token.destroy({ where: { userId: user.id, type: tokenTypes.PRE_AUTH }, force: true });
+  // ✅ Run both destroys in parallel, ignore errors if nothing to delete
+  await Promise.allSettled([
+    Token.destroy({ where: { userId: user.id, type: tokenTypes.OTP }, force: true }),
+    Token.destroy({ where: { userId: user.id, type: tokenTypes.PRE_AUTH }, force: true }),
+  ]);
 
   const otp = generateOtp();
-  const otpExpires = moment().add(10, 'minutes');
-  await saveToken(otp, user.id, otpExpires, tokenTypes.OTP);
+  console.log(`🔑 OTP for ${user.email}: ${otp}`);
 
+  const otpExpires = moment().add(10, 'minutes');
   const preAuthExpires = moment().add(15, 'minutes');
   const preAuthToken = generateToken(user.id, preAuthExpires, tokenTypes.PRE_AUTH);
-  await saveToken(preAuthToken, user.id, preAuthExpires, tokenTypes.PRE_AUTH);
+
+  // ✅ Run both saves in parallel
+  await Promise.all([
+    saveToken(otp, user.id, otpExpires, tokenTypes.OTP),
+    saveToken(preAuthToken, user.id, preAuthExpires, tokenTypes.PRE_AUTH),
+  ]);
 
   return { otp, preAuthToken };
 };

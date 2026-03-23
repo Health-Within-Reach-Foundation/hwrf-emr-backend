@@ -25,7 +25,7 @@ const register = catchAsync(async (req, res) => {
   try {
     const user = await authService.register({ name, email, phoneNumber, password: 'TzR6!wS@7bH9', role }, transaction);
 
-    const setPasswordToken = await tokenService.generatePasswordToken(user.email, tokenTypes.SET_PASSWORD, transaction);
+    const setPasswordToken = await tokenService.generatePasswordToken(user, tokenTypes.SET_PASSWORD, transaction);
 
     await emailService.sendPasswordEmail(user.email, setPasswordToken, tokenTypes.SET_PASSWORD);
     await transaction.commit();
@@ -36,6 +36,7 @@ const register = catchAsync(async (req, res) => {
     });
   } catch (error) {
     await transaction.rollback();
+    console.error('REGISTER ERROR -->', error); // ADD THIS
     throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, 'Error creating user');
   }
 });
@@ -98,13 +99,19 @@ const login = catchAsync(async (req, res) => {
   const user = await authService.loginUserWithEmailAndPassword(email, password);
   // const tokens = await tokenService.generateAuthTokens(user);
   // Skip OTP in development for easier testing
-  if (config.env === 'development') {
-    const tokens = await tokenService.generateAuthTokens(user);
-    return res.status(httpStatus.OK).send({ user, tokens });
-  }
+  // if (config.env === 'development') {
+  //   const tokens = await tokenService.generateAuthTokens(user);
+  //   return res.status(httpStatus.OK).send({ user, tokens });
+  // }
   const { otp, preAuthToken } = await tokenService.generateOtpAndPreAuthToken(user);
 
-  await emailService.sendOtpEmail(user.email, otp);
+  // ✅ Send email in background — don't await so response is instant
+  if (config.env === 'production') {
+    emailService.sendOtpEmail(user.email, otp).catch((err) => {
+      console.error('Failed to send OTP email:', err);
+    });
+  }
+
   res.status(httpStatus.OK).json({
     otpRequired: true,
     preAuthToken,
