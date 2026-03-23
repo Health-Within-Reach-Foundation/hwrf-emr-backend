@@ -5,7 +5,6 @@ const sendMessage = {
     recipientPhone: Joi.string().required(),
     templateId: Joi.string().required(),
     params: Joi.object().optional().default({}),
-    patientId: Joi.string().uuid().optional(),
   }),
 };
 

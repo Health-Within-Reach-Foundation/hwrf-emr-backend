@@ -9,6 +9,7 @@ const patientRoute = require('./patient.route');
 const campRoute = require('./camp.route');
 const rolePermissionRoute = require('./role-permission.route');
 const config = require('../../config/config');
+const whatsappRoute = require('./whatsapp.route');
 
 const router = express.Router();
 
@@ -69,6 +70,13 @@ const campRoutes = [
   },
 ];
 
+const whatsappRoutes = [
+  {
+    path: '/clinics/whatsapp',
+    route: whatsappRoute,
+  },
+];
+
 const rolePermissionRoutes = [
   {
     path: '/clinics/role-permission',
@@ -109,6 +117,10 @@ clinicRoutes.forEach((route) => {
 });
 
 patientRoutes.forEach((route) => {
+  router.use(route.path, route.route);
+});
+
+whatsappRoutes.forEach((route) => {
   router.use(route.path, route.route);
 });
 

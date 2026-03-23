@@ -7,3 +7,4 @@ module.exports.campValidation = require('./camp.validation');
 module.exports.rolePermissionValidation = require('./role-permission.validation');
 module.exports.formTemplateValidation = require('./form-template.validation');
 module.exports.formFieldsValidation = require('./form-fields.validation');
+module.exports.whatsappValidation = require('./whatsapp.validation');
