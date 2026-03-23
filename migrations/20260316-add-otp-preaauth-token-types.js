@@ -3,21 +3,15 @@
 module.exports = {
   up: async (queryInterface) => {
     const transaction = await queryInterface.sequelize.transaction();
-
     try {
-      await queryInterface.addColumn(
-        'patients',
-        'referral_source',
-        {
-          type: queryInterface.sequelize.Sequelize.STRING,
-          allowNull: true,
-          comment: 'Source of patient referral (e.g., doctor, website, social media, etc.)',
-        },
-        { transaction }
-      );
+      // Add otp and preAuth values to the enum_tokens_type enum
+      await queryInterface.sequelize.query(`ALTER TYPE "enum_tokens_type" ADD VALUE IF NOT EXISTS 'otp';`, { transaction });
+      await queryInterface.sequelize.query(`ALTER TYPE "enum_tokens_type" ADD VALUE IF NOT EXISTS 'preAuth';`, {
+        transaction,
+      });
 
       await transaction.commit();
-      console.log('✓ Migration completed: Added referral_source column to patients table');
+      console.log('✓ Migration completed: Added otp and preAuth to enum_tokens_type');
     } catch (error) {
       await transaction.rollback();
       console.error('✗ Migration failed:', error);
@@ -25,20 +19,7 @@ module.exports = {
     }
   },
 
-  down: async (queryInterface) => {
-    const transaction = await queryInterface.sequelize.transaction();
-
-    try {
-      await queryInterface.removeColumn('patients', 'referral_source', {
-        transaction,
-      });
-
-      await transaction.commit();
-      console.log('✓ Migration rollback completed: Removed referral_source column from patients table');
-    } catch (error) {
-      await transaction.rollback();
-      console.error('✗ Migration rollback failed:', error);
-      throw error;
-    }
+  down: async () => {
+    console.log('⚠ Rollback not supported for enum value removal in PostgreSQL');
   },
 };
