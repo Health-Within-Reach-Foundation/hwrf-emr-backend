@@ -23,9 +23,10 @@ const envVarsSchema = Joi.object()
     AZURE_STORAGE_ACCOUNT_KEY: Joi.string().allow('', null).optional(),
     AZURE_EMAIL_CONNECTION_STRING: Joi.string().allow('', null).optional(),
     MAIL_ALIAS_USER: Joi.string().allow('', null).optional(),
-    WA_API_URL: Joi.string().allow('', null).optional(),
-    WA_PHONE_NUMBER_ID: Joi.string().allow('', null).optional(),
-    WA_ACCESS_TOKEN: Joi.string().allow('', null).optional(),
+    GUPSHUP_API_KEY: Joi.string().allow('', null).optional(),
+    GUPSHUP_APP_NAME: Joi.string().allow('', null).optional(),
+    GUPSHUP_APP_ID: Joi.string().allow('', null).optional(),
+    GUPSHUP_SOURCE_NUMBER: Joi.string().allow('', null).optional(),
   })
   .unknown();
 
@@ -64,8 +65,13 @@ module.exports = {
   mail_alias_user: envVars.MAIL_ALIAS_USER,
   azure_email_connection_string: envVars.AZURE_EMAIL_CONNECTION_STRING,
   whatsapp: {
-    api_url: envVars.WA_API_URL,
-    phone_number_id: envVars.WA_PHONE_NUMBER_ID,
-    access_token: envVars.WA_ACCESS_TOKEN,
+    provider: 'gupshup',
+    gupshup: {
+      apiKey: envVars.GUPSHUP_API_KEY,
+      appName: envVars.GUPSHUP_APP_NAME,
+      appId: envVars.GUPSHUP_APP_ID,
+      sourceNumber: envVars.GUPSHUP_SOURCE_NUMBER,
+      baseUrl: 'https://api.gupshup.io',
+    },
   },
 };
